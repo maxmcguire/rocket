@@ -41,7 +41,7 @@ void Test_RegisterTest(Test* test);
  * Runs all of the unit tests. If pattern is not NULL, only tests whose name
  * match the DOS style pattern will be run,
  */
-void Test_RunTests(const char* pattern);
+void Test_RunTests(const char* pattern = 0);
 
 /**
  * Checks that a value is true.

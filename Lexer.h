@@ -62,6 +62,7 @@ struct Lexer
     int         token;
     String*     string;
     lua_Number  number;
+    bool        haveToken;
 };
 
 const char* Token_GetString(Token token);

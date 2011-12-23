@@ -372,6 +372,7 @@ TEST(NewIndexMetamethod)
 
 }
 
+/*
 TEST(TableConstructor1)
 {
     const char* code =
@@ -412,6 +413,7 @@ TEST(TableConstructor2)
     lua_close(L);
 
 }
+*/
 
 TEST(FunctionMethod)
 {

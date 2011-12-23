@@ -114,8 +114,6 @@ void Parser_Destroy(Parser* parser);
 
 void Parser_Error(Parser* parser, const char* fmt, ...);
 
-void Parser_Next(Parser* parser);
-
 bool Parser_Accept(Parser* parser, int token);
  
 bool Parser_Expect(Parser* parser, int token);

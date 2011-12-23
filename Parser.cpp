@@ -70,15 +70,15 @@ void Parser_Error(Parser* parser, const char* fmt, ...)
 
 }
 
-void Parser_Next(Parser* parser)
-{
-    Lexer_NextToken(parser->lexer);
-}
-
 bool Parser_Accept(Parser* parser, int token)
 {
+    if (!parser->lexer->haveToken)
+    {
+        Lexer_NextToken(parser->lexer);
+    }
     if (parser->lexer->token == token)
     {
+        parser->lexer->haveToken = false;
         return true;
     }
     return false;

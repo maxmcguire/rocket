@@ -55,6 +55,7 @@ void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input)
     lexer->input        = input;
     lexer->lineNumber   = 1;
     lexer->string       = NULL;
+    lexer->haveToken    = false;
     Lexer_NextToken(lexer);
 }
 
@@ -91,6 +92,8 @@ const char* Token_GetString(Token token)
 
 void Lexer_NextToken(Lexer* lexer)
 {
+
+    lexer->haveToken = true;
 
     while (1)
     {
