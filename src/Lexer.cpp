@@ -187,7 +187,9 @@ void Lexer_NextToken(Lexer* lexer)
             lexer->token = c;
             return;
         case '"':
+        case '\'':
             {
+                int end = c;
                 // Read the string literal.
                 char buffer[1024];
                 size_t length = 0;
@@ -198,7 +200,7 @@ void Lexer_NextToken(Lexer* lexer)
                     {
                         State_Error(lexer->L);
                     }
-                    if (c == '"')
+                    if (c == end)
                     {
                         break;
                     }
