@@ -21,7 +21,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="intermediate\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			>
@@ -101,7 +101,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="intermediate\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -188,87 +188,87 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\BaseLib.cpp"
+				RelativePath=".\src\BaseLib.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Code.cpp"
+				RelativePath=".\src\Code.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Compiler.cpp"
+				RelativePath=".\src\Compiler.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Function.cpp"
+				RelativePath=".\src\Function.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Gc.cpp"
+				RelativePath=".\src\Gc.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Input.cpp"
+				RelativePath=".\src\Input.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\IoLib.cpp"
+				RelativePath=".\src\IoLib.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Lexer.cpp"
+				RelativePath=".\src\Lexer.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Lua.cpp"
+				RelativePath=".\src\Lua.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\LuaLib.cpp"
+				RelativePath=".\src\LuaLib.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Main.cpp"
+				RelativePath=".\src\Main.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\MathLib.cpp"
+				RelativePath=".\src\MathLib.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Opcode.cpp"
+				RelativePath=".\src\Opcode.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\OsLib.cpp"
+				RelativePath=".\src\OsLib.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Parser.cpp"
+				RelativePath=".\src\Parser.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\State.cpp"
+				RelativePath=".\src\State.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\String.cpp"
+				RelativePath=".\src\String.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\StringLib.cpp"
+				RelativePath=".\src\StringLib.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Table.cpp"
+				RelativePath=".\src\Table.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Vm.cpp"
+				RelativePath=".\src\Vm.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Vm_x86.asm"
+				RelativePath=".\src\Vm_x86.asm"
 				>
 			</File>
 		</Filter>
@@ -278,71 +278,71 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\BaseLib.h"
+				RelativePath=".\src\BaseLib.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Code.h"
+				RelativePath=".\src\Code.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Compiler.h"
+				RelativePath=".\src\Compiler.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Function.h"
+				RelativePath=".\src\Function.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Gc.h"
+				RelativePath=".\src\Gc.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Input.h"
+				RelativePath=".\src\Input.h"
 				>
 			</File>
 			<File
-				RelativePath=".\lauxlib.h"
+				RelativePath=".\src\lauxlib.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Lexer.h"
+				RelativePath=".\src\Lexer.h"
 				>
 			</File>
 			<File
-				RelativePath=".\lua.h"
+				RelativePath=".\src\lua.h"
 				>
 			</File>
 			<File
-				RelativePath=".\luaconf.h"
+				RelativePath=".\src\luaconf.h"
 				>
 			</File>
 			<File
-				RelativePath=".\lualib.h"
+				RelativePath=".\src\lualib.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Opcode.h"
+				RelativePath=".\src\Opcode.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Parser.h"
+				RelativePath=".\src\Parser.h"
 				>
 			</File>
 			<File
-				RelativePath=".\State.h"
+				RelativePath=".\src\State.h"
 				>
 			</File>
 			<File
-				RelativePath=".\String.h"
+				RelativePath=".\src\String.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Table.h"
+				RelativePath=".\src\Table.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Vm.h"
+				RelativePath=".\src\Vm.h"
 				>
 			</File>
 		</Filter>
@@ -350,15 +350,15 @@
 			Name="Tests"
 			>
 			<File
-				RelativePath=".\Test.cpp"
+				RelativePath=".\src\Test.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Test.h"
+				RelativePath=".\src\Test.h"
 				>
 			</File>
 			<File
-				RelativePath=".\UnitTests.cpp"
+				RelativePath=".\src\UnitTests.cpp"
 				>
 			</File>
 		</Filter>
