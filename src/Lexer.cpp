@@ -175,6 +175,7 @@ void Lexer_NextToken(Lexer* lexer)
         case '}':
         case ',':
         case ':':
+        case '#':
             lexer->token = c;
             return;
         case '.':
