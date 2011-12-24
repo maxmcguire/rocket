@@ -372,7 +372,25 @@ TEST(NewIndexMetamethod)
 
 }
 
-/*
+TEST(MultipleAssignment)
+{
+
+   const char* code =
+        "a, b = 1, 2";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_tonumber(L, -1) == 2 );
+
+    lua_close(L);
+
+}
+
 TEST(TableConstructor1)
 {
     const char* code =
@@ -413,7 +431,6 @@ TEST(TableConstructor2)
     lua_close(L);
 
 }
-*/
 
 TEST(FunctionMethod)
 {

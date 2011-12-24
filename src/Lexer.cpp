@@ -54,7 +54,7 @@ void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input)
     lexer->L            = L;
     lexer->input        = input;
     lexer->lineNumber   = 1;
-    lexer->string       = NULL;
+    lexer->token.string = NULL;
     lexer->haveToken    = false;
     Lexer_NextToken(lexer);
 }
@@ -85,9 +85,9 @@ static void Lexer_ReadComment(Lexer* lexer)
     ++lexer->lineNumber;
 }
 
-const char* Token_GetString(Token token)
+const char* Token_GetString(TokenType token)
 {
-    return tokenName[token - Token_First];
+    return tokenName[token - TokenType_First];
 }
 
 void Lexer_NextToken(Lexer* lexer)
@@ -110,56 +110,56 @@ void Lexer_NextToken(Lexer* lexer)
         case '\t':
             break;
         case END_OF_STREAM:
-            lexer->token = Token_EndOfStream;
+            lexer->token.type = TokenType_EndOfStream;
             return;
         case '~':
             if (Input_PeekByte(lexer->input) == '=')
             {
                 Input_ReadByte(lexer->input);
-                lexer->token = Token_Ne;
+                lexer->token.type = TokenType_Ne;
             }
             else
             {
-                lexer->token = '~';
+                lexer->token.type = '~';
             }
             return;
         case '=':
             if (Input_PeekByte(lexer->input) == '=')
             {
                 Input_ReadByte(lexer->input);
-                lexer->token = Token_Eq;
+                lexer->token.type = TokenType_Eq;
             }
             else
             {
-                lexer->token = '=';
+                lexer->token.type = '=';
             }
             return;
         case '<':
             if (Input_PeekByte(lexer->input) == '=')
             {
                 Input_ReadByte(lexer->input);
-                lexer->token = Token_Le;
+                lexer->token.type = TokenType_Le;
             }
             else
             {
-                lexer->token = '<';
+                lexer->token.type = '<';
             }
             return;
         case '>':
             if (Input_PeekByte(lexer->input) == '=')
             {
                 Input_ReadByte(lexer->input);
-                lexer->token = Token_Ge;
+                lexer->token.type = TokenType_Ge;
             }
             else
             {
-                lexer->token = '>';
+                lexer->token.type = '>';
             }
             return;
         case '-':
             if (Input_PeekByte(lexer->input) != '-')
             {
-                lexer->token = '-';
+                lexer->token.type = '-';
                 return;
             }
             Lexer_ReadComment(lexer);
@@ -176,16 +176,16 @@ void Lexer_NextToken(Lexer* lexer)
         case ',':
         case ':':
         case '#':
-            lexer->token = c;
+            lexer->token.type = c;
             return;
         case '.':
             if (Input_PeekByte(lexer->input) == '.')
             {
                 Input_ReadByte(lexer->input);
-                lexer->token = Token_Concat;
+                lexer->token.type = TokenType_Concat;
                 return;
             }
-            lexer->token = c;
+            lexer->token.type = c;
             return;
         case '"':
         case '\'':
@@ -228,18 +228,18 @@ void Lexer_NextToken(Lexer* lexer)
                     buffer[length] = c;
                     ++length;
                 }
-                lexer->token = Token_String;
-                lexer->string = String_Create(lexer->L, buffer, length);
+                lexer->token.type = TokenType_String;
+                lexer->token.string = String_Create(lexer->L, buffer, length);
             }
             return;
         default:
             if (Lexer_IsDigit(c))
             {
-                lexer->number = 0.0f;
+                lexer->token.number = 0.0f;
                 while (1)
                 {
                     lua_Number digit = static_cast<lua_Number>(c - '0');
-                    lexer->number = lexer->number * 10.0f + digit;
+                    lexer->token.number = lexer->token.number * 10.0f + digit;
                     c = Input_PeekByte(lexer->input);
                     if (Lexer_IsDigit(c))
                     {
@@ -250,7 +250,7 @@ void Lexer_NextToken(Lexer* lexer)
                         break;
                     }
                 }
-                lexer->token = Token_Number;
+                lexer->token.type = TokenType_Number;
             }
             else
             {
@@ -273,23 +273,28 @@ void Lexer_NextToken(Lexer* lexer)
                 }
 
                 // Check to see if this is one of the reserved words.
-                const int numReserved = Token_LastReserved - Token_First + 1;
+                const int numReserved = TokenType_LastReserved - TokenType_First + 1;
                 for (int i = 0; i < numReserved; ++i)
                 {
                     size_t length = strlen(tokenName[i]);
                     if (length == bufferLength && strncmp(buffer, tokenName[i], bufferLength) == 0)
                     {
-                        lexer->token = Token_And + i;
+                        lexer->token.type = TokenType_And + i;
                         return;
                     }
                 }
 
-                lexer->string = String_Create(lexer->L, buffer, bufferLength);
-                lexer->token = Token_Name;
+                lexer->token.string = String_Create(lexer->L, buffer, bufferLength);
+                lexer->token.type = TokenType_Name;
 
             }
             return;
         }
     }
 
+}
+
+int Lexer_GetTokenType(Lexer* lexer)
+{
+    return lexer->token.type;
 }

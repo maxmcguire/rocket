@@ -116,7 +116,22 @@ void Parser_Error(Parser* parser, const char* fmt, ...);
 
 bool Parser_Accept(Parser* parser, int token);
  
+/** Expects the next token to be a specific token. If it's not the token, an
+error is generated. */
 bool Parser_Expect(Parser* parser, int token);
+
+/** Expects the next token to be one of two tokens. If the token isn't one of
+the tokens, an error is generated. */
+bool Parser_Expect(Parser* parser, int token1, int token2);
+
+/** Returns the type of the current token. */
+int Parser_GetToken(Parser* parser);
+
+/** Returns the string for a name or string token. */
+String* Parser_GetString(Parser* parser);
+
+/** Returns the value for a number token. */
+lua_Number Parser_GetNumber(Parser* parser);
 
 int Parser_AddFunction(Parser* parser, Function* function);
 

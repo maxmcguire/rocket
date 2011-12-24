@@ -228,10 +228,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\Main.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\src\MathLib.cpp"
 				>
 			</File>
@@ -349,6 +345,10 @@
 		<Filter
 			Name="Tests"
 			>
+			<File
+				RelativePath=".\src\Main.cpp"
+				>
+			</File>
 			<File
 				RelativePath=".\src\Test.cpp"
 				>

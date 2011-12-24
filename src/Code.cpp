@@ -123,12 +123,12 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
     Opcode opcode;
     int    value;
 
-    if (op == Token_Eq)
+    if (op == TokenType_Eq)
     {
         opcode = Opcode_Eq;
         value  = 0;
     }
-    else if (op == Token_Ne)
+    else if (op == TokenType_Ne)
     {
         opcode = Opcode_Eq;
         value  = 1;
@@ -138,7 +138,7 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         opcode = Opcode_Lt;
         value = 0;
     }
-    else if (op == Token_Le)
+    else if (op == TokenType_Le)
     {
         opcode = Opcode_Le;
         value = 0;
@@ -148,7 +148,7 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         opcode = Opcode_Le;
         value = 1;
     }
-    else if (op == Token_Ge)
+    else if (op == TokenType_Ge)
     {
         opcode = Opcode_Lt;
         value = 1;
@@ -240,9 +240,9 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
         {
             Parser_Expect(parser, ',');
         }
-        Parser_Expect(parser, Token_Name);
+        Parser_Expect(parser, TokenType_Name);
         // Add the parameter as a local, since they have the same semantics.
-        Parser_AddLocal( &p, parser->lexer->string );
+        Parser_AddLocal( &p, Parser_GetString(parser) );
         ++p.function->numParams;
     }
 
@@ -252,7 +252,7 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
     }
 
     // Parse the body.
-    Parser_Block(&p, Token_End);
+    Parser_Block(&p, TokenType_End);
     Parser_EmitAB(&p, Opcode_Return, 0, 1);
 
     // Store in the result parent function.
@@ -263,9 +263,9 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
 
 static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
 {
-    if (Parser_Accept(parser, Token_Name))
+    if (Parser_Accept(parser, TokenType_Name))
     {
-        int index = Parser_GetLocalIndex(parser, parser->lexer->string);
+        int index = Parser_GetLocalIndex( parser, Parser_GetString(parser) );
         if (index != -1)
         {
             dst->type  = EXPRESSION_LOCAL;
@@ -274,7 +274,7 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
         else
         {
             // Check if this is an up value.
-            index = Parser_AddUpValue(parser, parser->lexer->string);
+            index = Parser_AddUpValue( parser, Parser_GetString(parser) );
             if (index != -1)
             {
                 dst->type  = EXPRESSION_UPVALUE;
@@ -283,31 +283,31 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
             else
             {
                 dst->type  = EXPRESSION_GLOBAL;
-                dst->index = Parser_AddConstant(parser, parser->lexer->string);
+                dst->index = Parser_AddConstant( parser, Parser_GetString(parser) );
             }
         }
     }
-    else if (Parser_Accept(parser, Token_String))
+    else if (Parser_Accept(parser, TokenType_String))
     {
         dst->type  = EXPRESSION_CONSTANT;
-        dst->index = Parser_AddConstant(parser, parser->lexer->string);
+        dst->index = Parser_AddConstant( parser, Parser_GetString(parser) );
     }    
-    else if (Parser_Accept(parser, Token_Number))
+    else if (Parser_Accept(parser, TokenType_Number))
     {
         dst->type   = EXPRESSION_NUMBER;
-        dst->number = parser->lexer->number;
+        dst->number = Parser_GetNumber(parser);
     }
-    else if (Parser_Accept(parser, Token_True) ||
-             Parser_Accept(parser, Token_False))
+    else if (Parser_Accept(parser, TokenType_True) ||
+             Parser_Accept(parser, TokenType_False))
     {
         dst->type  = EXPRESSION_BOOLEAN;
-        dst->index = (parser->lexer->token == Token_True) ? 1 : 0;
+        dst->index = (Parser_GetToken(parser) == TokenType_True) ? 1 : 0;
     }
-    else if (Parser_Accept(parser, Token_Nil))
+    else if (Parser_Accept(parser, TokenType_Nil))
     {
         dst->type = EXPRESSION_NIL;
     }
-    else if (Parser_Accept(parser, Token_Function))
+    else if (Parser_Accept(parser, TokenType_Function))
     {
         Parser_Function(parser, dst, false);
     }
@@ -323,8 +323,43 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
         Parser_SelectDstRegister(parser, dst, regHint);
         Parser_EmitABC(parser, Opcode_NewTable, dst->index, 0, 0);
 
-        // TODO: Handle arguments.
-        Parser_Expect(parser, '}');
+        int num = 0;
+        while (!Parser_Accept(parser, '}'))
+        {
+            if (num > 0)
+            {
+                Parser_Expect(parser, ',', ';');
+            }
+            if (Parser_Accept(parser, '['))
+            {
+                Expression key;
+                Parser_Expression0(parser, &key, -1);
+                Parser_Expect(parser, '=');
+
+                Expression value;
+                Parser_Expression0(parser, &value, -1);
+                Parser_Expect(parser, ']');
+            }
+            else
+            {
+                int a = 0;
+                /*
+                if (Parser_Accept(parser, TokenType_Name))
+                {
+                    if (!Parser_Accept(parser, '='))
+                    {
+                        Parser_UngetToken(parser);
+                        Expression exp;
+                        Parser_Expression0(parser, &exp, -1);
+                    }
+                    else
+                    {
+                    }
+                }
+                */
+            }
+            ++num;
+        }
 
     }
     else
@@ -343,7 +378,7 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
            Parser_Accept(parser, '['))
     {
 
-        int op = parser->lexer->token;
+        int op = Parser_GetToken(parser);
 
         if (op == '(')
         {
@@ -358,13 +393,13 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
 
             // Handle table indexing (object form).
             
-            Parser_Expect(parser, Token_Name);
+            Parser_Expect(parser, TokenType_Name);
 
             Parser_MoveToRegister(parser, dst, regHint);
             dst->type = EXPRESSION_TABLE;
 
             dst->keyType = EXPRESSION_CONSTANT;
-            dst->key     = Parser_AddConstant(parser, parser->lexer->string);
+            dst->key     = Parser_AddConstant( parser, Parser_GetString(parser) );
 
         }
         else if (op == '[')
@@ -408,11 +443,11 @@ static void Parser_ExpressionMethod(Parser* parser, Expression* dst, int regHint
     if (Parser_Accept(parser, ':'))
     {
 
-        Parser_Expect(parser, Token_Name);
+        Parser_Expect(parser, TokenType_Name);
         Parser_MoveToRegister(parser, dst, -1);
 
         int reg     = Parser_AllocateRegister(parser);
-        int method  = Parser_AddConstant(parser, parser->lexer->string);
+        int method  = Parser_AddConstant (parser, Parser_GetString(parser) );
 
         // TODO: Handle string/table only arguments.
 
@@ -435,7 +470,7 @@ static void Parser_ExpressionMethod(Parser* parser, Expression* dst, int regHint
 
 static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
 {
-    if (Parser_Accept(parser, Token_Not))
+    if (Parser_Accept(parser, TokenType_Not))
     {
         Parser_ExpressionMethod(parser, dst, regHint);
         Parser_MoveToRegister(parser, dst, regHint);
@@ -453,7 +488,7 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
 	while (Parser_Accept(parser, '*') ||
            Parser_Accept(parser, '/'))
 	{
-		int op = parser->lexer->token;
+		int op = Parser_GetToken(parser);
 
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
@@ -470,7 +505,7 @@ static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
 	while (Parser_Accept(parser, '+') ||
            Parser_Accept(parser, '-'))
 	{
-		int op = parser->lexer->token;
+		int op = Parser_GetToken(parser);
 
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
@@ -484,14 +519,14 @@ static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
 static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
 {
     Parser_Expression2(parser, dst, regHint);
-    while ( Parser_Accept(parser, Token_Eq) ||
-            Parser_Accept(parser, Token_Ne) ||
-            Parser_Accept(parser, Token_Le) ||
-            Parser_Accept(parser, Token_Ge) ||
+    while ( Parser_Accept(parser, TokenType_Eq) ||
+            Parser_Accept(parser, TokenType_Ne) ||
+            Parser_Accept(parser, TokenType_Le) ||
+            Parser_Accept(parser, TokenType_Ge) ||
             Parser_Accept(parser, '<') || 
             Parser_Accept(parser, '>'))
     {
-        int op = parser->lexer->token;
+        int op = Parser_GetToken(parser);
 
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
@@ -507,13 +542,13 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
 
     Parser_Expression1(parser, dst, regHint);
 
-    while ( Parser_Accept(parser, Token_And) ||
-            Parser_Accept(parser, Token_Or) )
+    while ( Parser_Accept(parser, TokenType_And) ||
+            Parser_Accept(parser, TokenType_Or) )
     {
         
-        int op = parser->lexer->token;
+        int op = Parser_GetToken(parser);
 
-        int cond = op == Token_Or ? 1 : 0;
+        int cond = op == TokenType_Or ? 1 : 0;
 
         if (regHint == -1)
         {
@@ -549,14 +584,14 @@ static void Parser_Expression0(Parser* parser, Expression* dst, int regHint)
     
     Parser_ExpressionLogic(parser, dst, regHint);
 
-    if (Parser_Accept(parser, Token_Concat))
+    if (Parser_Accept(parser, TokenType_Concat))
     {
 
         Parser_MoveToStackTop(parser, dst);
         int start = dst->index;
         int numOperands = 0;
 
-        while (Parser_Accept(parser, Token_Concat))
+        while (Parser_Accept(parser, TokenType_Concat))
         {
 		    
             int reg = Parser_AllocateRegister(parser);
@@ -615,30 +650,30 @@ static void Parser_EmitSet(Parser* parser, Expression* dst, Expression* value)
 static bool Parser_TryIf(Parser* parser)
 {
 
-    if (Parser_Accept(parser, Token_If))
+    if (Parser_Accept(parser, TokenType_If))
     {
         // Parse the condition to test for the if statement.
         Expression test;
         Parser_Expression0(parser, &test, -1);
 
-        Parser_Expect(parser, Token_Then);
+        Parser_Expect(parser, TokenType_Then);
 
         // TODO: Peform "constant folding" for the test.
         Parser_ConvertToTest(parser, &test);
         Parser_BeginBlock(parser);
 
         // Parse the "if" part of the conditional.
-        while (!Parser_Accept(parser, Token_End) &&
-               !Parser_Accept(parser, Token_Else))
+        while (!Parser_Accept(parser, TokenType_End) &&
+               !Parser_Accept(parser, TokenType_Else))
         {
             Parser_Statement(parser);
         }
 
         Parser_EndBlock(parser);
 
-        int type = parser->lexer->token;
+        int type = Parser_GetToken(parser);
 
-        if (type == Token_Else)
+        if (type == TokenType_Else)
         {
 
             int elseJump;
@@ -647,7 +682,7 @@ static bool Parser_TryIf(Parser* parser)
             Parser_CloseTest(parser, &test);
 
             // Parse the "else" part of the conditional.
-            while (!Parser_Accept(parser, Token_End))
+            while (!Parser_Accept(parser, TokenType_End))
             {
                 Parser_Statement(parser);
             }
@@ -671,7 +706,7 @@ static bool Parser_TryIf(Parser* parser)
 
 static bool Parser_TryReturn(Parser* parser)
 {
-    if (Parser_Accept(parser, Token_Return))
+    if (Parser_Accept(parser, TokenType_Return))
     {
         
         int numResults = 0;
@@ -679,9 +714,9 @@ static bool Parser_TryReturn(Parser* parser)
 
         Expression arg;
 
-        while (!Parser_Accept(parser, Token_End) &&
-               !Parser_Accept(parser, Token_Else) &&
-               !Parser_Accept(parser, Token_ElseIf))
+        while (!Parser_Accept(parser, TokenType_End) &&
+               !Parser_Accept(parser, TokenType_Else) &&
+               !Parser_Accept(parser, TokenType_ElseIf))
         {
 
             if (numResults == 0)
@@ -736,12 +771,12 @@ static bool Parser_TryReturn(Parser* parser)
 static bool Parser_TryFunction(Parser* parser, bool local)
 {
 
-    if (!Parser_Accept(parser, Token_Function))
+    if (!Parser_Accept(parser, TokenType_Function))
     {
         return false;
     }
         
-    Parser_Expect(parser, Token_Name);
+    Parser_Expect(parser, TokenType_Name);
 
     Expression dst;
 
@@ -750,12 +785,12 @@ static bool Parser_TryFunction(Parser* parser, bool local)
 
     if (local)
     {
-        dst.index = Parser_AddLocal(parser, parser->lexer->string);
+        dst.index = Parser_AddLocal( parser, Parser_GetString(parser)  );
         dst.type  = EXPRESSION_LOCAL;
     }
     else
     {
-        dst.index = Parser_AddConstant(parser, parser->lexer->string);
+        dst.index = Parser_AddConstant( parser, Parser_GetString(parser) );
         dst.type  = EXPRESSION_GLOBAL;
 
         // Check if we are of the form function A.B.C:D()
@@ -763,15 +798,15 @@ static bool Parser_TryFunction(Parser* parser, bool local)
                Parser_Accept(parser, ':'))
         {
 
-            int token = parser->lexer->token;
+            int token = Parser_GetToken(parser);
 
-            Parser_Expect(parser, Token_Name);
+            Parser_Expect(parser, TokenType_Name);
 
             Parser_MoveToRegister(parser, &dst);
             dst.type = EXPRESSION_TABLE;
 
             dst.keyType = EXPRESSION_CONSTANT;
-            dst.key     = Parser_AddConstant(parser, parser->lexer->string);
+            dst.key     = Parser_AddConstant( parser, Parser_GetString(parser) );
 
             if (token == ':')
             {
@@ -797,7 +832,7 @@ static bool Parser_TryFunction(Parser* parser, bool local)
 static bool Parser_TryLocal(Parser* parser)
 {
     
-    if (!Parser_Accept(parser, Token_Local))
+    if (!Parser_Accept(parser, TokenType_Local))
     {
         return false;
     }
@@ -807,25 +842,16 @@ static bool Parser_TryLocal(Parser* parser)
         return true;
     }
 
-    Parser_Expect(parser, Token_Name);
+    Parser_Expect(parser, TokenType_Name);
 
-    char name[LUA_MAXNAME];
-    strcpy( name, String_GetData(parser->lexer->string) );
+    int local = Parser_AddLocal(parser, Parser_GetString(parser));
     
     if (Parser_Accept(parser, '='))
     {
-    
         Expression dst;
-        Parser_Expression0(parser, &dst, -1);
-        
-        int local = Parser_AddLocal(parser, String_Create(parser->L, name));
+        Parser_Expression0(parser, &dst, local);
         Parser_MoveToRegister(parser, &dst, local);
         dst.type = EXPRESSION_LOCAL;
-
-    }
-    else
-    {
-        Parser_AddLocal(parser, String_Create(parser->L, name));
     }
 
     return true;
@@ -835,13 +861,13 @@ static bool Parser_TryLocal(Parser* parser)
 static bool Parser_TryDo(Parser* parser)
 {
 
-    if (!Parser_Accept(parser, Token_Do))
+    if (!Parser_Accept(parser, TokenType_Do))
     {
         return false;
     }
 
     Parser_BeginBlock(parser);
-    Parser_Block(parser, Token_End);
+    Parser_Block(parser, TokenType_End);
     Parser_EndBlock(parser);
 
     return true;
@@ -851,7 +877,7 @@ static bool Parser_TryDo(Parser* parser)
 static bool Parser_TryWhile(Parser* parser)
 {
 
-    if (!Parser_Accept(parser, Token_While))
+    if (!Parser_Accept(parser, TokenType_While))
     {
         return false;
     }
@@ -862,12 +888,12 @@ static bool Parser_TryWhile(Parser* parser)
     Expression test;
     Parser_Expression0(parser, &test, -1);
 
-    Parser_Expect(parser, Token_Do);
+    Parser_Expect(parser, TokenType_Do);
 
     Parser_ConvertToTest(parser, &test);
 
     Parser_BeginBlock(parser);
-    Parser_Block(parser, Token_End);
+    Parser_Block(parser, TokenType_End);
     Parser_EndBlock(parser);
     Parser_EndLoop(parser, &loop);
 
@@ -887,12 +913,12 @@ static void Parser_ExpressionList(Parser* parser, int reg, int num)
 static bool Parser_TryFor(Parser* parser)
 {
 
-    if (!Parser_Accept(parser, Token_For))
+    if (!Parser_Accept(parser, TokenType_For))
     {
         return false;
     }
 
-    Parser_Expect(parser, Token_Name);
+    Parser_Expect(parser, TokenType_Name);
 
     Parser_BeginBlock(parser);
 
@@ -901,7 +927,7 @@ static bool Parser_TryFor(Parser* parser)
     int limitReg         = Parser_AllocateRegister(parser);
     int incrementReg     = Parser_AllocateRegister(parser);
 
-    int externalIndexReg = Parser_AddLocal(parser, parser->lexer->string);
+    int externalIndexReg = Parser_AddLocal( parser, Parser_GetString(parser) );
 
     if (Parser_Accept(parser, '='))
     {
@@ -930,7 +956,7 @@ static bool Parser_TryFor(Parser* parser)
             increment.number = 1.0f;
         }
 
-        Parser_Expect(parser, Token_Do);
+        Parser_Expect(parser, TokenType_Do);
 
         Parser_MoveToRegister(parser, &start, internalIndexReg);
         Parser_MoveToRegister(parser, &limit, limitReg);
@@ -940,7 +966,7 @@ static bool Parser_TryFor(Parser* parser)
         // amount until after we parse the body.
         int loop = Parser_EmitInstruction(parser, 0);
 
-        Parser_Block(parser, Token_End);
+        Parser_Block(parser, TokenType_End);
 
         // Close the loop and update the forprep instruction with the correct
         // skip amount.
@@ -958,20 +984,20 @@ static bool Parser_TryFor(Parser* parser)
 
         if (Parser_Accept(parser, ','))
         {
-            Parser_Expect(parser, Token_Name);
-            Parser_AddLocal(parser, parser->lexer->string);
+            Parser_Expect(parser, TokenType_Name);
+            Parser_AddLocal( parser, Parser_GetString(parser) );
             ++numArgs;
         }
 
-        Parser_Expect(parser, Token_In);
+        Parser_Expect(parser, TokenType_In);
         Parser_ExpressionList(parser, internalIndexReg, 3);
-        Parser_Expect(parser, Token_Do);
+        Parser_Expect(parser, TokenType_Do);
 
         // Reserve space for the jmp instruction since we don't know the skip
         // amount until after we parse the body.
         int loop = Parser_EmitInstruction(parser, 0);
         
-        Parser_Block(parser, Token_End);
+        Parser_Block(parser, TokenType_End);
 
         // Close the loop and update the forprep instruction with the correct
         // skip amount.
@@ -1027,6 +1053,11 @@ static void Parser_Statement(Parser* parser)
     Parser_Expression0(parser, &dst, -1);
     Parser_ResolveCall(parser, &dst, 0);
 
+    if (Parser_Accept(parser, ','))
+    {
+        int a = 0;
+    }
+
     // Handle assignment.
     while (Parser_Accept(parser, '='))
     {
@@ -1052,7 +1083,7 @@ static void Parser_Statement(Parser* parser)
 
 /**
  * endToken specifies the token which is expected to close the block (typically
- * Token_EndOfStream or Token_End.
+ * TokenType_EndOfStream or TokenType_End.
  */
 void Parser_Block(Parser* parser, int endToken)
 {
@@ -1072,7 +1103,7 @@ Prototype* Parse(lua_State* L, Input* input, const char* name)
     Parser parser;
     Parser_Initialize(&parser, L, &lexer, NULL);
 
-    Parser_Block(&parser, Token_EndOfStream);
+    Parser_Block(&parser, TokenType_EndOfStream);
     Parser_EmitAB(&parser, Opcode_Return, 0, 1);
 
     String* source = String_Create(L, name);

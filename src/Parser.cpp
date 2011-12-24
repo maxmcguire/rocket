@@ -76,7 +76,7 @@ bool Parser_Accept(Parser* parser, int token)
     {
         Lexer_NextToken(parser->lexer);
     }
-    if (parser->lexer->token == token)
+    if (Lexer_GetTokenType(parser->lexer) == token)
     {
         parser->lexer->haveToken = false;
         return true;
@@ -87,6 +87,17 @@ bool Parser_Accept(Parser* parser, int token)
 bool Parser_Expect(Parser* parser, int token)
 {
     if (Parser_Accept(parser, token))
+    {
+        return true;
+    }
+    Parser_Error(parser, "unexpected token");
+    return false;
+}
+
+bool Parser_Expect(Parser* parser, int token1, int token2)
+{
+    if (Parser_Accept(parser, token1) ||
+        Parser_Accept(parser, token2))
     {
         return true;
     }
@@ -857,4 +868,22 @@ void Parser_EndBlock(Parser* parser)
 {
     --parser->numBlocks;
     parser->function->numLocals = parser->block[parser->numBlocks].restoreNumLocals;
+}
+
+int Parser_GetToken(Parser* parser)
+{
+    return parser->lexer->token.type;
+}
+
+String* Parser_GetString(Parser* parser)
+{
+    assert( parser->lexer->token.type == TokenType_Name ||
+            parser->lexer->token.type == TokenType_String );
+    return parser->lexer->token.string;
+}
+
+lua_Number Parser_GetNumber(Parser* parser)
+{
+    assert( parser->lexer->token.type == TokenType_Number );
+    return parser->lexer->token.number;
 }

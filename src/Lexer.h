@@ -14,44 +14,51 @@ struct String;
 // In addition to these token values, single character values are also
 // used as tokens. The order of these is significant and must match the
 // order of reserved words inside Lexer_NextToken.
-enum Token
+enum TokenType
 {
     // Reserved words.
-    Token_First     = 256,
-    Token_And       = Token_First,
-    Token_Break,
-    Token_Do,
-    Token_Else,
-    Token_ElseIf,
-    Token_End,
-    Token_False,
-    Token_For,
-    Token_Function,
-    Token_If,
-    Token_In,
-    Token_Local,
-    Token_Nil,
-    Token_Not,
-    Token_Or,
-    Token_Repeat,
-    Token_Return,
-    Token_Then,
-    Token_True,
-    Token_Until,
-    Token_While,
+    TokenType_First     = 256,
+    TokenType_And       = TokenType_First,
+    TokenType_Break,
+    TokenType_Do,
+    TokenType_Else,
+    TokenType_ElseIf,
+    TokenType_End,
+    TokenType_False,
+    TokenType_For,
+    TokenType_Function,
+    TokenType_If,
+    TokenType_In,
+    TokenType_Local,
+    TokenType_Nil,
+    TokenType_Not,
+    TokenType_Or,
+    TokenType_Repeat,
+    TokenType_Return,
+    TokenType_Then,
+    TokenType_True,
+    TokenType_Until,
+    TokenType_While,
     // Symbols.
-    Token_LastReserved  = Token_While,
-    Token_Concat,
-    Token_Dots,
-    Token_Eq,
-    Token_Ge,
-    Token_Le,
-    Token_Ne,
+    TokenType_LastReserved  = TokenType_While,
+    TokenType_Concat,
+    TokenType_Dots,
+    TokenType_Eq,
+    TokenType_Ge,
+    TokenType_Le,
+    TokenType_Ne,
     // Specials.
-    Token_Number,
-    Token_Name,
-    Token_String,
-    Token_EndOfStream,
+    TokenType_Number,
+    TokenType_Name,
+    TokenType_String,
+    TokenType_EndOfStream,
+};
+
+struct Token
+{
+    int         type;
+    String*     string;
+    lua_Number  number;
 };
 
 struct Lexer
@@ -59,15 +66,15 @@ struct Lexer
     lua_State*  L;
     Input*      input;
     int         lineNumber;
-    int         token;
-    String*     string;
-    lua_Number  number;
+    Token       token;
     bool        haveToken;
 };
 
-const char* Token_GetString(Token token);
+const char* Token_GetString(TokenType token);
 
 void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input);
 void Lexer_NextToken(Lexer* lexer);
+
+int Lexer_GetTokenType(Lexer* lexer);
 
 #endif
