@@ -12,7 +12,7 @@ extern "C" void clear();
 int main(int argc, char* argv[])
 {
 
-    Test_RunTests("TableConstructor1");
+    Test_RunTests("TableConstructor*");
 
     /*
     lua_State* L = luaL_newstate();

@@ -391,10 +391,10 @@ TEST(MultipleAssignment)
 
 }
 
-TEST(TableConstructor1)
+TEST(TableConstructor)
 {
     const char* code =
-        "t = { 'one', 'two' }";
+        "t = { 'one', three = 3, 'two', [2 + 2] = 'four', 1 * 3 }";
 
     lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
@@ -410,23 +410,17 @@ TEST(TableConstructor1)
     CHECK( strcmp(lua_tostring(L, -1), "two") == 0 );
     lua_pop(L, 1);
 
-    lua_close(L);
+    lua_getfield(L, -1, "three");
+    CHECK( lua_tonumber(L, -1) == 3.0 );
+    lua_pop(L, 1);
 
-}
+    lua_rawgeti(L, -1, 4);
+    CHECK( strcmp(lua_tostring(L, -1), "four") == 0 );
+    lua_pop(L, 1);
 
-TEST(TableConstructor2)
-{
-    const char* code =
-        "t = { first = 1 }";
-
-    lua_State* L = luaL_newstate();
-    CHECK( DoString(L, code) );
-
-    lua_getglobal(L, "t");
-    CHECK( lua_istable(L, -1) == 1 );
-
-    lua_getfield(L, -1, "first");
-    CHECK( lua_tonumber(L, -1) == 1.0 );
+    lua_rawgeti(L, -1, 3);
+    CHECK( lua_tonumber(L, -1) == 3.0 );
+    lua_pop(L, 1);
 
     lua_close(L);
 

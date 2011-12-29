@@ -261,8 +261,127 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
 
 }
 
+static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
+{
+
+    if (!Parser_Accept(parser, '{'))
+    {
+        return false;
+    }
+    
+    // Table constructor.
+
+    Parser_SelectDstRegister(parser, dst, regHint);
+    int start = Parser_GetInstructionCount(parser);
+    Parser_EmitInstruction(parser, 0);
+
+    int listReg = Parser_AllocateRegister(parser);
+    int listSize = 0;
+    int hashSize = 0;
+
+    int num = 0;
+
+    while (!Parser_Accept(parser, '}'))
+    {
+        if (num > 0)
+        {
+            Parser_Expect(parser, ',', ';');
+        }
+        if (Parser_Accept(parser, '['))
+        {
+
+            // Handle the form: [x] = y
+            
+            Expression key;
+            Parser_Expression0(parser, &key, -1);
+            Parser_MoveToRegisterOrConstant(parser, &key);
+            Parser_Expect(parser, ']');
+
+            Parser_Expect(parser, '=');
+
+            Expression value;
+            Parser_Expression0(parser, &value, -1);
+            Parser_MoveToRegisterOrConstant(parser, &value);
+
+            Parser_EmitABC(parser, Opcode_SetTable, dst->index,
+                Parser_EncodeRK(key.index, key.type),
+                Parser_EncodeRK(value.index, value.type));
+
+            ++hashSize;
+
+        }
+        else
+        {
+
+            bool accepted = false;
+
+            if (Parser_Accept(parser, TokenType_Name))
+            {
+
+                Token token;
+                Lexer_CaptureToken(parser->lexer, &token);
+
+                int key = Parser_AddConstant(parser, Parser_GetString(parser));
+
+                if (Parser_Accept(parser, '='))
+                {
+
+                    // Handle the form: x = y
+
+                    Expression value;
+                    Parser_Expression0(parser, &value, -1);
+
+                    Parser_MoveToRegisterOrConstant(parser, &value);
+                    Parser_EmitABC(parser, Opcode_SetTable, dst->index,
+                        Parser_EncodeRK(key, EXPRESSION_CONSTANT),
+                        Parser_EncodeRK(parser, &value));
+
+                    accepted = true;
+                    ++hashSize;
+
+                }
+                else
+                {
+                    Lexer_RestoreTokens(parser->lexer, &token, 1);
+                }
+
+            }
+
+            if (!accepted)
+            {
+                Expression exp;
+                Parser_Expression0(parser, &exp, listReg + listSize);
+                Parser_MoveToRegister(parser, &exp, listReg + listSize);
+                ++listSize;
+            }
+
+        }
+        ++num;
+        Parser_SetLastRegister(parser, listReg);
+
+    }
+    
+    Instruction inst = Parser_EncodeABC(Opcode_NewTable, dst->index, listSize, hashSize);
+    Parser_UpdateInstruction( parser, start, inst );
+
+    if (listSize > 0)
+    {
+        Parser_EmitABC(parser, Opcode_SetList,  dst->index, listSize, 1);
+    }
+
+    return true;
+
+}
+
+
 static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
 {
+
+    if (Parser_TryTable(parser, dst, regHint))
+    {
+        return;
+    }
+
     if (Parser_Accept(parser, TokenType_Name))
     {
         int index = Parser_GetLocalIndex( parser, Parser_GetString(parser) );
@@ -316,75 +435,6 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
 		Parser_Expression0(parser, dst, regHint);
 		Parser_Expect(parser, ')');
 	}
-    else if (Parser_Accept(parser, '{'))
-    {
-        
-        // Table constructor.
-        Parser_SelectDstRegister(parser, dst, regHint);
-        Parser_EmitABC(parser, Opcode_NewTable, dst->index, 0, 0);
-
-        int listReg = Parser_AllocateRegister(parser);
-        int listSize = 0;
-
-        int num = 0;
-
-        while (!Parser_Accept(parser, '}'))
-        {
-            if (num > 0)
-            {
-                Parser_Expect(parser, ',', ';');
-            }
-            if (Parser_Accept(parser, '['))
-            {
-                Expression key;
-                Parser_Expression0(parser, &key, -1);
-                Parser_Expect(parser, '=');
-
-                Expression value;
-                Parser_Expression0(parser, &value, -1);
-                Parser_Expect(parser, ']');
-            }
-            else
-            {
-
-                bool accepted = false;
-
-                if (Parser_Accept(parser, TokenType_Name))
-                {
-                    Token token;
-                    Lexer_CaptureToken(parser->lexer, &token);
-                    if (Parser_Accept(parser, '='))
-                    {
-                        Expression exp;
-                        Parser_Expression0(parser, &exp, -1);
-                        accepted = true;
-                    }
-                    else
-                    {
-                        Lexer_RestoreTokens(parser->lexer, &token, 1);
-                    }
-                }
-
-                if (!accepted)
-                {
-                    Expression exp;
-                    Parser_Expression0(parser, &exp, listReg + listSize);
-                    Parser_MoveToRegister(parser, &exp, listReg + listSize);
-                    ++listSize;
-                }
-
-            }
-            ++num;
-            Parser_SetLastRegister(parser, listReg);
-
-        }
-
-        if (listSize > 0)
-        {
-            Parser_EmitABC(parser, Opcode_SetList,  dst->index, listSize, 1);
-        }
-
-    }
     else
     {
         Parser_Error(parser, "expected variable or constant");
