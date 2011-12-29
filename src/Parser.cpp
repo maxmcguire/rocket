@@ -72,10 +72,7 @@ void Parser_Error(Parser* parser, const char* fmt, ...)
 
 bool Parser_Accept(Parser* parser, int token)
 {
-    if (!parser->lexer->haveToken)
-    {
-        Lexer_NextToken(parser->lexer);
-    }
+    Lexer_NextToken(parser->lexer);
     if (Lexer_GetTokenType(parser->lexer) == token)
     {
         parser->lexer->haveToken = false;

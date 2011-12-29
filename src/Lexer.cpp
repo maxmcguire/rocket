@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 static const char* tokenName[] =
     {
@@ -51,11 +52,12 @@ static const char* tokenName[] =
 
 void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input)
 {
-    lexer->L            = L;
-    lexer->input        = input;
-    lexer->lineNumber   = 1;
-    lexer->token.string = NULL;
-    lexer->haveToken    = false;
+    lexer->L                = L;
+    lexer->input            = input;
+    lexer->lineNumber       = 1;
+    lexer->token.string     = NULL;
+    lexer->haveToken        = false;
+    lexer->numRestoreTokens = 0;
     Lexer_NextToken(lexer);
 }
 
@@ -92,6 +94,19 @@ const char* Token_GetString(TokenType token)
 
 void Lexer_NextToken(Lexer* lexer)
 {
+
+    if (lexer->haveToken)
+    {
+        return;
+    }
+
+    if (lexer->numRestoreTokens > 0)
+    {
+        --lexer->numRestoreTokens;
+        lexer->token     = lexer->restoreToken[lexer->numRestoreTokens];
+        lexer->haveToken = true;
+        return;
+    }
 
     lexer->haveToken = true;
 
@@ -297,4 +312,28 @@ void Lexer_NextToken(Lexer* lexer)
 int Lexer_GetTokenType(Lexer* lexer)
 {
     return lexer->token.type;
+}
+
+void Lexer_CaptureToken(Lexer* lexer, Token* token)
+{
+    *token = lexer->token;
+}
+
+void Lexer_RestoreTokens(Lexer* lexer, const Token token[], int numTokens)
+{
+
+    // If we have a token queued we need to store that as well since otherwise
+    // it will be lost.
+    if (lexer->haveToken)
+    {
+        assert( lexer->numRestoreTokens + 1 <= Lexer_maxRestoreTokens );
+        lexer->restoreToken[ lexer->numRestoreTokens ] = lexer->token;
+        ++lexer->numRestoreTokens;
+        lexer->haveToken = false;
+    }
+
+    assert( lexer->numRestoreTokens + numTokens <= Lexer_maxRestoreTokens );
+    memcpy( lexer->restoreToken + lexer->numRestoreTokens, token, numTokens * sizeof(Token) );
+    lexer->numRestoreTokens += numTokens;    
+
 }

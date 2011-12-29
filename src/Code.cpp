@@ -323,7 +323,11 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
         Parser_SelectDstRegister(parser, dst, regHint);
         Parser_EmitABC(parser, Opcode_NewTable, dst->index, 0, 0);
 
+        int listReg = Parser_AllocateRegister(parser);
+        int listSize = 0;
+
         int num = 0;
+
         while (!Parser_Accept(parser, '}'))
         {
             if (num > 0)
@@ -342,23 +346,42 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
             }
             else
             {
-                int a = 0;
-                /*
+
+                bool accepted = false;
+
                 if (Parser_Accept(parser, TokenType_Name))
                 {
-                    if (!Parser_Accept(parser, '='))
+                    Token token;
+                    Lexer_CaptureToken(parser->lexer, &token);
+                    if (Parser_Accept(parser, '='))
                     {
-                        Parser_UngetToken(parser);
                         Expression exp;
                         Parser_Expression0(parser, &exp, -1);
+                        accepted = true;
                     }
                     else
                     {
+                        Lexer_RestoreTokens(parser->lexer, &token, 1);
                     }
                 }
-                */
+
+                if (!accepted)
+                {
+                    Expression exp;
+                    Parser_Expression0(parser, &exp, listReg + listSize);
+                    Parser_MoveToRegister(parser, &exp, listReg + listSize);
+                    ++listSize;
+                }
+
             }
             ++num;
+            Parser_SetLastRegister(parser, listReg);
+
+        }
+
+        if (listSize > 0)
+        {
+            Parser_EmitABC(parser, Opcode_SetList,  dst->index, listSize, 1);
         }
 
     }
