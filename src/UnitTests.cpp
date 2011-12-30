@@ -764,3 +764,22 @@ TEST(LengthOperator)
     lua_close(L);
 
 }
+
+TEST(ConcatOperator)
+{
+
+    const char* code =
+        "s = 'a' .. 'b' .. 'c'";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "s");
+    const char* s = lua_tostring(L, -1);
+
+    CHECK( s != NULL );
+    CHECK( strcmp(s, "abc") == 0 );
+
+    lua_close(L);
+
+}

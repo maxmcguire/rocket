@@ -664,7 +664,7 @@ static void Parser_Expression0(Parser* parser, Expression* dst, int regHint)
         int start = dst->index;
         int numOperands = 0;
 
-        while (Parser_Accept(parser, TokenType_Concat))
+        do
         {
 		    
             int reg = Parser_AllocateRegister(parser);
@@ -680,6 +680,7 @@ static void Parser_Expression0(Parser* parser, Expression* dst, int regHint)
             ++numOperands;
 
         }
+        while (Parser_Accept(parser, TokenType_Concat));
 
         Parser_EmitABC(parser, Opcode_Concat, dst->index,
             start, start + numOperands);
