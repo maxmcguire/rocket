@@ -102,6 +102,11 @@ bool Parser_Expect(Parser* parser, int token1, int token2)
     return false;
 }
 
+void Parser_Unaccept(Parser* parser)
+{
+    parser->lexer->haveToken = true;    
+}
+
 /**
  * Searches an array of strings for a name and returns its index (or -1 if it's
  * not in the array).

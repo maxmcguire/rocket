@@ -394,7 +394,7 @@ TEST(MultipleAssignment)
 TEST(TableConstructor)
 {
     const char* code =
-        "t = { 'one', three = 3, 'two', [2 + 2] = 'four', 1 * 3 }";
+        "t = { 'one', three = 3, 'two', [2 + 2] = 'four', (function () return 3 end)() }";
 
     lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
@@ -422,6 +422,25 @@ TEST(TableConstructor)
     CHECK( lua_tonumber(L, -1) == 3.0 );
     lua_pop(L, 1);
 
+    lua_close(L);
+
+}
+
+TEST(Return)
+{
+
+    const char* code =
+        "function Foo()\n"
+        "  return 5\n"
+        "end\n"
+        "v = Foo()";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "v");
+    CHECK( lua_tonumber(L, -1) == 5.0 );
+    
     lua_close(L);
 
 }

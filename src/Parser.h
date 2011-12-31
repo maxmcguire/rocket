@@ -124,6 +124,10 @@ bool Parser_Expect(Parser* parser, int token);
 the tokens, an error is generated. */
 bool Parser_Expect(Parser* parser, int token1, int token2);
 
+/** Puts the current token back so that the next call to Parser_Accept or
+Parser_Expect will process it again. */
+void Parser_Unaccept(Parser* parser);
+
 /** Returns the type of the current token. */
 int Parser_GetToken(Parser* parser);
 

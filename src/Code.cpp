@@ -357,7 +357,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
         }
         ++num;
-        Parser_SetLastRegister(parser, listReg);
+        Parser_SetLastRegister(parser, listReg + listSize);
 
     }
     
@@ -821,6 +821,9 @@ static bool Parser_TryReturn(Parser* parser)
             ++numResults;
 
         }
+
+        // Put the end token back so that we can process is elsewhere.
+        Parser_Unaccept(parser);
 
         if (reg == -1)
         {
