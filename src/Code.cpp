@@ -318,6 +318,8 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
             if (Parser_Accept(parser, TokenType_Name))
             {
 
+                // TODO: Change to Parser_UnacceptToken
+
                 Token token;
                 Lexer_CaptureToken(parser->lexer, &token);
 
@@ -1092,6 +1094,53 @@ static bool Parser_TryFor(Parser* parser)
 
 }
 
+/** Parses a list of expressions separated by commas and puts them into
+successive registers on the top of the stack. Returns the number of expressions
+that were parsed. */
+static int Parser_ExpressionList(Parser* parser)
+{
+    int num = 0;
+    do
+    {
+        int reg = Parser_AllocateRegister(parser);
+        Expression exp;
+        Parser_Expression0(parser, &exp, reg);
+        Parser_MoveToRegister(parser, &exp, reg);
+        ++num;
+    }
+    while (Parser_Accept(parser, ','));
+    return num;
+}
+
+static void Parser_Assignment(Parser* parser, Expression* dst, int num = 1)
+{
+    int base = Parser_GetNumRegisters(parser);
+	if (Parser_Accept(parser, ','))
+	{
+		Expression exp2;
+		Parser_Expression0(parser, &exp2, -1);
+		Parser_Assignment(parser, &exp2, num + 1);
+	}
+	else
+	{
+        Parser_Expect(parser, '=');
+		int vals = Parser_ExpressionList(parser);
+        // If enough values weren't specified, add nil values.
+        while (vals < num)
+        {
+            int reg = Parser_AllocateRegister(parser);
+            Expression exp;
+            exp.type = EXPRESSION_NIL;
+            Parser_MoveToRegister(parser, &exp, reg);
+            ++vals;
+        }
+	}
+	Expression value;
+    value.index = base + num - 1;
+    value.type  = EXPRESSION_REGISTER;
+	Parser_EmitSet(parser, dst, &value);
+}
+
 static void Parser_Statement(Parser* parser)
 {
 
@@ -1124,33 +1173,13 @@ static void Parser_Statement(Parser* parser)
         return;
     }
     
-    Expression dst;
-
     // Handle expression statements.
+    Expression dst;
     Parser_Expression0(parser, &dst, -1);
-    Parser_ResolveCall(parser, &dst, 0);
-
-    if (Parser_Accept(parser, ','))
+    
+    if (!Parser_ResolveCall(parser, &dst, 0))
     {
-        int a = 0;
-    }
-
-    // Handle assignment.
-    while (Parser_Accept(parser, '='))
-    {
-
-        int reg = -1;
-
-        if (dst.type == EXPRESSION_REGISTER ||
-            dst.type == EXPRESSION_LOCAL)
-        {
-            reg = dst.index;
-        }
-
-        Expression arg2;
-        Parser_Expression0(parser, &arg2, reg);
-        Parser_EmitSet(parser, &dst, &arg2);
-
+        Parser_Assignment(parser, &dst);
     }
 
     // After each statement we can reuse all of the temporary registers.

@@ -4,6 +4,7 @@
  *
  * See copyright notice in lua.h
  */
+
 #include "Function.h"
 #include "String.h"
 #include "Compiler.h"

@@ -360,6 +360,12 @@ int Parser_AllocateRegister(Parser* parser)
     return function->numRegisters - 1;
 }
 
+int Parser_GetNumRegisters(Parser* parser)
+{
+    Function* function = parser->function;
+    return function->numRegisters;
+}
+
 bool Parser_ConvertToBoolean(Parser* parser, Expression* value)
 {
     if (value->type == EXPRESSION_NIL)

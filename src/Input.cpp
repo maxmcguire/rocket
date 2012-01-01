@@ -4,6 +4,7 @@
  *
  * See copyright notice in lua.h
  */
+
 #include "Input.h"
 #include "State.h"
 

@@ -4,6 +4,7 @@
  *
  * See copyright notice in lua.h
  */
+
 #include "Test.h"
 
 #include "lua.h"
@@ -376,7 +377,7 @@ TEST(MultipleAssignment)
 {
 
    const char* code =
-        "a, b = 1, 2";
+        "a, b, c = 1, 2";
 
     lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
@@ -386,6 +387,9 @@ TEST(MultipleAssignment)
 
     lua_getglobal(L, "b");
     CHECK( lua_tonumber(L, -1) == 2 );
+
+    lua_getglobal(L, "c");
+    CHECK( lua_isnil(L, -1) );
 
     lua_close(L);
 

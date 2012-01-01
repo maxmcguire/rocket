@@ -4,6 +4,7 @@
  *
  * See copyright notice in lua.h
  */
+
 #include "Opcode.h"
 
 const char* Opcode_GetAsText(Opcode opcode)

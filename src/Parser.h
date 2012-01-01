@@ -154,6 +154,9 @@ int Parser_AllocateRegister(Parser* parser);
 
 void Parser_SetLastRegister(Parser* parser, int reg);
 
+/** Returns the number of registers that are currently in use. */
+int Parser_GetNumRegisters(Parser* parser);
+
 void Parser_FreeRegisters(Parser* parser);
 void Parser_FreeRegisters(Parser* parser, int num);
 

@@ -4,6 +4,7 @@
  *
  * See copyright notice in lua.h
  */
+
 #ifndef ROCKETVM_TEST_H
 #define ROCKETVM_TEST_H
 
