@@ -491,7 +491,7 @@ LUA_API size_t lua_objlen(lua_State* L, int index)
     }
     else if (Value_GetIsTable(value))
     {
-        return Table_GetSize(value->table);
+        return Table_GetSize(L, value->table);
     }
     // TODO: implement userdata.
     return 0;

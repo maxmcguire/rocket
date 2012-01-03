@@ -929,7 +929,6 @@ TEST(FunctionCallTableArgument)
 
 }
 
-/*
 TEST(LengthOperator)
 {
 
@@ -947,7 +946,6 @@ TEST(LengthOperator)
     lua_close(L);
 
 }
-*/
 
 TEST(ConcatOperator)
 {

@@ -598,9 +598,25 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
 {
     if (Parser_Accept(parser, TokenType_Not))
     {
-        Parser_ExpressionMethod(parser, dst, regHint);
+        Parser_Expression0(parser, dst, regHint);
         Parser_MoveToRegister(parser, dst, regHint);
         dst->type = EXPRESSION_NOT;
+    }
+    else if (Parser_Accept(parser, '#'))
+    {
+        // Length operator.
+        Parser_Expression0(parser, dst, regHint);
+        if (!Parser_ConvertToRegister(parser, dst))
+        {
+            Parser_MoveToRegister(parser, dst, regHint);
+        }
+        if (regHint == -1)
+        {
+            regHint = dst->index;
+        }
+        Parser_EmitAB(parser, Opcode_Len, regHint, dst->index);
+        dst->index = regHint;
+        dst->type  = EXPRESSION_REGISTER;
     }
     else
     {

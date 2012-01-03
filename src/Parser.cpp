@@ -483,16 +483,21 @@ static void Parser_EmitUpValueBinding(Parser* parser, Function* closure)
     }
 }
 
+bool Parser_ConvertToRegister(Parser* parser, Expression* value)
+{
+    if (value->type == EXPRESSION_LOCAL)
+    {
+        value->type = EXPRESSION_REGISTER;
+    }
+    return value->type == EXPRESSION_REGISTER;
+}
+
 void Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
 {
 
     Parser_ResolveCall(parser, value, 1);
+    Parser_ConvertToRegister(parser, value);
 
-    if (value->type == EXPRESSION_LOCAL)
-    {
-        // Locals are stored in registers.    
-        value->type = EXPRESSION_REGISTER;
-    }
     if (value->type == EXPRESSION_REGISTER)
     {
         // The value is already in a register, so nothing to do.

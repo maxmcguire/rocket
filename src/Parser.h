@@ -187,6 +187,13 @@ void Parser_CloseTest(Parser* parser, Expression* value);
 void Parser_CloseTest(Parser* parser, Expression* value, int startPos);
 
 /**
+ * Changes the expression into a register value if it can be directly converted
+ * (for example if it's a local variable). Otherwise the function returns false
+ * and the value is unchanged.
+ */
+bool Parser_ConvertToRegister(Parser* parser, Expression* value);
+
+/**
  * Ensures that the location specifies a register. If reg specifies an index
  * then it will be moved to that register.
  */

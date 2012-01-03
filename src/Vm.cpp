@@ -356,6 +356,10 @@ static lua_Number GetValueLength(lua_State* L, const Value* value)
     {
         return static_cast<lua_Number>( value->string->length );
     }
+    else if (Value_GetIsTable(value))
+    {
+        return static_cast<lua_Number>( Table_GetSize(L, value->table) );  
+    }
     return 0.0;
 }
 

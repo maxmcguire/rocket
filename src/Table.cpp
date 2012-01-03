@@ -362,9 +362,48 @@ Value* Table_GetTable(lua_State* L, Table* table, int key)
     return Table_GetTable(L, table, &value);
 }
 
-int Table_GetSize(Table* table)
+int Table_GetSize(lua_State* L, Table* table)
 {
-    return 0;
+
+    // Find min, max such that min is non-nil and max is nil. These will
+    // bracket our length.
+    
+    int min = 0;
+    int max = 1;
+
+    while (1)
+    {
+        // Check if max is non-nil. If it is, then move min up to max and
+        // advance max.
+        const Value* value = Table_GetTable(L, table, max);
+        if (value == NULL || Value_GetIsNil(value))
+        {
+            break;
+        }
+        else
+        {
+            min = max;
+            max *= 2;
+        }
+    }
+
+    // Binary search between min and max to find the actual length.
+    while (max > min + 1)
+    {
+        int mid = (min + max) / 2;
+        const Value* value = Table_GetTable(L, table, mid);
+        if (value == NULL || Value_GetIsNil(value)) 
+        {
+            max = mid;
+        }
+        else
+        {
+            min = mid;
+        }
+    }
+
+    return min;
+
 }
 
 const Value* Table_Next(Table* table, Value* key)

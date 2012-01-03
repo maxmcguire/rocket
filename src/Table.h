@@ -48,7 +48,10 @@ Value* Table_GetTable(lua_State* L, Table* table, const Value* key);
 Value* Table_GetTable(lua_State* L, Table* table, int key);
 Value* Table_GetTable(lua_State* L, Table* table, String* key);
 
-int Table_GetSize(Table* table);
+/**
+ * For a hash table the size is t[n] is non-nil and t[n+1] is nil.
+ */
+int Table_GetSize(lua_State* L, Table* table);
 
 // The key will be updated to the next key.
 const Value* Table_Next(Table* table, Value* key);
