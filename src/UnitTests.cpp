@@ -813,7 +813,6 @@ TEST(ForLoop3)
 
 }
 
-/*
 TEST(RepeatLoop)
 {
 
@@ -834,7 +833,6 @@ TEST(RepeatLoop)
     lua_close(L);
 
 }
-*/
 
 TEST(FunctionCallStringArg)
 {

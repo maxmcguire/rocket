@@ -451,8 +451,13 @@ void Parser_ConvertToTest(Parser* parser, Expression* value)
 
 void Parser_CloseTest(Parser* parser, Expression* value)
 {
+    Parser_CloseTest(parser, value, Parser_GetInstructionCount(parser));
+}
+
+void Parser_CloseTest(Parser* parser, Expression* value, int startPos)
+{
     int testPos = value->index;
-    int jumpAmount = static_cast<int>(Parser_GetInstructionCount(parser) - testPos - 2);
+    int jumpAmount = static_cast<int>(startPos - testPos - 2);
     Parser_UpdateInstruction(parser, testPos + 1, Parser_EncodeAsBx(Opcode_Jmp, 0, jumpAmount));
 }
 

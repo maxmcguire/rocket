@@ -987,16 +987,17 @@ static int Parser_ExpressionList(Parser* parser, Expression* value, int minVals)
     if (numVals < minVals && value->type == EXPRESSION_CALL)
     {
         Parser_ResolveCall(parser, value, minVals - numVals + 1);
-        numVals = minVals;
     }
-
-    // If enough values weren't specified, add nil values.
-    while (numVals < minVals)
+    else
     {
-        Parser_MoveToRegister(parser, value, reg);
-        int reg = Parser_AllocateRegister(parser);
-        value->type = EXPRESSION_NIL;
-        ++numVals;
+        // If enough values weren't specified, add nil values.
+        while (numVals < minVals)
+        {
+            Parser_MoveToRegister(parser, value, reg);
+            int reg = Parser_AllocateRegister(parser);
+            value->type = EXPRESSION_NIL;
+            ++numVals;
+        }
     }
 
     return numVals; 
@@ -1008,7 +1009,7 @@ static void Parser_AssignLocals(Parser* parser, int firstLocal, int numLocals)
     Parser_SetLastRegister(parser, firstLocal - 1);
     Expression value;
     int numVals = Parser_ExpressionList(parser, &value, numLocals);
-    Parser_MoveToRegister(parser, &value);
+    Parser_MoveToRegister(parser, &value, firstLocal + numVals - 1);
     Parser_FreeRegisters(parser);
 }
 
@@ -1090,6 +1091,29 @@ static bool Parser_TryWhile(Parser* parser)
     Parser_EndLoop(parser, &loop);
 
     Parser_CloseTest(parser, &test);
+
+    return true;
+
+}
+
+static bool Parser_TryRepeat(Parser* parser)
+{
+
+    if (!Parser_Accept(parser, TokenType_Repeat))
+    {
+        return false;
+    }
+
+    int loop = Parser_GetInstructionCount(parser);
+
+    Parser_BeginBlock(parser);
+    Parser_Block(parser, TokenType_Until);
+    Parser_EndBlock(parser);
+
+    Expression test;
+    Parser_Expression0(parser, &test, -1);
+    Parser_ConvertToTest(parser, &test);
+    Parser_CloseTest(parser, &test, loop);
 
     return true;
 
@@ -1244,6 +1268,10 @@ static void Parser_Statement(Parser* parser)
         return;
     }
     if (Parser_TryWhile(parser))
+    {
+        return;
+    }
+    if (Parser_TryRepeat(parser))
     {
         return;
     }

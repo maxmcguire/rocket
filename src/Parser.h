@@ -181,6 +181,12 @@ void Parser_ConvertToTest(Parser* parser, Expression* value);
 void Parser_CloseTest(Parser* parser, Expression* value);
 
 /**
+ * Updates an open test expression so that if the expression is false it will
+ * jump to the instruction specified by startPos.
+ */
+void Parser_CloseTest(Parser* parser, Expression* value, int startPos);
+
+/**
  * Ensures that the location specifies a register. If reg specifies an index
  * then it will be moved to that register.
  */
