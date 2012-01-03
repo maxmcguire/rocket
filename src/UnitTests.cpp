@@ -474,6 +474,30 @@ TEST(Return)
 
 }
 
+TEST(FunctionStringArgument)
+{
+
+    const char* code =
+        "function Foo(arg1, arg2)\n"
+        "  s = arg1\n"
+        "  n = arg2\n"
+        "end\n"
+        "Foo 'test'";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "s");
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp(lua_tostring(L, -1), "test") == 0 );
+    
+    lua_getglobal(L, "n");
+    CHECK( lua_isnil(L, -1) );
+
+    lua_close(L);
+
+}
+
 TEST(FunctionMethod)
 {
 
