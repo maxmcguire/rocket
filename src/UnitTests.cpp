@@ -511,6 +511,28 @@ TEST(Return)
 
 }
 
+TEST(ReturnMultiple)
+{
+
+    const char* code =
+        "function Foo()\n"
+        "  return 5, 6\n"
+        "end\n"
+        "v1, v2 = Foo()";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "v1");
+    CHECK( lua_tonumber(L, -1) == 5.0 );
+
+    lua_getglobal(L, "v2");
+    CHECK( lua_tonumber(L, -1) == 6.0 );
+    
+    lua_close(L);
+
+}
+
 TEST(FunctionStringArgument)
 {
 
