@@ -395,6 +395,31 @@ TEST(MultipleAssignment)
 
 }
 
+TEST(LocalMultipleAssignment)
+{
+
+   const char* code =
+        "local _a, _b, _c = 1, 2\n"
+        "a = _a\n"
+        "b = _b\n"
+        "c = _c\n";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_tonumber(L, -1) == 2 );
+
+    lua_getglobal(L, "c");
+    CHECK( lua_isnil(L, -1) );
+
+    lua_close(L);
+
+}
+
 TEST(TableConstructor)
 {
     const char* code =

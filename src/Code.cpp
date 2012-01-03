@@ -908,6 +908,47 @@ static bool Parser_TryFunction(Parser* parser, bool local)
 
 }
 
+/**
+ * Parses a list of expressions separated by commas and puts them into
+ * successive registers on the top of the stack. If fewer than minVals
+ * were supplied, nil values will be added. Returns the number of
+ * expressions that were parsed.
+ */
+static int Parser_ExpressionList(Parser* parser, int minVals)
+{
+    int numVals = 0;
+     
+    do
+    {
+        int reg = Parser_AllocateRegister(parser);
+        Expression value;
+        Parser_Expression0(parser, &value, reg);
+        Parser_MoveToRegister(parser, &value, reg);
+        ++numVals;
+    }
+    while (Parser_Accept(parser, ','));
+
+    // If enough values weren't specified, add nil values.
+    while (numVals < minVals)
+    {
+        int reg = Parser_AllocateRegister(parser);
+        Expression value;
+        value.type = EXPRESSION_NIL;
+        Parser_MoveToRegister(parser, &value, reg);
+        ++numVals;
+    }
+
+    return numVals;
+}
+
+// TODO: Is this function necessary given the other Parser_ExpressionList?
+static void Parser_ExpressionList(Parser* parser, int reg, int num)
+{
+    Expression dst;
+    Parser_Expression0(parser, &dst, reg);
+    Parser_MoveToRegister(parser, &dst, reg);
+}
+
 static bool Parser_TryLocal(Parser* parser)
 {
     
@@ -921,18 +962,28 @@ static bool Parser_TryLocal(Parser* parser)
         return true;
     }
 
-    Parser_Expect(parser, TokenType_Name);
-
-    int local = Parser_AddLocal(parser, Parser_GetString(parser));
-    
-    if (Parser_Accept(parser, '='))
+    int reg;
+    int numVars = 0;
+    do
     {
-        Expression dst;
-        Parser_Expression0(parser, &dst, local);
-        Parser_MoveToRegister(parser, &dst, local);
-        dst.type = EXPRESSION_LOCAL;
+        if (numVars > 0)
+        {
+            Parser_Expect(parser, ',');
+        }
+        Parser_Expect(parser, TokenType_Name);
+        int local = Parser_AddLocal(parser, Parser_GetString(parser));
+        if (numVars == 0)
+        {
+            // Store off the first register where the locals will be stored.
+            reg = local;
+        }
+        ++numVars;
     }
+    while (!Parser_Accept(parser, '='));
 
+    Parser_SetLastRegister(parser, reg - 1);
+    int numVals = Parser_ExpressionList(parser, numVars);
+    
     return true;
 
 }
@@ -980,13 +1031,6 @@ static bool Parser_TryWhile(Parser* parser)
 
     return true;
 
-}
-
-static void Parser_ExpressionList(Parser* parser, int reg, int num)
-{
-    Expression dst;
-    Parser_Expression0(parser, &dst, reg);
-    Parser_MoveToRegister(parser, &dst, reg);
 }
 
 static bool Parser_TryFor(Parser* parser)
@@ -1094,49 +1138,21 @@ static bool Parser_TryFor(Parser* parser)
 
 }
 
-/** Parses a list of expressions separated by commas and puts them into
-successive registers on the top of the stack. Returns the number of expressions
-that were parsed. */
-static int Parser_ExpressionList(Parser* parser)
+static void Parser_Assignment(Parser* parser, Expression* dst, int numVars = 1)
 {
-    int num = 0;
-    do
-    {
-        int reg = Parser_AllocateRegister(parser);
-        Expression exp;
-        Parser_Expression0(parser, &exp, reg);
-        Parser_MoveToRegister(parser, &exp, reg);
-        ++num;
-    }
-    while (Parser_Accept(parser, ','));
-    return num;
-}
-
-static void Parser_Assignment(Parser* parser, Expression* dst, int num = 1)
-{
+    Expression value;
     int base = Parser_GetNumRegisters(parser);
 	if (Parser_Accept(parser, ','))
 	{
-		Expression exp2;
-		Parser_Expression0(parser, &exp2, -1);
-		Parser_Assignment(parser, &exp2, num + 1);
+		Parser_Expression0(parser, &value, -1);
+		Parser_Assignment(parser, &value, numVars + 1);
 	}
 	else
 	{
         Parser_Expect(parser, '=');
-		int vals = Parser_ExpressionList(parser);
-        // If enough values weren't specified, add nil values.
-        while (vals < num)
-        {
-            int reg = Parser_AllocateRegister(parser);
-            Expression exp;
-            exp.type = EXPRESSION_NIL;
-            Parser_MoveToRegister(parser, &exp, reg);
-            ++vals;
-        }
+		int numValues = Parser_ExpressionList(parser, numVars);
 	}
-	Expression value;
-    value.index = base + num - 1;
+    value.index = base + numVars - 1;
     value.type  = EXPRESSION_REGISTER;
 	Parser_EmitSet(parser, dst, &value);
 }

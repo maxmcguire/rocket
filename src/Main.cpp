@@ -15,6 +15,6 @@ extern "C" void clear();
 
 int main(int argc, char* argv[])
 {
-    Test_RunTests("MultipleAssignment");
+    Test_RunTests();
     return 0;
 }
