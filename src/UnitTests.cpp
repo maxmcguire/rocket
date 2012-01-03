@@ -771,7 +771,6 @@ TEST(ForLoop2)
 
 }
 
-/*
 TEST(ForLoop3)
 {
 
@@ -801,17 +800,18 @@ TEST(ForLoop3)
     lua_getglobal(L, "results");
 
     lua_rawgeti(L, -1, 1);
+    CHECK( lua_isstring(L, -1) );
     CHECK( strcmp( lua_tostring(L, -1), "first" ) == 0 );
     lua_pop(L, 1);
 
     lua_rawgeti(L, -1, 2);
+    CHECK( lua_isstring(L, -1) );
     CHECK( strcmp( lua_tostring(L, -1), "second" ) == 0 );
     lua_pop(L, 1);
 
     lua_close(L);
 
 }
-*/
 
 /*
 TEST(RepeatLoop)

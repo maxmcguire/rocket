@@ -1009,6 +1009,7 @@ static void Parser_AssignLocals(Parser* parser, int firstLocal, int numLocals)
     Expression value;
     int numVals = Parser_ExpressionList(parser, &value, numLocals);
     Parser_MoveToRegister(parser, &value);
+    Parser_FreeRegisters(parser);
 }
 
 static bool Parser_TryLocal(Parser* parser)
@@ -1174,7 +1175,7 @@ static bool Parser_TryFor(Parser* parser)
         }
 
         Parser_Expect(parser, TokenType_In);
-        Parser_AssignLocals(parser, internalIndexReg, numArgs);
+        Parser_AssignLocals(parser, internalIndexReg, 3);
         Parser_Expect(parser, TokenType_Do);
 
         // Reserve space for the jmp instruction since we don't know the skip
