@@ -168,7 +168,11 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
 
 }
 
-static int Parser_Arguments(Parser* parser)
+/**
+ * If single is true, only a single argument will be parsed (used for special syntax
+ * forms where a string or table argument is specified for a function).
+ */
+static int Parser_Arguments(Parser* parser, bool single = false)
 {
     int  numArgs = 0;
     bool varArg  = false;
@@ -176,7 +180,7 @@ static int Parser_Arguments(Parser* parser)
     while (1)
     {
 
-        if (Parser_Accept(parser, ')'))
+        if (!single && Parser_Accept(parser, ')'))
         {
             break;
         }
@@ -190,13 +194,14 @@ static int Parser_Arguments(Parser* parser)
         Expression arg;
         Parser_Expression0(parser, &arg, reg);
 
-        bool last = Parser_Accept(parser, ')');
-
-        if (last)
+        if (!single)
         {
-            // Allow variable number of arguments for a function call which
-            // is the last argument.
-            varArg = Parser_ResolveCall(parser, &arg, -1);
+            if (Parser_Accept(parser, ')'))
+            {
+                // Allow variable number of arguments for a function call which
+                // is the last argument.
+                varArg = Parser_ResolveCall(parser, &arg, -1);
+            }
         }
 
         // Make sure the result is stored in the register for the argument and
@@ -205,6 +210,11 @@ static int Parser_Arguments(Parser* parser)
         Parser_SetLastRegister(parser, reg);
 
         ++numArgs;
+
+        if (single)
+        {
+            break;
+        }
 
     }
 
@@ -443,68 +453,99 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
     }
 }
 
+static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst)
+{
+
+    // Standard function call like (arg1, arg2, ...)
+    if (Parser_Accept(parser, '('))
+    {
+        Parser_MoveToStackTop(parser, dst);
+        dst->type    = EXPRESSION_CALL;
+        dst->numArgs = Parser_Arguments(parser);
+        return true;
+    }
+
+    // Function call with a single string or table argument.
+    if (Parser_Accept(parser, TokenType_String) ||
+        Parser_Accept(parser, '{'))
+    {
+        Parser_Unaccept(parser);
+        Parser_MoveToStackTop(parser, dst);
+        dst->type    = EXPRESSION_CALL;
+        dst->numArgs = Parser_Arguments(parser, true);
+        return true;
+    }
+    
+    return false;
+
+}
+
 static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
 {
     
     Parser_Expression5(parser, dst, regHint);
 
-    while (Parser_Accept(parser, '(') ||
-           Parser_Accept(parser, '.') ||
-           Parser_Accept(parser, '['))
+    bool done = false;
+
+    while (!done)
     {
 
-        int op = Parser_GetToken(parser);
-
-        if (op == '(')
+        if (Parser_TryFunctionArguments(parser, dst))
         {
-            // Handle function calls.
-            // TODO: Make sure the register is temporary!
-            Parser_MoveToStackTop(parser, dst);
-            dst->type    = EXPRESSION_CALL;
-            dst->numArgs = Parser_Arguments(parser);
         }
-        else if (op == '.')
+        else if (Parser_Accept(parser, '.') || Parser_Accept(parser, '['))
         {
 
-            // Handle table indexing (object form).
-            
-            Parser_Expect(parser, TokenType_Name);
+            int op = Parser_GetToken(parser);
 
-            Parser_MoveToRegister(parser, dst, regHint);
-            dst->type = EXPRESSION_TABLE;
-
-            dst->keyType = EXPRESSION_CONSTANT;
-            dst->key     = Parser_AddConstant( parser, Parser_GetString(parser) );
-
-        }
-        else if (op == '[')
-        {
-            
-            // Handle table indexing (general form).
-
-            Parser_MoveToRegister(parser, dst);
-            dst->type = EXPRESSION_TABLE;
-
-            Expression key;
-            Parser_Expression0(parser, &key, -1);
-
-            // Table indexing must be done with a constant or a register.
-            Parser_MoveToRegisterOrConstant(parser, &key);
-            if (key.type == EXPRESSION_REGISTER)
+            if (op == '.')
             {
-                dst->keyType = EXPRESSION_REGISTER;
-                dst->key     = key.index;
-            }
-            else
-            {
+
+                // Handle table indexing (object form).
+                
+                Parser_Expect(parser, TokenType_Name);
+
+                Parser_MoveToRegister(parser, dst, regHint);
+                dst->type = EXPRESSION_TABLE;
+
                 dst->keyType = EXPRESSION_CONSTANT;
-                dst->key     = key.index;
+                dst->key     = Parser_AddConstant( parser, Parser_GetString(parser) );
+
             }
-            
-            Parser_Expect(parser, ']');
+            else if (op == '[')
+            {
+                
+                // Handle table indexing (general form).
+
+                Parser_MoveToRegister(parser, dst);
+                dst->type = EXPRESSION_TABLE;
+
+                Expression key;
+                Parser_Expression0(parser, &key, -1);
+
+                // Table indexing must be done with a constant or a register.
+                Parser_MoveToRegisterOrConstant(parser, &key);
+                if (key.type == EXPRESSION_REGISTER)
+                {
+                    dst->keyType = EXPRESSION_REGISTER;
+                    dst->key     = key.index;
+                }
+                else
+                {
+                    dst->keyType = EXPRESSION_CONSTANT;
+                    dst->key     = key.index;
+                }
+                
+                Parser_Expect(parser, ']');
+
+            }
 
         }
-    
+        else
+        {
+            done = true;
+        }
+
     }
 
 }
@@ -522,17 +563,26 @@ static void Parser_ExpressionMethod(Parser* parser, Expression* dst, int regHint
         Parser_MoveToRegister(parser, dst, -1);
 
         int reg     = Parser_AllocateRegister(parser);
-        int method  = Parser_AddConstant (parser, Parser_GetString(parser) );
+        int method  = Parser_AddConstant( parser, Parser_GetString(parser) );
 
-        // TODO: Handle string/table only arguments.
-
-        Parser_Expect(parser, '(');
         Parser_EmitABC(parser, Opcode_Self, reg, dst->index, Parser_EncodeRK(method, EXPRESSION_CONSTANT));
 
-        dst->type    = EXPRESSION_CALL;
-        dst->index   = reg;
-        dst->numArgs = Parser_Arguments(parser);
+        // This is a bit of a hack. Since TryFunctionArguments will put the
+        // expression onto the top of the stack, we just set it up to be a
+        // register since our Self opcode has already setup the stack.
+        dst->type  = EXPRESSION_REGISTER;
+        dst->index = Parser_AllocateRegister(parser);
 
+        if (!Parser_TryFunctionArguments(parser, dst))
+        {
+            Parser_Error(parser, "function arguments expected");
+        }
+        
+        assert(dst->type == EXPRESSION_CALL);
+
+        // Since we have the extra self paramter, we need to adjust the register
+        // where the function is located.
+        dst->index = reg;
         if (dst->numArgs != -1)
         {
             // If this isn't a vararg function we need to count the self parameter.

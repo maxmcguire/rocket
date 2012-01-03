@@ -549,6 +549,32 @@ TEST(FunctionMethod)
 
 }
 
+TEST(FunctionMethodStringArg)
+{
+
+    const char* code =
+        "result = false\n"
+        "Foo = { }\n"
+        "function Foo:Bar(_arg)\n"
+        "  if self == Foo then result = true end\n"
+        "  arg = _arg\n"
+        "end\n"
+        "Foo:Bar 'test'\n";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "result");
+    CHECK( lua_toboolean(L, -1) == 1 );
+
+    lua_getglobal(L, "arg");
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp(lua_tostring(L, -1), "test") == 0 );
+    
+    lua_close(L);
+
+}
+
 TEST(FunctionDefinition)
 {
     const char* code = "function Foo() end";
@@ -708,6 +734,7 @@ TEST(ForLoop2)
 
 }
 
+/*
 TEST(ForLoop3)
 {
 
@@ -747,7 +774,9 @@ TEST(ForLoop3)
     lua_close(L);
 
 }
+*/
 
+/*
 TEST(RepeatLoop)
 {
 
@@ -768,8 +797,9 @@ TEST(RepeatLoop)
     lua_close(L);
 
 }
+*/
 
-TEST(FunctionCallStringArgument)
+TEST(FunctionCallStringArg)
 {
 
     const char* code =
@@ -842,6 +872,7 @@ TEST(FunctionCallTableArgument)
 
 }
 
+/*
 TEST(LengthOperator)
 {
 
@@ -859,6 +890,7 @@ TEST(LengthOperator)
     lua_close(L);
 
 }
+*/
 
 TEST(ConcatOperator)
 {
