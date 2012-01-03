@@ -198,6 +198,7 @@ static int Parser_Arguments(Parser* parser, bool single = false)
         {
             if (Parser_Accept(parser, ')'))
             {
+                Parser_Unaccept(parser);
                 // Allow variable number of arguments for a function call which
                 // is the last argument.
                 varArg = Parser_ResolveCall(parser, &arg, -1);
@@ -453,13 +454,13 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
     }
 }
 
-static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst)
+static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int regHint)
 {
 
     // Standard function call like (arg1, arg2, ...)
     if (Parser_Accept(parser, '('))
     {
-        Parser_MoveToStackTop(parser, dst);
+        Parser_MoveToRegister(parser, dst, regHint);
         dst->type    = EXPRESSION_CALL;
         dst->numArgs = Parser_Arguments(parser);
         return true;
@@ -470,7 +471,7 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst)
         Parser_Accept(parser, '{'))
     {
         Parser_Unaccept(parser);
-        Parser_MoveToStackTop(parser, dst);
+        Parser_MoveToRegister(parser, dst, regHint);
         dst->type    = EXPRESSION_CALL;
         dst->numArgs = Parser_Arguments(parser, true);
         return true;
@@ -490,7 +491,7 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
     while (!done)
     {
 
-        if (Parser_TryFunctionArguments(parser, dst))
+        if (Parser_TryFunctionArguments(parser, dst, regHint))
         {
         }
         else if (Parser_Accept(parser, '.') || Parser_Accept(parser, '['))
@@ -573,7 +574,7 @@ static void Parser_ExpressionMethod(Parser* parser, Expression* dst, int regHint
         dst->type  = EXPRESSION_REGISTER;
         dst->index = Parser_AllocateRegister(parser);
 
-        if (!Parser_TryFunctionArguments(parser, dst))
+        if (!Parser_TryFunctionArguments(parser, dst, -1))
         {
             Parser_Error(parser, "function arguments expected");
         }
@@ -981,6 +982,14 @@ static int Parser_ExpressionList(Parser* parser, Expression* value, int minVals)
         ++numVals;
     }
 
+    // If a function call is the last expression, adjust its number of return
+    // values to match the expected number of values, 
+    if (numVals < minVals && value->type == EXPRESSION_CALL)
+    {
+        Parser_ResolveCall(parser, value, minVals - numVals + 1);
+        numVals = minVals;
+    }
+
     // If enough values weren't specified, add nil values.
     while (numVals < minVals)
     {
@@ -994,12 +1003,12 @@ static int Parser_ExpressionList(Parser* parser, Expression* value, int minVals)
 
 }
 
-// TODO: Is this function necessary given the other Parser_ExpressionList?
-static void Parser_ExpressionList(Parser* parser, int reg, int num)
+static void Parser_AssignLocals(Parser* parser, int firstLocal, int numLocals)
 {
-    Expression dst;
-    Parser_Expression0(parser, &dst, reg);
-    Parser_MoveToRegister(parser, &dst, reg);
+    Parser_SetLastRegister(parser, firstLocal - 1);
+    Expression value;
+    int numVals = Parser_ExpressionList(parser, &value, numLocals);
+    Parser_MoveToRegister(parser, &value);
 }
 
 static bool Parser_TryLocal(Parser* parser)
@@ -1034,11 +1043,7 @@ static bool Parser_TryLocal(Parser* parser)
     }
     while (!Parser_Accept(parser, '='));
 
-    Parser_SetLastRegister(parser, reg - 1);
-
-    Expression value;
-    int numVals = Parser_ExpressionList(parser, &value, numVars);
-    Parser_MoveToRegister(parser, &value);
+    Parser_AssignLocals(parser, reg, numVars);
     
     return true;
 
@@ -1101,16 +1106,17 @@ static bool Parser_TryFor(Parser* parser)
 
     Parser_BeginBlock(parser);
 
-    // TODO: Lua creates these as named local variables. Is that important?
-    int internalIndexReg = Parser_AllocateRegister(parser);
-    int limitReg         = Parser_AllocateRegister(parser);
-    int incrementReg     = Parser_AllocateRegister(parser);
+    // For a numeric loop, a=index, b=limit, c=step
+    // For a generic loop, a=generator, b=state, c=control
+    int internalIndexReg = Parser_AddLocal( parser, String_Create(parser->L, "(for a)") );
+    int limitReg         = Parser_AddLocal( parser, String_Create(parser->L, "(for b)") );
+    int incrementReg     = Parser_AddLocal( parser, String_Create(parser->L, "(for c)") );
 
     int externalIndexReg = Parser_AddLocal( parser, Parser_GetString(parser) );
 
     if (Parser_Accept(parser, '='))
     {
-
+        
         // Numeric for loop.
 
         // Start value.
@@ -1160,8 +1166,7 @@ static bool Parser_TryFor(Parser* parser)
         // Generic for loop.
 
         int numArgs = 1;
-
-        if (Parser_Accept(parser, ','))
+        while (Parser_Accept(parser, ','))
         {
             Parser_Expect(parser, TokenType_Name);
             Parser_AddLocal( parser, Parser_GetString(parser) );
@@ -1169,7 +1174,7 @@ static bool Parser_TryFor(Parser* parser)
         }
 
         Parser_Expect(parser, TokenType_In);
-        Parser_ExpressionList(parser, internalIndexReg, 3);
+        Parser_AssignLocals(parser, internalIndexReg, numArgs);
         Parser_Expect(parser, TokenType_Do);
 
         // Reserve space for the jmp instruction since we don't know the skip

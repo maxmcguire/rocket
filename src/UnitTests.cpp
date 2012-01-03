@@ -420,6 +420,43 @@ TEST(LocalMultipleAssignment)
 
 }
 
+TEST(LocalMultipleAssignment2)
+{
+
+    struct Locals
+    {
+        static int Function(lua_State* L)
+        {
+            lua_pushnumber(L, 2.0);
+            lua_pushnumber(L, 3.0);
+            return 2;
+        }
+    };
+
+   const char* code =
+        "local _a, _b, _c = 1, F()\n"
+        "a = _a\n"
+        "b = _b\n"
+        "c = _c\n";
+
+    lua_State* L = luaL_newstate();
+
+    lua_register(L, "F", Locals::Function);
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_tonumber(L, -1) == 2.0 );
+
+    lua_getglobal(L, "c");
+    CHECK( lua_tonumber(L, -1) == 3.0 );
+
+    lua_close(L);
+
+}
+
 TEST(TableConstructor)
 {
     const char* code =

@@ -98,6 +98,10 @@ struct Parser
  *
  * If type is EXPRESSION_NOT:
  *  - index is the index of the register to negate.
+ *
+ * If type is EXPRESSION_CALL:
+ *  - index is the index of the function.
+ *  - numArgs is the number of arguments to the function.
  */
 struct Expression
 {
