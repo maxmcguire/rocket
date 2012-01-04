@@ -1137,7 +1137,7 @@ TEST(ConcatOperator)
 
 }
 
-TEST(VarArgFunction)
+TEST(VarArgFunction1)
 {
 
     const char* code =
@@ -1154,6 +1154,29 @@ TEST(VarArgFunction)
 
     lua_getglobal(L, "x");
     CHECK( lua_tonumber(L, -1) == 5.0 );
+
+    lua_close(L);
+
+}
+
+
+TEST(VarArgFunction2)
+{
+
+    const char* code =
+        "function g(a, b, ...)\n"
+        "  w, x = ...\n"
+        "end\n"
+        "g(1, 2, 3, 4)";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "w");
+    CHECK( lua_tonumber(L, -1) == 3.0 );
+
+    lua_getglobal(L, "x");
+    CHECK( lua_tonumber(L, -1) == 4.0 );
 
     lua_close(L);
 

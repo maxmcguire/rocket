@@ -185,6 +185,11 @@ void Parser_FreeRegisters(Parser* parser, int num);
 bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults);
 
 /**
+ * Converts a vararg call (if value specifies one) into a register.
+ */
+bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults);
+
+/**
  * Converts an expression into an open test if it isn't one.
  */
 void Parser_ConvertToTest(Parser* parser, Expression* value);

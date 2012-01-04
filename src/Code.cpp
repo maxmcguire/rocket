@@ -1025,10 +1025,11 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
         if (!Parser_Accept(parser, ','))
         {
             done = true;
-            // If the final expression is a function call, adjust the number of
-            // return values to match the remaining number of variables.
+            // If the final expression is a function call or vararg, adjust the number
+            // of return values to match the remaining number of variables.
             int numResults = numVars - numValues;
-            if (Parser_ResolveCall(parser, &value, numResults))
+            if (Parser_ResolveCall(parser, &value, numResults) ||
+                Parser_ResolveVarArg(parser, &value, numResults))
             {
                 assert(value.type == EXPRESSION_REGISTER);
                 for (int i = 0; i < numResults; ++i)
@@ -1221,9 +1222,9 @@ static bool Parser_TryFor(Parser* parser)
     if (Parser_Accept(parser, '='))
     {
         
-        Parser_CommitLocals( parser );
-        
         // Numeric for loop.
+        
+        Parser_CommitLocals( parser );
 
         // Start value.
         Expression start;
