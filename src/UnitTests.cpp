@@ -856,6 +856,82 @@ TEST(RepeatLoop)
 
 }
 
+TEST(WhileLoopBreak)
+{
+
+    const char* code = 
+        "index = 0\n"
+        "while true do\n"
+        "  index = index + 1\n"
+        "  break\n"
+        "end";
+
+    lua_State* L = luaL_newstate();
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "index");
+    CHECK( lua_type(L, -1) == LUA_TNUMBER );
+    CHECK( lua_tointeger(L, -1) == 1 );
+
+    lua_close(L);
+
+}
+
+TEST(ForLoopBreak)
+{
+
+    const char* code = 
+        "index = 0\n"
+        "for i = 1,10 do\n"
+        "  index = index + 1\n"
+        "  break\n"
+        "end";
+
+    lua_State* L = luaL_newstate();
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "index");
+    CHECK( lua_type(L, -1) == LUA_TNUMBER );
+    CHECK( lua_tointeger(L, -1) == 1 );
+
+    lua_close(L);
+
+}
+
+TEST(RepeatLoopBreak)
+{
+
+    const char* code = 
+        "index = 0\n"
+        "repeat\n"
+        "  index = index + 1\n"
+        "  break\n"
+        "until index == 10";
+
+    lua_State* L = luaL_newstate();
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "index");
+    CHECK( lua_type(L, -1) == LUA_TNUMBER );
+    CHECK( lua_tointeger(L, -1) == 1 );
+
+    lua_close(L);
+
+}
+
+TEST(IllegalBreak)
+{
+    const char* code = 
+        "print('test')\n"
+        "break";
+    lua_State* L = luaL_newstate();
+    CHECK( luaL_loadstring(L, code) != 0 );
+    lua_close(L);
+}
+
 TEST(FunctionCallStringArg)
 {
 

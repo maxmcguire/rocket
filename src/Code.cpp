@@ -803,7 +803,7 @@ static bool Parser_TryIf(Parser* parser)
 
         // TODO: Peform "constant folding" for the test.
         Parser_ConvertToTest(parser, &test);
-        Parser_BeginBlock(parser);
+        Parser_BeginBlock(parser, false);
 
         // Parse the "if" part of the conditional.
         while (!Parser_Accept(parser, TokenType_End) &&
@@ -820,7 +820,7 @@ static bool Parser_TryIf(Parser* parser)
         {
 
             int elseJump;
-            Parser_BeginBlock(parser);
+            Parser_BeginBlock(parser, false);
             Parser_BeginSkip(parser, &elseJump);
             Parser_CloseTest(parser, &test);
 
@@ -1075,7 +1075,7 @@ static bool Parser_TryDo(Parser* parser)
         return false;
     }
 
-    Parser_BeginBlock(parser);
+    Parser_BeginBlock(parser, false);
     Parser_Block(parser, TokenType_End);
     Parser_EndBlock(parser);
 
@@ -1101,7 +1101,7 @@ static bool Parser_TryWhile(Parser* parser)
 
     Parser_ConvertToTest(parser, &test);
 
-    Parser_BeginBlock(parser);
+    Parser_BeginBlock(parser, true);
     Parser_Block(parser, TokenType_End);
     Parser_EndBlock(parser);
     Parser_EndLoop(parser, &loop);
@@ -1122,14 +1122,15 @@ static bool Parser_TryRepeat(Parser* parser)
 
     int loop = Parser_GetInstructionCount(parser);
 
-    Parser_BeginBlock(parser);
+    Parser_BeginBlock(parser, true);
     Parser_Block(parser, TokenType_Until);
-    Parser_EndBlock(parser);
 
     Expression test;
     Parser_Expression0(parser, &test, -1);
     Parser_ConvertToTest(parser, &test);
     Parser_CloseTest(parser, &test, loop);
+
+    Parser_EndBlock(parser);
 
     return true;
 
@@ -1145,7 +1146,7 @@ static bool Parser_TryFor(Parser* parser)
 
     Parser_Expect(parser, TokenType_Name);
 
-    Parser_BeginBlock(parser);
+    Parser_BeginBlock(parser, true);
 
     // For a numeric loop, a=index, b=limit, c=step
     // For a generic loop, a=generator, b=state, c=control
@@ -1264,6 +1265,18 @@ static void Parser_Assignment(Parser* parser, Expression* dst, int numVars = 1)
 	Parser_EmitSet(parser, dst, &value);
 }
 
+static bool Parser_TryBreak(Parser* parser)
+{
+    if (!Parser_Accept(parser, TokenType_Break))
+    {
+        return false;
+    }
+    Parser_BreakBlock(parser);
+    // Note, unlike in vanialla Lua we don't require break to be the final
+    // statement in a block (since there's no reason for it).
+    return true;
+}
+
 static void Parser_Statement(Parser* parser)
 {
 
@@ -1272,6 +1285,10 @@ static void Parser_Statement(Parser* parser)
         return;
     }
     if (Parser_TryReturn(parser))
+    {
+        return;
+    }
+    if (Parser_TryBreak(parser))
     {
         return;
     }

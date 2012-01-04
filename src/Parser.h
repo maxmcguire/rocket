@@ -50,6 +50,8 @@ struct Function
 struct Block
 {
     int             restoreNumLocals;
+    bool            breakable;
+    int             firstBreakPos;
 };
 
 struct Parser
@@ -302,8 +304,14 @@ void Parser_EndLoop(Parser* parser, int* id);
 
 Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* source);
 
-void Parser_BeginBlock(Parser* parser);
+/**
+ * The breakable flag indicates if the block can be exited with a break
+ * statement.
+ */
+void Parser_BeginBlock(Parser* parser, bool breakable);
 void Parser_EndBlock(Parser* parser);
+
+void Parser_BreakBlock(Parser* parser);
 
 bool Parser_ConvertToBoolean(Parser* parser, Expression* value);
 

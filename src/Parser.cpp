@@ -872,20 +872,42 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
 
 }
 
-void Parser_BeginBlock(Parser* parser)
+void Parser_BeginBlock(Parser* parser, bool breakable)
 {
     if (parser->numBlocks == LUAI_MAXCCALLS)
     {
         Parser_Error(parser, "too many block levels");
     }
-    parser->block[parser->numBlocks].restoreNumLocals = parser->function->numLocals;
+    Block* block = &parser->block[parser->numBlocks];
+    block->restoreNumLocals = parser->function->numLocals;
+    block->breakable        = breakable;
+    block->firstBreakPos   = -1;
     ++parser->numBlocks;
 }
 
 void Parser_EndBlock(Parser* parser)
 {
+
+    assert(parser->numBlocks > 0);
+    Block* block = &parser->block[parser->numBlocks - 1]; 
+    
+    // Update the break instructions.
+    
+    int breakPos = block->firstBreakPos;
+    int currentPos = Parser_GetInstructionCount(parser);
+    
+    while (breakPos != -1)
+    {
+        int nextBreakPos = Parser_GetInstruction(parser, breakPos);
+        int jumpAmount = currentPos - breakPos;
+        Instruction inst = Parser_EncodeAsBx(Opcode_Jmp, 0, jumpAmount);
+        Parser_UpdateInstruction(parser, breakPos, inst);
+        breakPos = nextBreakPos;
+    }
+    
     --parser->numBlocks;
     parser->function->numLocals = parser->block[parser->numBlocks].restoreNumLocals;
+
 }
 
 int Parser_GetToken(Parser* parser)
@@ -904,4 +926,33 @@ lua_Number Parser_GetNumber(Parser* parser)
 {
     assert( parser->lexer->token.type == TokenType_Number );
     return parser->lexer->token.number;
+}
+
+void Parser_BreakBlock(Parser* parser)
+{
+
+    int blockIndex = parser->numBlocks - 1;
+    while (blockIndex >= 0)
+    {
+        if (parser->block[blockIndex].breakable)
+        {
+            break;
+        }
+        --blockIndex;
+    }
+
+    if (blockIndex < 0)
+    {
+        Parser_Error(parser, "no loop to break");
+    }
+
+    Block* block = &parser->block[blockIndex];
+
+    // Reserve a location in the instruction stream for the jump since we
+    // don't know how far we'll need to jump yet. In this location we store
+    // the position of the next break out of the block as a form of inline
+    // linked list.
+    int pos = Parser_EmitInstruction(parser, block->firstBreakPos);
+    block->firstBreakPos = pos;
+
 }
