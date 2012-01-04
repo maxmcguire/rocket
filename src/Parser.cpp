@@ -806,6 +806,8 @@ void PrintFunction(Prototype* prototype)
         };
 
     printf("; function\n");
+    printf("; %d upvalues, %d params, %d stacks\n",
+        prototype->numUpValues, prototype->numParams, prototype->maxStackSize);
 
     PrintConstants(prototype);
 
@@ -885,8 +887,8 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
         prototype->constant[i] = key;
     }
     
-    prototype->varArg       = false;
-    prototype->numParams    = 0;
+    prototype->varArg       = function->varArg;
+    prototype->numParams    = function->numParams;
     prototype->maxStackSize = function->maxStackSize;
     prototype->numUpValues  = function->numUpValues;
 

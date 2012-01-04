@@ -1137,13 +1137,12 @@ TEST(ConcatOperator)
 
 }
 
-/*
 TEST(VarArgFunction)
 {
 
     const char* code =
         "function g(a, b, ...)\n"
-        "  w,x = ...,5\n"
+        "  w, x = ..., 5\n"
         "end\n"
         "g(1, 2, 3, 4)";
 
@@ -1159,4 +1158,3 @@ TEST(VarArgFunction)
     lua_close(L);
 
 }
-*/
