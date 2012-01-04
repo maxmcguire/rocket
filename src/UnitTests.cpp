@@ -395,6 +395,60 @@ TEST(MultipleAssignment)
 
 }
 
+TEST(MultipleAssignment2)
+{
+
+    struct Locals
+    {
+        static int Function(lua_State* L)
+        {
+            lua_pushnumber(L, 2.0);
+            lua_pushnumber(L, 3.0);
+            return 2;
+        }
+    };
+
+   const char* code =
+        "a, b, c = 1, F()";
+
+    lua_State* L = luaL_newstate();
+
+    lua_register(L, "F", Locals::Function);
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_tonumber(L, -1) == 2.0 );
+
+    lua_getglobal(L, "c");
+    CHECK( lua_tonumber(L, -1) == 3.0 );
+
+    lua_close(L);
+
+}
+
+TEST(AssignmentSideEffect)
+{
+
+   const char* code =
+        "function F() b = 2 end\n"
+        "a = 1, F(), 3";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_tonumber(L, -1) == 2 );
+
+    lua_close(L);
+
+}
+
 TEST(LocalMultipleAssignment)
 {
 
@@ -452,6 +506,29 @@ TEST(LocalMultipleAssignment2)
 
     lua_getglobal(L, "c");
     CHECK( lua_tonumber(L, -1) == 3.0 );
+
+    lua_close(L);
+
+}
+
+TEST(LocalMultipleAssignment3)
+{
+
+   const char* code =
+        "local _a, _b = 1, _a\n"
+        "a = _a\n"
+        "b = _b";
+
+    lua_State* L = luaL_newstate();
+
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    // a should not be visible until after the declaration is complete.
+    lua_getglobal(L, "b");
+    CHECK( lua_isnil(L, -1) );
 
     lua_close(L);
 
@@ -793,6 +870,7 @@ TEST(ForLoop2)
 
 }
 
+/*
 TEST(ForLoop3)
 {
 
@@ -830,6 +908,23 @@ TEST(ForLoop3)
     CHECK( lua_isstring(L, -1) );
     CHECK( strcmp( lua_tostring(L, -1), "second" ) == 0 );
     lua_pop(L, 1);
+
+    lua_close(L);
+
+}
+*/
+
+TEST(ForLoop3)
+{
+
+    const char* code = 
+        "values = { first=1, second=2 }\n"
+        "for k,v in pairs(values) do\n"
+        "end";
+
+    lua_State* L = luaL_newstate();
+
+    CHECK( DoString(L, code) );
 
     lua_close(L);
 
@@ -1042,6 +1137,7 @@ TEST(ConcatOperator)
 
 }
 
+/*
 TEST(VarArgFunction)
 {
 
@@ -1063,3 +1159,4 @@ TEST(VarArgFunction)
     lua_close(L);
 
 }
+*/

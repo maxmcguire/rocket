@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <malloc.h>
 
 static void Parser_Block(Parser* parser, int endToken);
 static void Parser_Statement(Parser* parser);
@@ -240,6 +241,7 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
     if (method)
     {
         Parser_AddLocal( &p, String_Create(parser->L, "self") );
+        Parser_CommitLocals( &p );
     }
 
     // Parse the arguments.
@@ -255,6 +257,7 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
         if (Parser_Accept(parser, TokenType_Dots))
         {
             Parser_AddLocal( &p, String_Create(p.L, "...") );
+            Parser_CommitLocals( &p );
             Parser_Expect( parser, ')' );
             p.function->varArg = true;
             break;
@@ -263,6 +266,7 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
         {
             Parser_Expect(parser, TokenType_Name);
             Parser_AddLocal( &p, Parser_GetString(parser) );
+            Parser_CommitLocals( &p );
             ++p.function->numParams;
         }
     }
@@ -479,7 +483,7 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
     // Standard function call like (arg1, arg2, ...)
     if (Parser_Accept(parser, '('))
     {
-        Parser_MoveToRegister(parser, dst, regHint);
+        Parser_MoveToStackTop(parser, dst);
         dst->type    = EXPRESSION_CALL;
         dst->numArgs = Parser_Arguments(parser);
         return true;
@@ -490,7 +494,7 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
         Parser_Accept(parser, '{'))
     {
         Parser_Unaccept(parser);
-        Parser_MoveToRegister(parser, dst, regHint);
+        Parser_MoveToStackTop(parser, dst);
         dst->type    = EXPRESSION_CALL;
         dst->numArgs = Parser_Arguments(parser, true);
         return true;
@@ -780,9 +784,10 @@ static void Parser_Expression0(Parser* parser, Expression* dst, int regHint)
 /**
  * Generates instructions to perform the operation: dst = value
  */
-static void Parser_EmitSet(Parser* parser, Expression* dst, Expression* value)
+static void Parser_EmitSet(Parser* parser, const Expression* dst, Expression* value)
 {
-    if (dst->type == EXPRESSION_LOCAL)
+    if (dst->type == EXPRESSION_REGISTER ||
+        dst->type == EXPRESSION_LOCAL)
     {
         Parser_MoveToRegister(parser, value, dst->index);
     }
@@ -952,6 +957,7 @@ static bool Parser_TryFunction(Parser* parser, bool local)
     {
         dst.index = Parser_AddLocal( parser, Parser_GetString(parser)  );
         dst.type  = EXPRESSION_LOCAL;
+        Parser_CommitLocals( parser );
     }
     else
     {
@@ -995,57 +1001,94 @@ static bool Parser_TryFunction(Parser* parser, bool local)
 }
 
 /**
- * Parses a list of expressions separated by commas and puts them into
- * successive registers on the top of the stack. The final expression is not
- * (necessarily) put onto the stack, but is stored in the value argument. If
- * fewer than minVals were supplied, nil values will be added. Returns the
- * number of expressions that were parsed.
+ * Parses a list of expressions exp1, exp2, exp3, etc. and assigns the values
+ * to the destination expressions specified by the dst array (of size numVars).
+ * If more values are specified than numVars, the additional expressions will
+ * be parsed but their values will be discarded. If fewer expressions are
+ * supplied than numVars, the renamining dst expressions will be set to nil.
  */
-static int Parser_ExpressionList(Parser* parser, Expression* value, int minVals)
+static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], int numVars)
 {
 
-    int numVals = 1;
+    int  numValues = 0;
+    bool done = false;
 
-    int reg = Parser_AllocateRegister(parser);
-    Parser_Expression0(parser, value, reg);
+    while (!done && numValues < numVars)
+    {
 
-    while (Parser_Accept(parser, ','))
-    {
-        Parser_MoveToRegister(parser, value, reg);
-        reg = Parser_AllocateRegister(parser);
-        Parser_Expression0(parser, value, reg);
-        ++numVals;
-    }
+        int regHint = Parser_GetRegisterHint(parser, &dst[numValues]);
+        
+        Expression value;
+        Parser_Expression0(parser, &value, regHint);
 
-    // If a function call is the last expression, adjust its number of return
-    // values to match the expected number of values, 
-    if (numVals < minVals && value->type == EXPRESSION_CALL)
-    {
-        Parser_ResolveCall(parser, value, minVals - numVals + 1);
-    }
-    else
-    {
-        // If enough values weren't specified, add nil values.
-        while (numVals < minVals)
+        // Check if we've reached the end of the list.
+        if (!Parser_Accept(parser, ','))
         {
-            Parser_MoveToRegister(parser, value, reg);
-            int reg = Parser_AllocateRegister(parser);
-            value->type = EXPRESSION_NIL;
-            ++numVals;
+            done = true;
+            // If the final expression is a function call, adjust the number of
+            // return values to match the remaining number of variables.
+            int numResults = numVars - numValues;
+            if (Parser_ResolveCall(parser, &value, numResults))
+            {
+                assert(value.type == EXPRESSION_REGISTER);
+                for (int i = 0; i < numResults; ++i)
+                {
+                    Parser_EmitSet(parser, &dst[numValues + i], &value);
+                    ++value.index;
+                }
+                return;
+            }
         }
+
+        Parser_EmitSet(parser, &dst[numValues], &value);
+
+        // Make sure we don't reuse the registers occupied by locals that
+        // we've assigned.
+        if (dst[numValues].type == EXPRESSION_LOCAL)
+        {
+            int reg = dst[numValues].index;
+            if (reg <= Parser_GetNumRegisters(parser))
+            {
+                Parser_SetLastRegister(parser, reg);
+            }
+        }
+
+        ++numValues;
+
     }
 
-    return numVals; 
+    // If enough values weren't specified, substitute nils.
+    while (numValues < numVars)
+    {
+        Expression value;
+        value.type = EXPRESSION_NIL;
+        Parser_EmitSet(parser, &dst[numValues], &value);
+        ++numValues;
+    }
+
+    if (!done)
+    {
+        do
+        {
+            Expression value;
+            Parser_Expression0(parser, &value, -1);
+            // Move to a register so that we get any side effects.
+            Parser_MoveToRegister(parser, &value);
+        }
+        while (Parser_Accept(parser, ','));
+    }
 
 }
 
 static void Parser_AssignLocals(Parser* parser, int firstLocal, int numLocals)
 {
-    Parser_SetLastRegister(parser, firstLocal - 1);
-    Expression value;
-    int numVals = Parser_ExpressionList(parser, &value, numLocals);
-    Parser_MoveToRegister(parser, &value, firstLocal + numVals - 1);
-    Parser_FreeRegisters(parser);
+    Expression* dst = (Expression*)alloca(numLocals * sizeof(Expression));
+    for (int i = 0; i < numLocals; ++i)
+    {
+        dst[i].type  = EXPRESSION_LOCAL;
+        dst[i].index = firstLocal + i;
+    }
+    Parser_AssignExpressionList(parser, dst, numLocals);
 }
 
 static bool Parser_TryLocal(Parser* parser)
@@ -1065,10 +1108,6 @@ static bool Parser_TryLocal(Parser* parser)
     int numVars = 0;
     do
     {
-        if (numVars > 0)
-        {
-            Parser_Expect(parser, ',');
-        }
         Parser_Expect(parser, TokenType_Name);
         int local = Parser_AddLocal(parser, Parser_GetString(parser));
         if (numVars == 0)
@@ -1078,9 +1117,13 @@ static bool Parser_TryLocal(Parser* parser)
         }
         ++numVars;
     }
-    while (!Parser_Accept(parser, '='));
+    while (Parser_Accept(parser, ','));
 
-    Parser_AssignLocals(parser, reg, numVars);
+    if (Parser_Accept(parser, '='))
+    {
+        Parser_AssignLocals(parser, reg, numVars);
+    }
+    Parser_CommitLocals(parser);
     
     return true;
 
@@ -1178,6 +1221,8 @@ static bool Parser_TryFor(Parser* parser)
     if (Parser_Accept(parser, '='))
     {
         
+        Parser_CommitLocals( parser );
+        
         // Numeric for loop.
 
         // Start value.
@@ -1235,7 +1280,10 @@ static bool Parser_TryFor(Parser* parser)
         }
 
         Parser_Expect(parser, TokenType_In);
+
         Parser_AssignLocals(parser, internalIndexReg, 3);
+        Parser_CommitLocals( parser );
+
         Parser_Expect(parser, TokenType_Do);
 
         // Reserve space for the jmp instruction since we don't know the skip
@@ -1260,30 +1308,6 @@ static bool Parser_TryFor(Parser* parser)
 
 }
 
-static void Parser_Assignment(Parser* parser, Expression* dst, int numVars = 1)
-{
-    Expression value;
-    int base = Parser_GetNumRegisters(parser);
-	if (Parser_Accept(parser, ','))
-	{
-		Parser_Expression0(parser, &value, -1);
-		Parser_Assignment(parser, &value, numVars + 1);
-	}
-	else
-	{
-        Parser_Expect(parser, '=');
-		int numValues = Parser_ExpressionList(parser, &value, numVars);
-        if (numValues == numVars)
-        {
-            Parser_EmitSet(parser, dst, &value);        
-            return;
-        }
-	}
-    value.index = base + numVars - 1;
-    value.type  = EXPRESSION_REGISTER;
-	Parser_EmitSet(parser, dst, &value);
-}
-
 static bool Parser_TryBreak(Parser* parser)
 {
     if (!Parser_Accept(parser, TokenType_Break))
@@ -1292,7 +1316,7 @@ static bool Parser_TryBreak(Parser* parser)
     }
     Parser_BreakBlock(parser);
     // Note, unlike in vanialla Lua we don't require break to be the final
-    // statement in a block (since there's no reason for it).
+    // statement in a block (since it just makes the parser more complex).
     return true;
 }
 
@@ -1337,12 +1361,33 @@ static void Parser_Statement(Parser* parser)
     }
     
     // Handle expression statements.
-    Expression dst;
-    Parser_Expression0(parser, &dst, -1);
+
+    Expression dst[LUA_MAXASSIGNS];
+    Parser_Expression0(parser, &dst[0], -1);
     
-    if (!Parser_ResolveCall(parser, &dst, 0))
+    if (!Parser_ResolveCall(parser, &dst[0], 0))
     {
-        Parser_Assignment(parser, &dst);
+        
+        int numVars = 1;
+        while (numVars < LUA_MAXASSIGNS && Parser_Accept(parser, ','))
+        {
+            Parser_Expression0(parser, &dst[numVars], -1);
+            ++numVars;
+        }
+
+        if (numVars == LUA_MAXASSIGNS)
+        {
+            // Because we use a fixed sized array, we impose a limit on the
+            // maximum number of assignments for a single statement. This
+            // shouldn't be a factor for most code, but if it is the statement
+            // can easily be broken into two statements.
+            Parser_Error(parser, "maximum number of assignments for a single statment (%d) reached",
+                LUA_MAXASSIGNS);
+        }
+
+        Parser_Expect(parser, '=');
+        Parser_AssignExpressionList(parser, dst, numVars);
+
     }
 
     // After each statement we can reuse all of the temporary registers.

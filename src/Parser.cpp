@@ -45,6 +45,7 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
     function->maxSourceLines    = 0;
   
     function->numLocals         = 0;
+    function->numCommitedLocals = 0;
     function->numUpValues       = 0;
 
     function->function          = NULL;
@@ -126,7 +127,7 @@ static int Parser_FindName(String* names[], int numNames, String* name)
 
 static int Parser_GetLocalIndex(Function* function, String* name)
 {
-    return Parser_FindName(function->local, function->numLocals, name);
+    return Parser_FindName(function->local, function->numCommitedLocals, name);
 }
 
 static int Parser_GetUpValueIndex(Function* function, String* name)
@@ -193,17 +194,25 @@ int Parser_AddLocal(Parser* parser, String* name)
     function->local[function->numLocals] = name;
     ++function->numLocals;
 
-    if (function->numLocals > function->maxStackSize)
-    {
-        function->maxStackSize = function->numLocals;
-    }
-    if (function->numRegisters < function->numLocals)
-    {
-        function->numRegisters = function->numLocals;
-    }
-
     return function->numLocals - 1;
 
+}
+
+void Parser_CommitLocals(Parser* parser)
+{
+
+    Function* function = parser->function;
+    function->numCommitedLocals = function->numLocals;
+
+    if (function->numCommitedLocals > function->maxStackSize)
+    {
+        function->maxStackSize = function->numCommitedLocals;
+    }
+    if (function->numRegisters < function->numCommitedLocals)
+    {
+        function->numRegisters = function->numCommitedLocals;
+    }
+    
 }
 
 int Parser_AddConstant(Parser* parser, Value* value)
@@ -484,6 +493,16 @@ static void Parser_EmitUpValueBinding(Parser* parser, Function* closure)
     }
 }
 
+int Parser_GetRegisterHint(Parser* parser, const Expression* value)
+{
+    if (value->type == EXPRESSION_LOCAL ||
+        value->type == EXPRESSION_REGISTER)
+    {
+        return value->index;
+    }
+    return -1;
+}
+
 bool Parser_ConvertToRegister(Parser* parser, Expression* value)
 {
     if (value->type == EXPRESSION_LOCAL)
@@ -609,7 +628,7 @@ void Parser_MoveToStackTop(Parser* parser, Expression* value)
 {
     Function* function = parser->function;
     Parser_MoveToRegister(parser, value);
-    if (value->index != function->numRegisters - 1 || value->index < function->numLocals)
+    if (value->index != function->numRegisters - 1 || value->index < function->numCommitedLocals)
     {
         int reg = Parser_AllocateRegister(parser);
         Parser_MoveToRegister(parser, value, reg);
@@ -619,7 +638,7 @@ void Parser_MoveToStackTop(Parser* parser, Expression* value)
 bool Parser_GetIsTemporaryRegister(Parser* parser, const Expression* value)
 {
     return value->type == EXPRESSION_REGISTER &&
-           value->index >= parser->function->numLocals;
+           value->index >= parser->function->numCommitedLocals;
 }
 
 void Parser_SelectDstRegister(Parser* parser, Expression* dst, int regHint)
@@ -641,7 +660,7 @@ void Parser_SetLastRegister(Parser* parser, int reg)
 void Parser_FreeRegisters(Parser* parser)
 {
     Function* function = parser->function;
-    function->numRegisters = function->numLocals;
+    function->numRegisters = function->numCommitedLocals;
 }
 
 void Parser_FreeRegisters(Parser* parser, int num)
@@ -883,6 +902,10 @@ void Parser_BeginBlock(Parser* parser, bool breakable)
     {
         Parser_Error(parser, "too many block levels");
     }
+
+    // Locals must be commited before starting a block.
+    assert( parser->function->numLocals == parser->function->numCommitedLocals );
+
     Block* block = &parser->block[parser->numBlocks];
     block->restoreNumLocals = parser->function->numLocals;
     block->breakable        = breakable;
@@ -912,6 +935,7 @@ void Parser_EndBlock(Parser* parser)
     
     --parser->numBlocks;
     parser->function->numLocals = parser->block[parser->numBlocks].restoreNumLocals;
+    parser->function->numCommitedLocals = parser->function->numLocals;
 
 }
 

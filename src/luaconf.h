@@ -57,6 +57,9 @@
 // Maximum length of an identifier.
 #define LUA_MAXNAME 512
 
+// Maximum number of variables that can assigned in a single statement.
+#define LUA_MAXASSIGNS 100
+
 /*
 @@ LUAL_BUFFERSIZE is the buffer size used by the lauxlib buffer system.
 */

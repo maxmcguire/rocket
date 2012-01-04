@@ -38,6 +38,7 @@ struct Function
 
     String*         local[LUAI_MAXVARS];
     int             numLocals;
+    int             numCommitedLocals;
 
     String*         upValue[LUAI_MAXUPVALUES];
     int             numUpValues;
@@ -147,7 +148,17 @@ lua_Number Parser_GetNumber(Parser* parser);
 
 int Parser_AddFunction(Parser* parser, Function* function);
 
+/**
+ * The local will not be visible until it is commited using the
+ * Parser_CommitLocals function.
+ */
 int Parser_AddLocal(Parser* parser, String* name);
+
+/**
+ * Makes all of the locals that were added using Parser_AddLocal
+ * visible to script.
+ */
+void Parser_CommitLocals(Parser* parser);
 
 int Parser_GetLocalIndex(Parser* parser, String* name);
 int Parser_AddUpValue(Parser* parser, String* name);
@@ -189,6 +200,12 @@ void Parser_CloseTest(Parser* parser, Expression* value);
  * jump to the instruction specified by startPos.
  */
 void Parser_CloseTest(Parser* parser, Expression* value, int startPos);
+
+/**
+ * Returns the index of the register occupied by the value, or -1 if the
+ * expression is not in a register.
+ */
+int Parser_GetRegisterHint(Parser* parser, const Expression* value);
 
 /**
  * Changes the expression into a register value if it can be directly converted
