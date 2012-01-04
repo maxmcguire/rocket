@@ -40,6 +40,7 @@ static const char* tokenName[] =
         "while",
         // Symbols.
         "..",
+        "...",
         "=",
         ">=",
         "<=",
@@ -198,7 +199,15 @@ void Lexer_NextToken(Lexer* lexer)
             if (Input_PeekByte(lexer->input) == '.')
             {
                 Input_ReadByte(lexer->input);
-                lexer->token.type = TokenType_Concat;
+                if (Input_PeekByte(lexer->input) == '.')
+                {
+                    Input_ReadByte(lexer->input);
+                    lexer->token.type = TokenType_Dots;
+                }
+                else
+                {
+                    lexer->token.type = TokenType_Concat;
+                }
                 return;
             }
             lexer->token.type = c;

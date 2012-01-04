@@ -251,10 +251,20 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
         {
             Parser_Expect(parser, ',');
         }
-        Parser_Expect(parser, TokenType_Name);
         // Add the parameter as a local, since they have the same semantics.
-        Parser_AddLocal( &p, Parser_GetString(parser) );
-        ++p.function->numParams;
+        if (Parser_Accept(parser, TokenType_Dots))
+        {
+            Parser_AddLocal( &p, String_Create(p.L, "...") );
+            Parser_Expect( parser, ')' );
+            p.function->varArg = true;
+            break;
+        }
+        else
+        {
+            Parser_Expect(parser, TokenType_Name);
+            Parser_AddLocal( &p, Parser_GetString(parser) );
+            ++p.function->numParams;
+        }
     }
 
     if (method)
@@ -448,6 +458,15 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
 		Parser_Expression0(parser, dst, regHint);
 		Parser_Expect(parser, ')');
 	}
+    else if (Parser_Accept(parser, TokenType_Dots))
+    {
+        // Check that we're in a vararg function.
+        if (!parser->function->varArg)
+        {
+            Parser_Error(parser, "cannot use '...' outside a vararg function");
+        }
+        dst->type = EXPRESSION_VARARG;
+    }
     else
     {
         Parser_Error(parser, "expected variable or constant");

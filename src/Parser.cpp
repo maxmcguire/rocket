@@ -32,6 +32,7 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
     function->numRegisters      = 0;
     function->maxStackSize      = 0;
     function->numParams         = 0;
+    function->varArg            = false;
 
     function->numConstants      = 0;
     function->constants         = Table_Create(parser->L);
@@ -578,6 +579,10 @@ void Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     else if (value->type == EXPRESSION_NOT)
     {
         Parser_EmitAB(parser, Opcode_Not, reg, value->index);
+    }
+    else if (value->type == EXPRESSION_VARARG)
+    {
+        Parser_EmitAB(parser, Opcode_VarArg, reg, 2);
     }
     else
     {

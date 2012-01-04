@@ -21,6 +21,7 @@ struct Function
     Function*       parent;
 
     int             numParams;
+    bool            varArg;
 
     int             numRegisters;
     int             maxStackSize;
@@ -76,6 +77,7 @@ struct Parser
 #define EXPRESSION_TEST         11
 #define EXPRESSION_UPVALUE      12
 #define EXPRESSION_NOT          13
+#define EXPRESSION_VARARG       14
 
 /**
  * If type is EXPRESSION_TABLE:
