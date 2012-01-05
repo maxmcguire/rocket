@@ -1375,3 +1375,38 @@ TEST(EmptyStatement)
     lua_close(L);
 
 }
+
+TEST(CppCommentLine)
+{
+
+    const char* code =
+        "// this is a comment\n"
+        "a = 1";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_close(L);
+
+}
+
+TEST(CppCommentBlock)
+{
+
+    const char* code =
+        "/* this is a comment\n"
+        "that goes for multiple lines */\n"
+        "a = 1\n";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_close(L);
+
+}

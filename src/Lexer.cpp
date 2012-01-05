@@ -89,6 +89,28 @@ static void Lexer_ReadComment(Lexer* lexer)
     ++lexer->lineNumber;
 }
 
+/**
+ * Reads from the input until the end of a CPP style block comment is reached.
+ */
+static void Lexer_ReadBlockComment(Lexer* lexer)
+{
+    int c;
+    do
+    {
+        c = Input_ReadByte(lexer->input);
+        if (c == '*' && Input_PeekByte(lexer->input) == '/')
+        {
+            Input_ReadByte(lexer->input);
+            break;
+        }
+        if (Lexer_IsNewLine(c))
+        {
+            ++lexer->lineNumber;
+        }
+    }
+    while (c != END_OF_STREAM);
+}
+
 const char* Token_GetString(TokenType token)
 {
     return tokenName[token - TokenType_First];
@@ -181,9 +203,24 @@ void Lexer_NextToken(Lexer* lexer)
             }
             Lexer_ReadComment(lexer);
             break;
+        case '/':
+            if (Input_PeekByte(lexer->input) == '*')
+            {
+                Input_ReadByte(lexer->input);
+                Lexer_ReadBlockComment(lexer);
+            }
+            else if (Input_PeekByte(lexer->input) == '/')
+            {
+                Input_ReadByte(lexer->input);
+                Lexer_ReadComment(lexer);
+            }
+            else
+            {
+                lexer->token.type = c;
+            }
+            break;
         case '+':
         case '*':
-        case '/':
         case '(':
         case ')':
         case '[':
