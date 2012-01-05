@@ -11,6 +11,6 @@ extern "C" void clear();
 
 int main(int argc, char* argv[])
 {
-    Test_RunTests();
+    Test_RunTests("DoBlock");
     return 0;
 }

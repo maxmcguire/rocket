@@ -110,12 +110,12 @@ void Parser_Unaccept(Parser* parser)
 }
 
 /**
- * Searches an array of strings for a name and returns its index (or -1 if it's
- * not in the array).
+ * Searches an array of strings in reverse order for a name and returns its
+ * index (or -1  if it's not in the array).
  */
 static int Parser_FindName(String* names[], int numNames, String* name)
 {
-    for (int i = 0; i < numNames; ++i)
+    for (int i = numNames - 1; i >= 0; --i)
     {
         if (names[i] == name)
         {

@@ -1314,3 +1314,29 @@ TEST(VarArg4)
     lua_close(L);
 
 }
+
+TEST(DoBlock)
+{
+
+    const char* code =
+        "local _a = 1\n"
+        "do\n"
+        "  local _a, _b\n"
+        "  _a = 2\n"
+        "  _b = 3\n"
+        "end\n"
+        "a = _a\n"
+        "b = _b";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_isnil(L, -1)  );
+
+    lua_close(L);
+
+}
