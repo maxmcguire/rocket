@@ -170,6 +170,18 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
 }
 
 /**
+ * Atempts to parse the empty statement (a semicolon).
+ */
+static bool Parser_TryEmpty(Parser* parser)
+{
+    if (Parser_Accept(parser, ';'))
+    {
+        return true;
+    }
+    return false;
+}
+
+/**
  * If single is true, only a single argument will be parsed (used for special syntax
  * forms where a string or table argument is specified for a function).
  */
@@ -905,6 +917,18 @@ static bool Parser_TryReturn(Parser* parser)
                !Parser_Accept(parser, TokenType_ElseIf))
         {
 
+            if (Parser_TryEmpty(parser))
+            {
+                // Lua allows a single empty statement to follow a return statement. 
+                if (Parser_Accept(parser, TokenType_End) ||
+                    Parser_Accept(parser, TokenType_Else) ||
+                    Parser_Accept(parser, TokenType_ElseIf))
+                {
+                    break;
+                }
+                Parser_Error(parser, "unexpected token");
+            }
+
             if (numResults == 0)
             {
                 // The first result is handleded specially so that if we're only
@@ -939,8 +963,15 @@ static bool Parser_TryReturn(Parser* parser)
 
         if (reg == -1)
         {
-            Parser_MoveToRegister(parser, &arg);
-            reg = arg.index;
+            if (numResults > 0)
+            {
+                Parser_MoveToRegister(parser, &arg);
+                reg = arg.index;
+            }
+            else
+            {
+                reg = 0;
+            }
         }
 
         Parser_EmitAB(parser, Opcode_Return, reg, numResults + 1);
@@ -1338,18 +1369,6 @@ static bool Parser_TryBreak(Parser* parser)
     // Note, unlike in vanialla Lua we don't require break to be the final
     // statement in a block (since it just makes the parser more complex).
     return true;
-}
-
-/**
- * Atempts to parse the empty statement (a semicolon).
- */
-static bool Parser_TryEmpty(Parser* parser)
-{
-    if (Parser_Accept(parser, ';'))
-    {
-        return true;
-    }
-    return false;
 }
 
 static void Parser_Statement(Parser* parser)

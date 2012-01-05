@@ -688,6 +688,21 @@ TEST(ReturnMultiple)
 
 }
 
+TEST(ReturnEmpty)
+{
+
+    const char* code =
+        "function Foo()\n"
+        "  return ;\n"
+        "end";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_close(L);
+
+}
+
 TEST(FunctionStringArgument)
 {
 
