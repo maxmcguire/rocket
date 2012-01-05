@@ -386,7 +386,11 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                 if (Parser_Accept(parser, '}'))
                 {
                     Parser_Unaccept(parser);
-                    varArg = Parser_ResolveVarArg(parser, &exp, -1, listReg + listSize);
+                    if ( Parser_ResolveCall(parser, &exp, -1) ||
+                         Parser_ResolveVarArg(parser, &exp, -1, listReg + listSize))
+                    {
+                        varArg = true;
+                    }
                 }
 
                 Parser_MoveToRegister(parser, &exp, listReg + listSize);
@@ -399,7 +403,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
         }
         ++num;
-        Parser_SetLastRegister(parser, listReg + listSize);
+        Parser_SetLastRegister(parser, listReg + listSize - 1);
 
     }
     

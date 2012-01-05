@@ -608,6 +608,45 @@ TEST(TableConstructorVarArg)
 
 }
 
+TEST(TableConstructorFunction)
+{
+
+    const char* code =
+        "function f()\n"
+        "  return 'one', 'two', 'three'\n"
+        "end\n"
+        "t = { 'zero', f() }";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "t");
+    CHECK( lua_istable(L, -1) == 1 );
+
+    lua_rawgeti(L, -1, 1);
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp(lua_tostring(L, -1), "zero") == 0 );
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, -1, 2);
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp(lua_tostring(L, -1), "one") == 0 );
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, -1, 3);
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp(lua_tostring(L, -1), "two") == 0 );
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, -1, 4);
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp(lua_tostring(L, -1), "three") == 0 );
+    lua_pop(L, 1);
+
+    lua_close(L);
+
+}
+
 TEST(Return)
 {
 
