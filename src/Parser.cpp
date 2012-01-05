@@ -438,18 +438,17 @@ bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults)
     return false;
 }
 
-bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults)
+bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int regHint)
 {
     if (value->type == EXPRESSION_VARARG)
     {
-        int reg = Parser_GetRegisterHint(parser, value);
-        if (reg == -1)
+        if (regHint == -1)
         {
-            reg = Parser_AllocateRegister(parser);
+            regHint = Parser_AllocateRegister(parser);
         }
-        Parser_EmitAB(parser, Opcode_VarArg, reg, numResults + 1);
+        Parser_EmitAB(parser, Opcode_VarArg, regHint, numResults + 1);
         value->type  = EXPRESSION_REGISTER;
-        value->index = reg;
+        value->index = regHint;
         Parser_SetLastRegister(parser, value->index + numResults - 1);
         return true;
     }

@@ -1137,7 +1137,7 @@ TEST(ConcatOperator)
 
 }
 
-TEST(VarArgFunction1)
+TEST(VarArg1)
 {
 
     const char* code =
@@ -1159,8 +1159,7 @@ TEST(VarArgFunction1)
 
 }
 
-
-TEST(VarArgFunction2)
+TEST(VarArg2)
 {
 
     const char* code =
@@ -1177,6 +1176,62 @@ TEST(VarArgFunction2)
 
     lua_getglobal(L, "x");
     CHECK( lua_tonumber(L, -1) == 4.0 );
+
+    lua_close(L);
+
+}
+
+TEST(VarArg3)
+{
+
+    const char* code =
+        "function f(a, b, c)\n"
+        "  x, y, z = a, b, c\n"
+        "end\n"
+        "function g(...)\n"
+        "  f(...)\n"
+        "end\n"
+        "g(1, 2)";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "x");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_getglobal(L, "y");
+    CHECK( lua_tonumber(L, -1) == 2.0 );
+
+    lua_getglobal(L, "z");
+    CHECK( lua_isnil(L, -1) );
+
+    lua_close(L);
+
+}
+
+TEST(VarArg4)
+{
+
+    const char* code =
+        "function f(a, b, c)\n"
+        "  x, y, z = a, b, c\n"
+        "end\n"
+        "function g(...)\n"
+        "  f(..., 3)\n"
+        "end\n"
+        "g(1, 2)";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "x");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_getglobal(L, "y");
+    CHECK( lua_tonumber(L, -1) == 3.0 );
+
+    lua_getglobal(L, "z");
+    CHECK( lua_isnil(L, -1) );
 
     lua_close(L);
 

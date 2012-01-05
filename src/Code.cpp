@@ -195,14 +195,15 @@ static int Parser_Arguments(Parser* parser, bool single = false)
         Expression arg;
         Parser_Expression0(parser, &arg, reg);
 
-        if (!single)
+        if (!single && Parser_Accept(parser, ')'))
         {
-            if (Parser_Accept(parser, ')'))
+            Parser_Unaccept(parser);
+            // Allow variable number of arguments for a function call which
+            // is the last argument.
+            if (Parser_ResolveCall(parser, &arg, -1) ||
+                Parser_ResolveVarArg(parser, &arg, -1, reg))
             {
-                Parser_Unaccept(parser);
-                // Allow variable number of arguments for a function call which
-                // is the last argument.
-                varArg = Parser_ResolveCall(parser, &arg, -1);
+                varArg = true;
             }
         }
 
@@ -1029,7 +1030,7 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
             // of return values to match the remaining number of variables.
             int numResults = numVars - numValues;
             if (Parser_ResolveCall(parser, &value, numResults) ||
-                Parser_ResolveVarArg(parser, &value, numResults))
+                Parser_ResolveVarArg(parser, &value, numResults, regHint))
             {
                 assert(value.type == EXPRESSION_REGISTER);
                 for (int i = 0; i < numResults; ++i)
