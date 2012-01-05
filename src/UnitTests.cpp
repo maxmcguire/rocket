@@ -1361,3 +1361,17 @@ TEST(ShadowLocalUpValue)
     lua_close(L);
 
 }
+
+TEST(EmptyStatement)
+{
+
+    const char* code =
+        "function g() end\n"
+        "local a = f ; (g)()\n";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_close(L);
+
+}

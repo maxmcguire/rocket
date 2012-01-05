@@ -1340,9 +1340,25 @@ static bool Parser_TryBreak(Parser* parser)
     return true;
 }
 
+/**
+ * Atempts to parse the empty statement (a semicolon).
+ */
+static bool Parser_TryEmpty(Parser* parser)
+{
+    if (Parser_Accept(parser, ';'))
+    {
+        return true;
+    }
+    return false;
+}
+
 static void Parser_Statement(Parser* parser)
 {
 
+    if (Parser_TryEmpty(parser))
+    {
+        return;
+    }
     if (Parser_TryDo(parser))
     {
         return;
