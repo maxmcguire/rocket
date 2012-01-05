@@ -306,6 +306,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
     int hashSize = 0;
 
     int num = 0;
+    bool varArg = false;
 
     while (!Parser_Accept(parser, '}'))
     {
@@ -377,10 +378,23 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
             if (!accepted)
             {
+
                 Expression exp;
                 Parser_Expression0(parser, &exp, listReg + listSize);
+
+                // Check if this is the last expression in the list.
+                if (Parser_Accept(parser, '}'))
+                {
+                    Parser_Unaccept(parser);
+                    varArg = Parser_ResolveVarArg(parser, &exp, -1, listReg + listSize);
+                }
+
                 Parser_MoveToRegister(parser, &exp, listReg + listSize);
-                ++listSize;
+                if (!varArg)
+                {
+                    ++listSize;
+                }
+
             }
 
         }
@@ -394,7 +408,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
     if (listSize > 0)
     {
-        Parser_EmitABC(parser, Opcode_SetList,  dst->index, listSize, 1);
+        Parser_EmitABC(parser, Opcode_SetList,  dst->index, varArg ? 0 : listSize, 1);
     }
 
     return true;
