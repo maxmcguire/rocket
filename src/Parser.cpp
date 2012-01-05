@@ -160,7 +160,10 @@ static void Parser_MarkUpValue(Function* function, int local)
             return;
         }
     }
-    assert(0);
+
+    // Note, it's possible for no block to contain the local if it's declared
+    // at the top level. That's ok since functions automatically close up values
+    // when they return.
 
 }
 
