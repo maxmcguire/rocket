@@ -10,6 +10,7 @@
 #include "State.h"
 #include "Input.h"
 
+struct Parser;
 struct Table;
 struct Prototype;
 struct Lexer;
@@ -18,6 +19,7 @@ enum   Opcode;
 struct Function
 {
 
+    Parser*         parser;         // Only valid while the function is being parsed.
     Function*       parent;
 
     int             numParams;
@@ -51,9 +53,10 @@ struct Function
 
 struct Block
 {
-    int             restoreNumLocals;
+    int             firstLocal;
     bool            breakable;
     int             firstBreakPos;
+    int             firstLocalUpValue;
 };
 
 struct Parser

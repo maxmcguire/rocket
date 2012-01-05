@@ -28,6 +28,7 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
     Function* function = static_cast<Function*>( Allocate( L, sizeof(Function) ) );
 
     function->parent            = parent;
+    function->parser            = parser;
 
     function->numRegisters      = 0;
     function->maxStackSize      = 0;
@@ -51,7 +52,7 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
     function->function          = NULL;
     function->numFunctions      = 0;
     function->maxFunctions      = 0;
-
+        
     parser->function            = function;
 
 }
@@ -140,6 +141,29 @@ int Parser_GetLocalIndex(Parser* parser, String* name)
     return Parser_GetLocalIndex(parser->function, name);
 }
 
+static void Parser_MarkUpValue(Function* function, int local)
+{
+
+    Parser* parser = function->parser;
+    assert(parser != NULL);
+
+    // Find the block that contains the local.
+    for (int i = parser->numBlocks - 1; i >= 0; --i)
+    {
+        Block* block = &parser->block[i];
+        if (local >= block->firstLocal)
+        {
+            if (block->firstLocalUpValue == -1 || local < block->firstLocalUpValue)
+            {
+                block->firstLocalUpValue = local;
+            }
+            return;
+        }
+    }
+    assert(0);
+
+}
+
 int Parser_AddUpValue(Parser* parser, String* name)
 {
 
@@ -157,13 +181,23 @@ int Parser_AddUpValue(Parser* parser, String* name)
     Function* parent = function->parent;
     while (parent != NULL)
     {
-        if (Parser_GetLocalIndex(parent, name) != -1 ||
-            Parser_GetUpValueIndex(parent, name) != -1)
+
+        int index = Parser_GetLocalIndex(parent, name);
+        if (index != -1)
+        {
+            // Mark the local as needing to be "closed" when the block its
+            // declared in ends, since it will be used as an upvalue.
+            Parser_MarkUpValue(parent, index);
+        }
+
+        if (index != -1 || Parser_GetUpValueIndex(parent, name) != -1)
         {
             if (function->numUpValues == LUAI_MAXUPVALUES)
             {
                 Parser_Error(parser, "too many up values to function");
             }
+
+            // TODO: Mark the block as needing the locals to be closed.
 
             int n =  function->numUpValues;
             function->upValue[n] = name;
@@ -926,9 +960,10 @@ void Parser_BeginBlock(Parser* parser, bool breakable)
     assert( parser->function->numLocals == parser->function->numCommitedLocals );
 
     Block* block = &parser->block[parser->numBlocks];
-    block->restoreNumLocals = parser->function->numLocals;
-    block->breakable        = breakable;
-    block->firstBreakPos   = -1;
+    block->firstLocal           = parser->function->numLocals;
+    block->breakable            = breakable;
+    block->firstBreakPos        = -1;
+    block->firstLocalUpValue    = -1;
     ++parser->numBlocks;
 }
 
@@ -951,10 +986,17 @@ void Parser_EndBlock(Parser* parser)
         Parser_UpdateInstruction(parser, breakPos, inst);
         breakPos = nextBreakPos;
     }
+
+    if (block->firstLocalUpValue != -1)
+    {
+        // Close an local up values.
+        Parser_EmitAB(parser, Opcode_Close, block->firstLocalUpValue, 0);
+    }
     
     --parser->numBlocks;
-    parser->function->numLocals = parser->block[parser->numBlocks].restoreNumLocals;
+    parser->function->numLocals = parser->block[parser->numBlocks].firstLocal;
     parser->function->numCommitedLocals = parser->function->numLocals;
+
 
 }
 

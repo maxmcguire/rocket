@@ -271,13 +271,13 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
         {
             Parser_AddLocal( &p, String_Create(p.L, "...") );
             Parser_CommitLocals( &p );
-            Parser_Expect( parser, ')' );
+            Parser_Expect( &p, ')' );
             p.function->varArg = true;
             break;
         }
         else
         {
-            Parser_Expect(parser, TokenType_Name);
+            Parser_Expect( &p, TokenType_Name );
             Parser_AddLocal( &p, Parser_GetString(parser) );
             Parser_CommitLocals( &p );
             ++p.function->numParams;
@@ -296,6 +296,8 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
     // Store in the result parent function.
     dst->type  = EXPRESSION_FUNCTION;
     dst->index = Parser_AddFunction(parser, p.function);
+
+    p.function->parser = NULL;
 
 }
 
