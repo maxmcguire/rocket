@@ -1340,3 +1340,24 @@ TEST(DoBlock)
     lua_close(L);
 
 }
+
+TEST(ShadowLocalUpValue)
+{
+
+    const char* code =
+        "local a = 5\n"
+        "function f()\n"
+        "  v = a\n"
+        "end\n"
+        "local a = 6\n"
+        "f()";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "v");
+    CHECK( lua_tonumber(L, -1) == 5.0 );
+
+    lua_close(L);
+
+}
