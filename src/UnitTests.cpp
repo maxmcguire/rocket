@@ -124,6 +124,37 @@ TEST(PCallTest)
 
 }
 
+TEST(ErrorStackTest)
+{
+
+    struct Locals
+    {
+        static int ErrorFunction(lua_State* L)
+        {
+            lua_pushstring(L, "Error message");
+            lua_error(L);
+            return 0;
+        }
+    };
+
+    lua_State* L = luaL_newstate();
+
+    lua_pushstring(L, "test");
+
+    lua_pushcfunction(L, Locals::ErrorFunction);
+    CHECK( lua_pcall(L, 0, 0, 0) == LUA_ERRRUN );
+
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp( lua_tostring(L, -1), "Error message") == 0 );
+    
+    // Check that the stack is in the correct state.
+    CHECK( lua_isstring(L, -2) );
+    CHECK( strcmp( lua_tostring(L, -2), "test") == 0);
+
+    lua_close(L);
+
+}
+
 TEST(RawGetITest)
 {
 
