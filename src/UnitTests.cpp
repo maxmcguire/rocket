@@ -1330,6 +1330,32 @@ TEST(VarArg4)
 
 }
 
+TEST(VarArg5)
+{
+
+    const char* code =
+        "function f(a, b)\n"
+        "  x = a\n"
+        "  y = b\n"
+        "end\n"
+        "function g()\n"
+        "  return 1, 2\n"
+        "end\n"
+        "f( g() )";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "x");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_getglobal(L, "y");
+    CHECK( lua_tonumber(L, -1) == 2.0 );
+
+    lua_close(L);
+
+}
+
 TEST(DoBlock)
 {
 

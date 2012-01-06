@@ -709,6 +709,10 @@ void Parser_SetLastRegister(Parser* parser, int reg)
 {
     Function* function = parser->function;
     function->numRegisters = reg + 1;
+    if (function->numRegisters > function->maxStackSize)
+    {
+        function->maxStackSize = function->numRegisters;
+    }
 }
 
 void Parser_FreeRegisters(Parser* parser)

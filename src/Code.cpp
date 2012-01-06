@@ -516,6 +516,7 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
     // Standard function call like (arg1, arg2, ...)
     if (Parser_Accept(parser, '('))
     {
+        Parser_MoveToRegister(parser, dst, regHint);
         Parser_MoveToStackTop(parser, dst);
         dst->type    = EXPRESSION_CALL;
         dst->numArgs = Parser_Arguments(parser);
@@ -527,6 +528,7 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
         Parser_Accept(parser, '{'))
     {
         Parser_Unaccept(parser);
+        Parser_MoveToRegister(parser, dst, regHint);
         Parser_MoveToStackTop(parser, dst);
         dst->type    = EXPRESSION_CALL;
         dst->numArgs = Parser_Arguments(parser, true);
