@@ -285,7 +285,7 @@ void State_Error(lua_State* L)
 {
     if (L->errorHandler != NULL)
     {
-        longjmp(L->errorHandler->jump, 1);
+        longjmp(L->errorHandler->jump, LUA_ERRRUN);
     }
     else
     {

@@ -124,13 +124,16 @@ TEST(PCallTest)
 
 }
 
-TEST(ErrorStackTest)
+TEST(ErrorRestoreTest)
 {
 
     struct Locals
     {
         static int ErrorFunction(lua_State* L)
         {
+            lua_pushnumber(L, 1.0);
+            lua_pushnumber(L, 2.0);
+            lua_pushnumber(L, 3.0);
             lua_pushstring(L, "Error message");
             lua_error(L);
             return 0;

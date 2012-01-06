@@ -862,21 +862,51 @@ static int Execute(lua_State* L, int numArgs)
 int ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, int errorFunc)
 {
 
-    int result = 0;
-
     ErrorHandler* oldErrorHandler = L->errorHandler;
     
     ErrorHandler errorHandler;
     L->errorHandler = &errorHandler;
 
-    if (setjmp(errorHandler.jump))
+    // Save off the pre-call state so we can restore it in the case of an error.
+    CallFrame* oldFrame = L->callStackTop;
+    Value*     oldBase  = L->stackBase;
+
+    int result = setjmp(errorHandler.jump);
+
+    if (result != 0)
     {
-        // Error occured.
+        // An error occured.
+
+        // For certain types of errors, there will be an error message on the
+        // top of the stack.
+        Value* errorMessage = L->stackTop - 1;
+
+        // Restore the pre-call state.
+        L->stackBase    = oldBase;
+        L->callStackTop = oldFrame;
+        L->stackTop     = value + 1;
+
+        switch (result)
+        {
+        case LUA_ERRMEM:
+            SetValue(L->stackTop - 1, String_Create(L, "not enough memory"));
+            break;
+        case LUA_ERRERR:
+            SetValue(L->stackTop - 1, String_Create(L, "error in error handling"));
+            break;
+        case LUA_ERRRUN:
+        case LUA_ERRSYNTAX:
+            // Move the error message to the top of the restored stack.
+            *(L->stackTop - 1) = *errorMessage;
+            break;
+        default:
+            SetNil(L->stackTop - 1);
+        }
+
         if (errorFunc != 0)
         {
             // TODO: Call the error handler function.
         }
-        result = LUA_ERRRUN;
     }
     else
     {
