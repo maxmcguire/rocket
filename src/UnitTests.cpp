@@ -1628,3 +1628,24 @@ TEST(ModuloOperator)
     lua_close(L);
 
 }
+
+TEST(EscapeCharacters)
+{
+
+    const char* code =
+        "b = '\\01a\\002'";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_isstring(L, -1) );
+    const char* buffer = lua_tostring(L, -1); 
+
+    CHECK( buffer[0] == 1 );
+    CHECK( buffer[1] == 'a' );
+    CHECK( buffer[2] == 2 );
+
+    lua_close(L);
+
+}

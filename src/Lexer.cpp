@@ -158,6 +158,7 @@ static int Lexer_GetHexValue(int c)
     {
         return c - 'a' + 10;
     }
+    return 0;
 }
 
 static bool Lexer_ReadNumber(Lexer* lexer, int c)
@@ -448,20 +449,38 @@ void Lexer_NextToken(Lexer* lexer)
                     {
                         // Handle escape sequences.
                         c = Input_ReadByte(lexer->input);
-                        switch (c)
+                        if (Lexer_IsDigit(c))
                         {
-                        case 'a': c = '\a'; break;
-                        case 'b': c = '\b'; break;
-                        case 'f': c = '\f'; break;
-                        case 'n': c = '\n'; break;
-                        case 'r': c = '\r'; break;
-                        case 't': c = '\t'; break;
-                        case 'v': c = '\v'; break;
-                        case '\\':  c = '\\'; break;
-                        case '\"':  c = '\"'; break;
-                        case '\'':  c = '\''; break;
-                        default:
-                            State_Error(lexer->L);
+                            int value = 0;
+                            for (int i = 0; i < 3; ++i)
+                            {
+                                value = (value * 10) + c - '0';
+                                c = Input_PeekByte(lexer->input);
+                                if (!Lexer_IsDigit(c))
+                                {
+                                    break;
+                                }
+                                Input_ReadByte(lexer->input);
+                            }
+                            c = value;
+                        }
+                        else
+                        {
+                            switch (c)
+                            {
+                            case 'a': c = '\a'; break;
+                            case 'b': c = '\b'; break;
+                            case 'f': c = '\f'; break;
+                            case 'n': c = '\n'; break;
+                            case 'r': c = '\r'; break;
+                            case 't': c = '\t'; break;
+                            case 'v': c = '\v'; break;
+                            case '\\':  c = '\\'; break;
+                            case '\"':  c = '\"'; break;
+                            case '\'':  c = '\''; break;
+                            default:
+                                Lexer_Error(lexer, "invalid escape sequence");
+                            }
                         }
                     }
                     buffer[length] = c;
