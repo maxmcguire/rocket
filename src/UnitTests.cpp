@@ -1670,3 +1670,26 @@ TEST(InvalidEscapeCharacters)
     lua_close(L);
 
 }
+
+TEST(NilConstant)
+{
+
+    const char* code =
+        "c = nil\n"
+        "if a == nil then\n"
+        "  b = 5\n"
+        "end\n";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_tonumber(L, -1) == 5 );
+
+    lua_getglobal(L, "c");
+    CHECK( lua_isnil(L, -1) );
+
+    lua_close(L);
+
+
+}

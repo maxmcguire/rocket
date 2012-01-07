@@ -240,6 +240,17 @@ int Parser_AddConstant(Parser* parser, Value* value)
 {
 
     Function* function = parser->function;
+
+    // We can't store a nil value in a table, so if it's a nil value we need
+    // to use some other value to indicate that. We use the constant table
+    // itself since this will never appear otherwise.
+    Value _value;
+    if (Value_GetIsNil(value))
+    {
+        SetValue(&_value, function->constants);
+        value = &_value;
+    }
+
     const Value* result = Table_GetTable(parser->L, function->constants, value);
     if (result != NULL)
     {
@@ -428,6 +439,11 @@ static void Parser_ConvertLiteralToConstant(Parser* parser, Expression* value)
     {
         Value constant;
         SetNil(&constant);
+
+        if (parser->lexer->lineNumber == 79)
+        {
+            int a =0;
+        }
         value->type = EXPRESSION_CONSTANT;
         value->index = Parser_AddConstant(parser, &constant);
     }
@@ -918,15 +934,20 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     Table* constants = function->constants;
     const Value* value;
 
-    // Since we can't store nil in a table, any slot which is unset in the table
-    // should be a constant.
-    SetRangeNil(prototype->constant, prototype->constant + prototype->numConstants);
-
     while (value = Table_Next(constants, &key))
     {
         assert(Value_GetIsNumber(value));
         int i = static_cast<int>(value->number);
-        prototype->constant[i] = key;
+        if (Value_GetIsTable(&key) && key.table == constants)
+        {
+            // The table itself is used to indicate nil values since nil values
+            // cannot be saved in the table.
+            SetNil(&prototype->constant[i]);
+        }
+        else
+        {
+            prototype->constant[i] = key;
+        }
     }
     
     prototype->varArg       = function->varArg;
