@@ -1633,7 +1633,7 @@ TEST(EscapeCharacters)
 {
 
     const char* code =
-        "b = '\\01a\\002'";
+        "b = '\\01a\\002\\a\\b\\f\\n\\r\\t\\v\\\"\\\''";
 
     lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
@@ -1645,7 +1645,28 @@ TEST(EscapeCharacters)
     CHECK( buffer[0] == 1 );
     CHECK( buffer[1] == 'a' );
     CHECK( buffer[2] == 2 );
+    CHECK( buffer[3] == '\a' );
+    CHECK( buffer[4] == '\b' );
+    CHECK( buffer[5] == '\f' );
+    CHECK( buffer[6] == '\n' );
+    CHECK( buffer[7] == '\r' );
+    CHECK( buffer[8] == '\t' );
+    CHECK( buffer[9] == '\v' );
+    CHECK( buffer[10] == '\"' );
+    CHECK( buffer[11] == '\'' );
 
+    lua_close(L);
+
+}
+
+TEST(InvalidEscapeCharacters)
+{
+
+    const char* code =
+        "b = '\\xyz";
+
+    lua_State* L = luaL_newstate();
+    CHECK( luaL_loadstring(L, code) != 0 );
     lua_close(L);
 
 }
