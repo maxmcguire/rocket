@@ -1655,6 +1655,23 @@ TEST(DivideOperator)
 
 }
 
+TEST(UnaryMinusOperator)
+{
+
+    const char* code =
+        "local x = 5\n" 
+        "y = -x";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "y");
+    CHECK( lua_tonumber(L, -1) == -5 );
+
+    lua_close(L);
+
+}
+
 TEST(ModuloOperator)
 {
 
@@ -1732,6 +1749,5 @@ TEST(NilConstant)
     CHECK( lua_isnil(L, -1) );
 
     lua_close(L);
-
 
 }
