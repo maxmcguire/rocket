@@ -672,9 +672,21 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
         Parser_MoveToRegister(parser, dst, regHint);
         dst->type = EXPRESSION_NOT;
     }
-    else if (Parser_Accept(parser, '#'))
+    else if (Parser_Accept(parser, '#') || Parser_Accept(parser, '-'))
     {
-        // Length operator.
+        // Handle unary minus and length.
+
+        Opcode opcode;
+        switch (Parser_GetToken(parser))
+        {
+        case '#':
+            opcode = Opcode_Len;
+            break;
+        case '-':
+            opcode = Opcode_Unm;
+            break;
+        }
+
         Parser_Expression0(parser, dst, regHint);
         if (!Parser_ConvertToRegister(parser, dst))
         {
@@ -684,7 +696,8 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
         {
             regHint = dst->index;
         }
-        Parser_EmitAB(parser, Opcode_Len, regHint, dst->index);
+
+        Parser_EmitAB(parser, opcode, regHint, dst->index);
         dst->index = regHint;
         dst->type  = EXPRESSION_REGISTER;
     }
