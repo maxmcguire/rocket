@@ -391,6 +391,7 @@ void Lexer_NextToken(Lexer* lexer)
             else
             {
                 lexer->token.type = c;
+                return;
             }
             break;
         case '+':
