@@ -70,6 +70,9 @@ static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, int r
     case '/':
         opcode = Opcode_Div;
         break;
+    case '%':
+        opcode = Opcode_Mod;
+        break;
     }
     
     if (arg1->type == EXPRESSION_NUMBER &&
@@ -686,7 +689,8 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
 {
     Parser_ExpressionUnary(parser, dst, regHint);
 	while (Parser_Accept(parser, '*') ||
-           Parser_Accept(parser, '/'))
+           Parser_Accept(parser, '/') ||
+           Parser_Accept(parser, '%'))
 	{
 		int op = Parser_GetToken(parser);
 

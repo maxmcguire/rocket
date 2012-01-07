@@ -1596,3 +1596,19 @@ TEST(ElseIf)
     lua_close(L);
 
 }
+
+TEST(ModuloOperator)
+{
+
+    const char* code =
+        "a = 10 % 3";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1 );
+
+    lua_close(L);
+
+}

@@ -395,6 +395,7 @@ void Lexer_NextToken(Lexer* lexer)
             break;
         case '+':
         case '*':
+        case '%':
         case '(':
         case ')':
         case '[':
