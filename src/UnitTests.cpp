@@ -1751,3 +1751,20 @@ TEST(NilConstant)
     lua_close(L);
 
 }
+
+TEST(LongString)
+{
+
+    const char* code =
+        "a = [[one\ntwo]]";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_isstring(L, -1) );
+    CHECK_EQ( lua_tostring(L, -1), "one\ntwo" );
+
+    lua_close(L);
+
+}
