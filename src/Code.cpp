@@ -327,10 +327,18 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
     while (!Parser_Accept(parser, '}'))
     {
+
         if (num > 0)
         {
             Parser_Expect(parser, ',', ';');
+            // Allow the table constructor to end with a separator token for
+            // convenience to the programmer.
+            if (Parser_Accept(parser, '}'))
+            {
+                break;
+            }
         }
+
         if (Parser_Accept(parser, '['))
         {
 
