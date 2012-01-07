@@ -124,8 +124,6 @@ struct Expression
 void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* parent);
 void Parser_Destroy(Parser* parser);
 
-void Parser_Error(Parser* parser, const char* fmt, ...);
-
 bool Parser_Accept(Parser* parser, int token);
  
 /** Expects the next token to be a specific token. If it's not the token, an

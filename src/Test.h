@@ -10,8 +10,9 @@
 
 #include <assert.h>
 
-#define CHECK(x)        Test_Check(x, #x, __FILE__, __LINE__)
-#define CHECK_EQ(x, y)  Test_Check( Test_Equal((x), (y)), #x" = "#y, __FILE__, __LINE__ )
+#define CHECK(x)            Test_Check(x, #x, __FILE__, __LINE__)
+#define CHECK_EQ(x, y)      Test_Check( Test_Equal((x), (y)), #x" = "#y, __FILE__, __LINE__ )
+#define CHECK_CLOSE(x, y)   Test_Check( Test_Close((x), (y)), #x" = "#y, __FILE__, __LINE__ )
 
 class Test
 {
@@ -51,6 +52,7 @@ void Test_Check(int value, const char* description, const char* fileName, int li
 void Test_Check(bool value, const char* description, const char* fileName, int line);
 
 bool Test_Equal(const char* x, const char* y);
+bool Test_Close(double x, double y);
 
 /**
  * Helper struct used to register a test from file scope.

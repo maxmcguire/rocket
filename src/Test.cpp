@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 namespace
 {
@@ -156,4 +157,10 @@ void Test_Check(bool value, const char* description, const char* fileName, int l
 bool Test_Equal(const char* x, const char* y)
 {
     return strcmp(x, y) == 0;
+}
+
+bool Test_Close(double x, double y)
+{
+    const double fuzzyEpsilon = 0.0000001;
+    return (fabs(x - y) <= fuzzyEpsilon * (fabs(x) + 1.0));
 }

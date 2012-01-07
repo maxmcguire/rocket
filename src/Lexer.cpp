@@ -63,6 +63,22 @@ void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input)
     Lexer_NextToken(lexer);
 }
 
+void Lexer_Error(Lexer* lexer, const char* fmt, ...)
+{
+
+    PushFString(lexer->L, "Error line %d: ", lexer->lineNumber);
+
+    va_list argp;
+    va_start(argp, fmt);
+    PushVFString(lexer->L, fmt, argp);
+    va_end(argp);
+
+    Concat(lexer->L, 2);
+    
+    State_Error(lexer->L);
+
+}
+
 static inline bool Lexer_IsSpace(int c)
 {
     return c == ' ' || c == '\t';
@@ -76,6 +92,11 @@ static inline bool Lexer_IsNewLine(int c)
 static inline bool Lexer_IsDigit(int c)
 {
     return c >= '0' && c <= '9';
+}
+
+static inline bool Lexer_IsAlphaNumeric(int c)
+{
+    return Lexer_IsDigit(c) || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
 static void Lexer_ReadComment(Lexer* lexer)
@@ -116,6 +137,104 @@ const char* Token_GetString(TokenType token)
     return tokenName[token - TokenType_First];
 }
 
+static bool Lexer_IsNumberTerminal(int c)
+{
+    return !Lexer_IsAlphaNumeric(c) && c != '.';
+}
+
+static bool Lexer_ReadNumber(Lexer* lexer, int c)
+{
+
+    if (c == '.')
+    {
+        int n = Input_PeekByte(lexer->input);
+        if (!Lexer_IsDigit(n))
+        {
+            return false;
+        }
+    }
+    else if (c == '-')
+    {
+        int n = Input_PeekByte(lexer->input);
+        if (!Lexer_IsDigit(n) && n != '.')
+        {
+            return false;
+        }
+    }
+    /*
+    else if (c == '0')
+    {
+        int n = Input_PeekByte(lexer->input);
+        if (n == 'x')
+        {
+            // TODO: hexademical.
+        }
+    }
+    */
+    else if (!Lexer_IsDigit(c))
+    {
+        return false;
+    }
+
+    bool negative = false;
+
+    if (c == '-')
+    {
+        negative = true;
+        c = Input_ReadByte(lexer->input);
+    }
+
+    lexer->token.type   = TokenType_Number;
+    lexer->token.number = 0.0;
+
+    while (Lexer_IsDigit(c))
+    {
+        lua_Number digit = static_cast<lua_Number>(c - '0');
+        lexer->token.number = lexer->token.number * 10.0f + digit;
+        if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+        {
+            goto done;
+        }
+        c = Input_ReadByte(lexer->input);
+    }
+
+    if (c == '.')
+    {
+        if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+        {
+            goto done;
+        }
+        c = Input_ReadByte(lexer->input);
+        lua_Number frac = 10.0;
+        while (Lexer_IsDigit(c))
+        {
+            lua_Number digit = static_cast<lua_Number>(c - '0');
+            lexer->token.number += digit / frac;
+            frac *= 10.0;
+            if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+            {
+                goto done;
+            }
+            c = Input_ReadByte(lexer->input);
+        }
+    }
+
+    if (!Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+    {
+        // malformed number.
+        Lexer_Error(lexer, "malformed number");
+    }
+
+done:
+
+    if (negative)
+    {
+        lexer->token.number = -lexer->token.number;
+    }
+    return true;
+    
+}
+
 void Lexer_NextToken(Lexer* lexer)
 {
 
@@ -133,11 +252,16 @@ void Lexer_NextToken(Lexer* lexer)
     }
 
     lexer->haveToken = true;
-
+    
     while (1)
     {
 
         int c = Input_ReadByte(lexer->input);
+
+        if (Lexer_ReadNumber(lexer, c))
+        {
+            return;
+        }
 
         switch (c)
         {
@@ -196,13 +320,16 @@ void Lexer_NextToken(Lexer* lexer)
             }
             return;
         case '-':
-            if (Input_PeekByte(lexer->input) != '-')
             {
+                int n = Input_PeekByte(lexer->input);
+                if (n == '-')
+                {
+                    Lexer_ReadComment(lexer);
+                    break;
+                }
                 lexer->token.type = '-';
-                return;
             }
-            Lexer_ReadComment(lexer);
-            break;
+            return;
         case '/':
             if (Input_PeekByte(lexer->input) == '*')
             {
@@ -296,26 +423,6 @@ void Lexer_NextToken(Lexer* lexer)
             }
             return;
         default:
-            if (Lexer_IsDigit(c))
-            {
-                lexer->token.number = 0.0f;
-                while (1)
-                {
-                    lua_Number digit = static_cast<lua_Number>(c - '0');
-                    lexer->token.number = lexer->token.number * 10.0f + digit;
-                    c = Input_PeekByte(lexer->input);
-                    if (Lexer_IsDigit(c))
-                    {
-                        Input_ReadByte(lexer->input);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                lexer->token.type = TokenType_Number;
-            }
-            else
             {
                 char buffer[LUA_MAXNAME];
                 size_t bufferLength = 1;

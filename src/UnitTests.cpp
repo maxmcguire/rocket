@@ -1507,3 +1507,73 @@ TEST(CppCommentBlock)
     lua_close(L);
 
 }
+
+TEST(NotEqual)
+{
+
+    const char* code =
+        "a = (5 ~= 6)\n"
+        "b = (7 ~= 7)";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 1 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 0 );
+
+    lua_close(L);
+
+}
+
+TEST(Number)
+{
+
+    const char* code =
+        "a = 3\n"
+        "b = 3.14\n"
+        "c = -3.1416\n"
+        "d = -.12\n";
+        /*
+        "e = 314.16e-2\n";
+        "f = 0.31416E1\n";
+        "g = 0xff\n";
+        "h = 0x56";
+        */
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 3.0 );
+
+    lua_getglobal(L, "b");
+    CHECK_CLOSE( lua_tonumber(L, -1), 3.14 ); 
+
+    lua_getglobal(L, "c");
+    CHECK_CLOSE( lua_tonumber(L, -1), -3.1416 );
+
+    lua_getglobal(L, "d");
+    CHECK_CLOSE( lua_tonumber(L, -1), -0.12);
+
+    /*
+    lua_getglobal(L, "e");
+    CHECK( lua_tonumber(L, -1) == 314.16e-2 );
+    
+    lua_getglobal(L, "f");
+    CHECK( lua_tonumber(L, -1) == 0.31416e1 );
+
+    lua_getglobal(L, "g");
+    CHECK( lua_tonumber(L, -1) == 0xFF );
+
+    lua_getglobal(L, "h");
+    CHECK( lua_tonumber(L, -1) == 0x56 );
+    */
+
+    lua_close(L);
+
+}

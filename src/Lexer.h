@@ -11,8 +11,6 @@
 
 struct String;
 
-#define MAX_SAVED_TOKENS 2
-
 // In addition to these token values, single character values are also
 // used as tokens. The order of these is significant and must match the
 // order of reserved words inside Lexer_NextToken.
@@ -80,6 +78,8 @@ const char* Token_GetString(TokenType token);
 
 void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input);
 void Lexer_NextToken(Lexer* lexer);
+
+void Lexer_Error(Lexer* lexer, const char* fmt, ...);
 
 int Lexer_GetTokenType(Lexer* lexer);
 

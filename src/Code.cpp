@@ -500,13 +500,13 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
         // Check that we're in a vararg function.
         if (!parser->function->varArg)
         {
-            Parser_Error(parser, "cannot use '...' outside a vararg function");
+            Lexer_Error(parser->lexer, "cannot use '...' outside a vararg function");
         }
         dst->type = EXPRESSION_VARARG;
     }
     else
     {
-        Parser_Error(parser, "expected variable or constant");
+        Lexer_Error(parser->lexer, "expected variable or constant");
     }
 }
 
@@ -634,7 +634,7 @@ static void Parser_ExpressionMethod(Parser* parser, Expression* dst, int regHint
 
         if (!Parser_TryFunctionArguments(parser, dst, -1))
         {
-            Parser_Error(parser, "function arguments expected");
+            Lexer_Error(parser->lexer, "function arguments expected");
         }
         
         assert(dst->type == EXPRESSION_CALL);
@@ -845,7 +845,7 @@ static void Parser_EmitSet(Parser* parser, const Expression* dst, Expression* va
     }
     else
     {
-        Parser_Error(parser, "illegal assignment");
+        Lexer_Error(parser->lexer, "illegal assignment");
     }
 }
 
@@ -930,7 +930,7 @@ static bool Parser_TryReturn(Parser* parser)
                 {
                     break;
                 }
-                Parser_Error(parser, "unexpected token");
+                Lexer_Error(parser->lexer, "unexpected token");
             }
 
             if (numResults == 0)
@@ -1440,7 +1440,7 @@ static void Parser_Statement(Parser* parser)
             // maximum number of assignments for a single statement. This
             // shouldn't be a factor for most code, but if it is the statement
             // can easily be broken into two statements.
-            Parser_Error(parser, "maximum number of assignments for a single statment (%d) reached",
+            Lexer_Error(parser->lexer, "maximum number of assignments for a single statment (%d) reached",
                 LUA_MAXASSIGNS);
         }
 

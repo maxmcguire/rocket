@@ -57,22 +57,6 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
 
 }
 
-void Parser_Error(Parser* parser, const char* fmt, ...)
-{
-
-    PushFString(parser->L, "Error line %d: ", parser->lexer->lineNumber);
-
-    va_list argp;
-    va_start(argp, fmt);
-    PushVFString(parser->L, fmt, argp);
-    va_end(argp);
-
-    Concat(parser->L, 2);
-    
-    State_Error(parser->L);
-
-}
-
 bool Parser_Accept(Parser* parser, int token)
 {
     Lexer_NextToken(parser->lexer);
@@ -90,7 +74,7 @@ bool Parser_Expect(Parser* parser, int token)
     {
         return true;
     }
-    Parser_Error(parser, "unexpected token");
+    Lexer_Error(parser->lexer, "unexpected token");
     return false;
 }
 
@@ -101,7 +85,7 @@ bool Parser_Expect(Parser* parser, int token1, int token2)
     {
         return true;
     }
-    Parser_Error(parser, "unexpected token");
+    Lexer_Error(parser->lexer, "unexpected token");
     return false;
 }
 
@@ -197,7 +181,7 @@ int Parser_AddUpValue(Parser* parser, String* name)
         {
             if (function->numUpValues == LUAI_MAXUPVALUES)
             {
-                Parser_Error(parser, "too many up values to function");
+                Lexer_Error(parser->lexer, "too many up values to function");
             }
 
             // TODO: Mark the block as needing the locals to be closed.
@@ -222,7 +206,7 @@ int Parser_AddLocal(Parser* parser, String* name)
     /*
     if (Parser_GetLocalIndex(parser, name) != -1)
     {
-        Parser_Error(parser, "local already defined");
+        Lexer_Error(parser->lexer, "local already defined");
     }
     */
 
@@ -950,7 +934,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->maxStackSize = function->maxStackSize;
     prototype->numUpValues  = function->numUpValues;
 
-//    PrintFunction(prototype);
+    PrintFunction(prototype);
 
     return prototype;
 
@@ -960,7 +944,7 @@ void Parser_BeginBlock(Parser* parser, bool breakable)
 {
     if (parser->numBlocks == LUAI_MAXCCALLS)
     {
-        Parser_Error(parser, "too many block levels");
+        Lexer_Error(parser->lexer, "too many block levels");
     }
 
     // Locals must be commited before starting a block.
@@ -1040,7 +1024,7 @@ void Parser_BreakBlock(Parser* parser)
 
     if (blockIndex < 0)
     {
-        Parser_Error(parser, "no loop to break");
+        Lexer_Error(parser->lexer, "no loop to break");
     }
 
     Block* block = &parser->block[blockIndex];
