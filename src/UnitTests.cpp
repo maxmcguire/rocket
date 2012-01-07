@@ -681,6 +681,35 @@ TEST(TableConstructorFunction)
 
 }
 
+TEST(TableConstructorTrailingComma)
+{
+
+    // Lua allows for a trailing comma in a table, even though it doesn't
+    // actually syntatically make sense.
+
+    const char* code =
+        "t = { 'one', 'two', }";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "t");
+    CHECK( lua_istable(L, -1) == 1 );
+
+    lua_rawgeti(L, -1, 1);
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp(lua_tostring(L, -1), "one") == 0 );
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, -1, 2);
+    CHECK( lua_isstring(L, -1) );
+    CHECK( strcmp(lua_tostring(L, -1), "two") == 0 );
+    lua_pop(L, 1);
+
+    lua_close(L);
+
+}
+
 TEST(Return)
 {
 
