@@ -849,61 +849,71 @@ static void Parser_EmitSet(Parser* parser, const Expression* dst, Expression* va
     }
 }
 
-static bool Parser_TryIf(Parser* parser)
+/**
+ * Parses the conditional part after an if or an elseif token.
+ */
+static void Parser_Conditional(Parser* parser)
 {
 
-    if (Parser_Accept(parser, TokenType_If))
+    // Parse the condition to test for the if statement.
+    Expression test;
+    Parser_Expression0(parser, &test, -1);
+
+    Parser_Expect(parser, TokenType_Then);
+
+    // TODO: Peform "constant folding" for the test.
+    Parser_ConvertToTest(parser, &test);
+    Parser_BeginBlock(parser, false);
+
+    // Parse the "if" part of the conditional.
+    while (!Parser_Accept(parser, TokenType_End) &&
+           !Parser_Accept(parser, TokenType_Else) &&
+           !Parser_Accept(parser, TokenType_ElseIf))
     {
-        // Parse the condition to test for the if statement.
-        Expression test;
-        Parser_Expression0(parser, &test, -1);
+        Parser_Statement(parser);
+    }
 
-        Parser_Expect(parser, TokenType_Then);
+    Parser_EndBlock(parser);
 
-        // TODO: Peform "constant folding" for the test.
-        Parser_ConvertToTest(parser, &test);
+    int type = Parser_GetToken(parser);
+
+    if (type == TokenType_Else)
+    {
+
+        int elseJump;
         Parser_BeginBlock(parser, false);
+        Parser_BeginSkip(parser, &elseJump);
+        Parser_CloseTest(parser, &test);
 
-        // Parse the "if" part of the conditional.
-        while (!Parser_Accept(parser, TokenType_End) &&
-               !Parser_Accept(parser, TokenType_Else))
+        // Parse the "else" part of the conditional.
+        while (!Parser_Accept(parser, TokenType_End))
         {
             Parser_Statement(parser);
         }
 
+        Parser_EndSkip(parser, &elseJump);
         Parser_EndBlock(parser);
 
-        int type = Parser_GetToken(parser);
-
-        if (type == TokenType_Else)
-        {
-
-            int elseJump;
-            Parser_BeginBlock(parser, false);
-            Parser_BeginSkip(parser, &elseJump);
-            Parser_CloseTest(parser, &test);
-
-            // Parse the "else" part of the conditional.
-            while (!Parser_Accept(parser, TokenType_End))
-            {
-                Parser_Statement(parser);
-            }
-
-            Parser_EndSkip(parser, &elseJump);
-            Parser_EndBlock(parser);
-
-        }
-        else
-        {
-            Parser_CloseTest(parser, &test);
-        }
-
-        return true;
-
+    }
+    else if (type == TokenType_ElseIf)
+    {
+        Parser_Conditional(parser);
+    }
+    else
+    {
+        Parser_CloseTest(parser, &test);
     }
 
-    return false;
+}
 
+static bool Parser_TryIf(Parser* parser)
+{
+    if (Parser_Accept(parser, TokenType_If))
+    {
+        Parser_Conditional(parser);
+        return true;
+    }
+    return false;
 }
 
 static bool Parser_TryReturn(Parser* parser)

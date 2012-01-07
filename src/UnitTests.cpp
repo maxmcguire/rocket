@@ -1577,3 +1577,22 @@ TEST(Number)
     lua_close(L);
 
 }
+
+TEST(ElseIf)
+{
+
+    const char* code =
+        "if false then\n"
+        "elseif true then\n"
+        "  success = true\n"
+        "end";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "success");
+    CHECK( lua_toboolean(L, -1) );
+
+    lua_close(L);
+
+}
