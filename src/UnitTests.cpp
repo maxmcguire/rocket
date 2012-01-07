@@ -950,6 +950,24 @@ TEST(LocalScopedFunctionDefinition)
 
 }
 
+TEST(LocalMethod)
+{
+
+    const char* code =
+        "local t = { }\n"
+        "function t:c() return { d = 5 } end\n"
+        "a = t:c().d";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 5 );
+
+    lua_close(L);
+
+}
+
 TEST(WhileLoop)
 {
 

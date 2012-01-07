@@ -444,6 +444,34 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
 }
 
+/**
+ * Looks up a variable name and sets the expression as either a global, a
+ * local or an upvalue.
+ */
+static void Parser_ResolveName(Parser* parser, Expression* dst, String* name)
+{
+    int index = Parser_GetLocalIndex( parser, name );
+    if (index != -1)
+    {
+        dst->type  = EXPRESSION_LOCAL;
+        dst->index = index;
+    }
+    else
+    {
+        // Check if this is an up value.
+        index = Parser_AddUpValue( parser, name );
+        if (index != -1)
+        {
+            dst->type  = EXPRESSION_UPVALUE;
+            dst->index = index;
+        }
+        else
+        {
+            dst->type  = EXPRESSION_GLOBAL;
+            dst->index = Parser_AddConstant( parser, name );
+        }
+   }
+}
 
 static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
 {
@@ -455,27 +483,7 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
 
     if (Parser_Accept(parser, TokenType_Name))
     {
-        int index = Parser_GetLocalIndex( parser, Parser_GetString(parser) );
-        if (index != -1)
-        {
-            dst->type  = EXPRESSION_LOCAL;
-            dst->index = index;
-        }
-        else
-        {
-            // Check if this is an up value.
-            index = Parser_AddUpValue( parser, Parser_GetString(parser) );
-            if (index != -1)
-            {
-                dst->type  = EXPRESSION_UPVALUE;
-                dst->index = index;
-            }
-            else
-            {
-                dst->type  = EXPRESSION_GLOBAL;
-                dst->index = Parser_AddConstant( parser, Parser_GetString(parser) );
-            }
-        }
+        Parser_ResolveName(parser, dst, Parser_GetString(parser));
     }
     else if (Parser_Accept(parser, TokenType_String))
     {
@@ -611,52 +619,45 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
             }
 
         }
+        else if (Parser_Accept(parser, ':'))
+        {
+
+            // Handle Foo:Bar()
+
+            Parser_Expect(parser, TokenType_Name);
+            Parser_MoveToRegister(parser, dst, -1);
+
+            int reg     = Parser_AllocateRegister(parser);
+            int method  = Parser_AddConstant( parser, Parser_GetString(parser) );
+
+            Parser_EmitABC(parser, Opcode_Self, reg, dst->index, Parser_EncodeRK(method, EXPRESSION_CONSTANT));
+
+            // This is a bit of a hack. Since TryFunctionArguments will put the
+            // expression onto the top of the stack, we just set it up to be a
+            // register since our Self opcode has already setup the stack.
+            dst->type  = EXPRESSION_REGISTER;
+            dst->index = Parser_AllocateRegister(parser);
+
+            if (!Parser_TryFunctionArguments(parser, dst, -1))
+            {
+                Lexer_Error(parser->lexer, "function arguments expected");
+            }
+            
+            assert(dst->type == EXPRESSION_CALL);
+
+            // Since we have the extra self paramter, we need to adjust the register
+            // where the function is located.
+            dst->index = reg;
+            if (dst->numArgs != -1)
+            {
+                // If this isn't a vararg function we need to count the self parameter.
+                ++dst->numArgs;
+            }
+
+        }
         else
         {
             done = true;
-        }
-
-    }
-
-}
-
-static void Parser_ExpressionMethod(Parser* parser, Expression* dst, int regHint)
-{
-
-    Parser_Expression4(parser, dst, regHint);
-
-    // Handle Foo:Bar()
-    if (Parser_Accept(parser, ':'))
-    {
-
-        Parser_Expect(parser, TokenType_Name);
-        Parser_MoveToRegister(parser, dst, -1);
-
-        int reg     = Parser_AllocateRegister(parser);
-        int method  = Parser_AddConstant( parser, Parser_GetString(parser) );
-
-        Parser_EmitABC(parser, Opcode_Self, reg, dst->index, Parser_EncodeRK(method, EXPRESSION_CONSTANT));
-
-        // This is a bit of a hack. Since TryFunctionArguments will put the
-        // expression onto the top of the stack, we just set it up to be a
-        // register since our Self opcode has already setup the stack.
-        dst->type  = EXPRESSION_REGISTER;
-        dst->index = Parser_AllocateRegister(parser);
-
-        if (!Parser_TryFunctionArguments(parser, dst, -1))
-        {
-            Lexer_Error(parser->lexer, "function arguments expected");
-        }
-        
-        assert(dst->type == EXPRESSION_CALL);
-
-        // Since we have the extra self paramter, we need to adjust the register
-        // where the function is located.
-        dst->index = reg;
-        if (dst->numArgs != -1)
-        {
-            // If this isn't a vararg function we need to count the self parameter.
-            ++dst->numArgs;
         }
 
     }
@@ -689,7 +690,7 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
     }
     else
     {
-        Parser_ExpressionMethod(parser, dst, regHint);
+        Parser_Expression4(parser, dst, regHint);
     }
 }
 
@@ -1037,8 +1038,8 @@ static bool Parser_TryFunction(Parser* parser, bool local)
     }
     else
     {
-        dst.index = Parser_AddConstant( parser, Parser_GetString(parser) );
-        dst.type  = EXPRESSION_GLOBAL;
+
+        Parser_ResolveName( parser, &dst, Parser_GetString(parser) );
 
         // Check if we are of the form function A.B.C:D()
         while (Parser_Accept(parser, '.') ||
