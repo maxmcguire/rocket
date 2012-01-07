@@ -1537,13 +1537,13 @@ TEST(Number)
         "a = 3\n"
         "b = 3.14\n"
         "c = -3.1416\n"
-        "d = -.12\n";
+        "d = -.12\n"
         /*
         "e = 314.16e-2\n";
         "f = 0.31416E1\n";
-        "g = 0xff\n";
-        "h = 0x56";
         */
+        "g = 0xff\n"
+        "h = 0x56";
 
     lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
@@ -1566,13 +1566,13 @@ TEST(Number)
     
     lua_getglobal(L, "f");
     CHECK( lua_tonumber(L, -1) == 0.31416e1 );
+    */
 
     lua_getglobal(L, "g");
-    CHECK( lua_tonumber(L, -1) == 0xFF );
+    CHECK_CLOSE( lua_tonumber(L, -1), 0xFF );
 
     lua_getglobal(L, "h");
-    CHECK( lua_tonumber(L, -1) == 0x56 );
-    */
+    CHECK_CLOSE( lua_tonumber(L, -1), 0x56 );
 
     lua_close(L);
 

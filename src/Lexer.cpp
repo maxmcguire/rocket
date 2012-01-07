@@ -142,6 +142,24 @@ static bool Lexer_IsNumberTerminal(int c)
     return !Lexer_IsAlphaNumeric(c) && c != '.';
 }
 
+static bool Lexer_IsHexDigit(int c)
+{
+    return Lexer_IsDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+static int Lexer_GetHexValue(int c)
+{
+    c = tolower(c);
+    if (Lexer_IsDigit(c))
+    {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f')
+    {
+        return c - 'a' + 10;
+    }
+}
+
 static bool Lexer_ReadNumber(Lexer* lexer, int c)
 {
 
@@ -161,16 +179,45 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
             return false;
         }
     }
-    /*
     else if (c == '0')
     {
         int n = Input_PeekByte(lexer->input);
         if (n == 'x')
         {
-            // TODO: hexademical.
+            
+            // Hexademical number.
+
+            c = Input_ReadByte(lexer->input);
+            c = Input_ReadByte(lexer->input);
+
+            if (!Lexer_IsHexDigit(c))
+            {
+                Lexer_Error(lexer, "malformed number");
+            }
+
+            lexer->token.type   = TokenType_Number;
+            lexer->token.number = 0.0;
+
+            while (Lexer_IsHexDigit(c))
+            {
+                lua_Number digit = static_cast<lua_Number>(Lexer_GetHexValue(c));
+                lexer->token.number = lexer->token.number * 16.0 + digit;
+                if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+                {
+                    return true;
+                }
+                c = Input_ReadByte(lexer->input);
+            }
+
+            if (!Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+            {
+                // malformed number.
+                Lexer_Error(lexer, "malformed number");
+            }
+            return true;
+
         }
     }
-    */
     else if (!Lexer_IsDigit(c))
     {
         return false;
@@ -190,7 +237,7 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
     while (Lexer_IsDigit(c))
     {
         lua_Number digit = static_cast<lua_Number>(c - '0');
-        lexer->token.number = lexer->token.number * 10.0f + digit;
+        lexer->token.number = lexer->token.number * 10.0 + digit;
         if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
         {
             goto done;
