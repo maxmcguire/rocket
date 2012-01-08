@@ -449,7 +449,10 @@ void Lexer_NextToken(Lexer* lexer)
                     {
                         // Handle escape sequences.
                         c = Input_ReadByte(lexer->input);
-                        if (Lexer_IsDigit(c))
+                        if (c == '\n')
+                        {
+                        }
+                        else if (Lexer_IsDigit(c))
                         {
                             int value = 0;
                             for (int i = 0; i < 3; ++i)
