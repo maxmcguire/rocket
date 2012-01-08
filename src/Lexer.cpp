@@ -99,14 +99,12 @@ static inline bool Lexer_IsAlphaNumeric(int c)
     return Lexer_IsDigit(c) || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
-static void Lexer_ReadComment(Lexer* lexer)
+static void Lexer_ReadComment(Lexer* lexer, int c)
 {
-    int c;
-    do
+    while (c != END_OF_STREAM && !Lexer_IsNewLine(c))
     {
         c = Input_ReadByte(lexer->input);
     }
-    while (c != END_OF_STREAM && !Lexer_IsNewLine(c));
     ++lexer->lineNumber;
 }
 
@@ -260,7 +258,11 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
 
 }
 
-static bool Lexer_ReadLongString(Lexer* lexer, int c)
+/**
+ * If store is false, the long block will be parsed, but it will not be captured
+ * as a token.
+ */
+static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
 {
 
     if (c != '[')
@@ -293,7 +295,7 @@ static bool Lexer_ReadLongString(Lexer* lexer, int c)
             Input_ReadByte(lexer->input);
             break;
         }
-        else
+        else if (store)
         {
             if (length == 1024)
             {
@@ -305,8 +307,11 @@ static bool Lexer_ReadLongString(Lexer* lexer, int c)
         }
     }
 
-    lexer->token.type   = TokenType_String;
-    lexer->token.string = String_Create(lexer->L, buffer, length);
+    if (store)
+    {
+        lexer->token.type   = TokenType_String;
+        lexer->token.string = String_Create(lexer->L, buffer, length);
+    }
 
     return true;
     
@@ -336,7 +341,7 @@ void Lexer_NextToken(Lexer* lexer)
         int c = Input_ReadByte(lexer->input);
 
         if (Lexer_ReadNumber(lexer, c) ||
-            Lexer_ReadLongString(lexer, c))
+            Lexer_ReadLongBlock(lexer, c, true))
         {
             return;
         }
@@ -402,7 +407,12 @@ void Lexer_NextToken(Lexer* lexer)
                 int n = Input_PeekByte(lexer->input);
                 if (n == '-')
                 {
-                    Lexer_ReadComment(lexer);
+                    Input_ReadByte(lexer->input);
+                    c = Input_ReadByte(lexer->input);
+                    if (!Lexer_ReadLongBlock(lexer, c, false))
+                    {
+                        Lexer_ReadComment(lexer, c);
+                    }
                     break;
                 }
                 lexer->token.type = '-';
@@ -417,7 +427,8 @@ void Lexer_NextToken(Lexer* lexer)
             else if (Input_PeekByte(lexer->input) == '/')
             {
                 Input_ReadByte(lexer->input);
-                Lexer_ReadComment(lexer);
+                c = Input_ReadByte(lexer->input);
+                Lexer_ReadComment(lexer, c);
             }
             else
             {

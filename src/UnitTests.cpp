@@ -1550,6 +1550,24 @@ TEST(CppCommentBlock)
 
 }
 
+TEST(LuaCommentBlock)
+{
+
+    const char* code =
+        "--[[ this is a comment\n"
+        "this is the second line ]]\n"
+        "a = 1";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_close(L);
+
+}
+
 TEST(NotEqual)
 {
 
