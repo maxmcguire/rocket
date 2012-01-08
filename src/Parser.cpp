@@ -720,6 +720,7 @@ void Parser_MakeRKEncodable(Parser* parser, Expression* value)
         int reg = Parser_AllocateRegister(parser);
         if (reg >= 256)
         {
+            // This means we've used too many registers.
             Lexer_Error(parser->lexer, "internal error RK encoding");
         }
         Parser_MoveToRegister(parser, value, reg);
