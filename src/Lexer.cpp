@@ -374,6 +374,7 @@ void Lexer_NextToken(Lexer* lexer)
         case '+':
         case '*':
         case '%':
+        case '^':
         case '(':
         case ')':
         case '[':

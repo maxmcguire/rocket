@@ -73,6 +73,9 @@ static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, int r
     case '%':
         opcode = Opcode_Mod;
         break;
+    case '^':
+        opcode = Opcode_Pow;
+        break;
     }
     
     if (arg1->type == EXPRESSION_NUMBER &&
@@ -678,9 +681,25 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
     }
 }
 
-static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
+static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
 {
     Parser_ExpressionUnary(parser, dst, regHint);
+	while (Parser_Accept(parser, '^'))
+	{
+		int op = Parser_GetToken(parser);
+
+        Expression arg1 = *dst;
+        Parser_ResolveCall(parser, &arg1, 1);
+
+        Expression arg2;
+        Parser_ExpressionUnary(parser, &arg2, -1);
+        Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
+	}
+}
+
+static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
+{
+    Parser_ExpressionPow(parser, dst, regHint);
 	while (Parser_Accept(parser, '*') ||
            Parser_Accept(parser, '/') ||
            Parser_Accept(parser, '%'))
@@ -691,7 +710,7 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_Expression3(parser, &arg2, -1);
+        Parser_ExpressionPow(parser, &arg2, -1);
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }

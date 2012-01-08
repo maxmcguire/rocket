@@ -260,6 +260,13 @@ int Parser_AddConstant(Parser* parser, Value* value)
         return Value_GetInteger(result);
     }
 
+    if (function->numConstants == 256)
+    {
+        // Currently we cant use more than 256 constants in a function due to
+        // the encoding of the constants.
+        Lexer_Error(parser->lexer, "too many constants");
+    }
+
     Value index;
     SetValue(&index, function->numConstants);
 

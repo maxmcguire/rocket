@@ -1706,6 +1706,22 @@ TEST(ModuloOperator)
 
 }
 
+TEST(ExponentiationOperator)
+{
+
+    const char* code =
+        "a = 2 ^ 3";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 8 );
+
+    lua_close(L);
+
+}
+
 TEST(EscapeCharacters)
 {
 
