@@ -1655,6 +1655,24 @@ TEST(DivideOperator)
 
 }
 
+TEST(SubtractOperator)
+{
+
+    // Check that the subtraction symbol is properly parsed and
+    // not treated as part of the 4.
+    const char* code =
+        "v = 6-4";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "v");
+    CHECK( lua_tonumber(L, -1) == 2 );
+
+    lua_close(L);
+
+}
+
 TEST(UnaryMinusOperator)
 {
 

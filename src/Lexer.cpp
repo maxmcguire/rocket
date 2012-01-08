@@ -172,14 +172,6 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
             return false;
         }
     }
-    else if (c == '-')
-    {
-        int n = Input_PeekByte(lexer->input);
-        if (!Lexer_IsDigit(n) && n != '.')
-        {
-            return false;
-        }
-    }
     else if (c == '0')
     {
         int n = Input_PeekByte(lexer->input);
@@ -224,14 +216,6 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
         return false;
     }
 
-    bool negative = false;
-
-    if (c == '-')
-    {
-        negative = true;
-        c = Input_ReadByte(lexer->input);
-    }
-
     lexer->token.type   = TokenType_Number;
     lexer->token.number = 0.0;
 
@@ -241,7 +225,7 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
         lexer->token.number = lexer->token.number * 10.0 + digit;
         if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
         {
-            goto done;
+            return true;
         }
         c = Input_ReadByte(lexer->input);
     }
@@ -250,7 +234,7 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
     {
         if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
         {
-            goto done;
+            return true;
         }
         c = Input_ReadByte(lexer->input);
         lua_Number frac = 10.0;
@@ -261,7 +245,7 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
             frac *= 10.0;
             if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
             {
-                goto done;
+                return true;
             }
             c = Input_ReadByte(lexer->input);
         }
@@ -273,14 +257,6 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
         Lexer_Error(lexer, "malformed number");
     }
 
-done:
-
-    if (negative)
-    {
-        lexer->token.number = -lexer->token.number;
-    }
-    return true;
-    
 }
 
 void Lexer_NextToken(Lexer* lexer)
