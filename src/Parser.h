@@ -302,7 +302,6 @@ void Parser_EmitAsBx(Parser* parser, Opcode opcode, int a, int sbx);
  * accept either. The location must be either a register or constant.
  */
 int Parser_EncodeRK(Parser* parser, Expression* location);
-int Parser_EncodeRK(int index, int type);
 
 /**
  * Encodes a 2 argument instruction with args A sBx.

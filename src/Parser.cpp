@@ -270,25 +270,22 @@ int Parser_AddConstant(Parser* parser, Value* value)
 
 }
 
-int Parser_EncodeRK(int index, int type)
-{
-    assert(index < 256);
-    if (type == EXPRESSION_REGISTER)
-    {
-        return index;
-    }
-    else if (type == EXPRESSION_CONSTANT)
-    {
-        return index | 256;
-    }
-    return 0;
-}
-
 int Parser_EncodeRK(Parser* parser, Expression* location)
 {
     assert(location->type == EXPRESSION_REGISTER ||
            location->type == EXPRESSION_CONSTANT);
-    return Parser_EncodeRK(location->index, location->type);
+    assert(location->index < 256);
+
+    if (location->type == EXPRESSION_REGISTER)
+    {
+        return location->index;
+    }
+    else if (location->type == EXPRESSION_CONSTANT)
+    {
+        return location->index | 256;
+    }
+
+    return 0;
 }
 
 int Parser_EmitInstruction(Parser* parser, Instruction inst)
@@ -650,8 +647,15 @@ void Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     }
     else if (value->type == EXPRESSION_TABLE)
     {
+
+        Expression key;
+        key.type  = value->keyType;
+        key.index = value->key;
+
+        Parser_MakeRKEncodable(parser, &key);
         Parser_EmitABC(parser, Opcode_GetTable, reg, value->index,
-            Parser_EncodeRK(value->key, value->keyType));
+            Parser_EncodeRK(parser, &key));
+
     }
     else if (value->type == EXPRESSION_FUNCTION)
     {

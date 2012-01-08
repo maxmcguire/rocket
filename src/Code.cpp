@@ -359,8 +359,8 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
             Parser_MakeRKEncodable(parser, &value);
 
             Parser_EmitABC(parser, Opcode_SetTable, dst->index,
-                Parser_EncodeRK(key.index, key.type),
-                Parser_EncodeRK(value.index, value.type));
+                Parser_EncodeRK(parser, &key),
+                Parser_EncodeRK(parser, &value));
 
             ++hashSize;
 
@@ -378,7 +378,9 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                 Token token;
                 Lexer_CaptureToken(parser->lexer, &token);
 
-                int key = Parser_AddConstant(parser, Parser_GetString(parser));
+                Expression key;
+                key.index = Parser_AddConstant(parser, Parser_GetString(parser));
+                key.type = EXPRESSION_CONSTANT;
 
                 if (Parser_Accept(parser, '='))
                 {
@@ -389,8 +391,10 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                     Parser_Expression0(parser, &value, -1);
 
                     Parser_MakeRKEncodable(parser, &value);
+                    Parser_MakeRKEncodable(parser, &key);
+
                     Parser_EmitABC(parser, Opcode_SetTable, dst->index,
-                        Parser_EncodeRK(key, EXPRESSION_CONSTANT),
+                        Parser_EncodeRK(parser, &key),
                         Parser_EncodeRK(parser, &value));
 
                     accepted = true;
@@ -601,10 +605,14 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
             Parser_Expect(parser, TokenType_Name);
             Parser_MoveToRegister(parser, dst, -1);
 
-            int reg     = Parser_AllocateRegister(parser);
-            int method  = Parser_AddConstant( parser, Parser_GetString(parser) );
+            int reg = Parser_AllocateRegister(parser);
 
-            Parser_EmitABC(parser, Opcode_Self, reg, dst->index, Parser_EncodeRK(method, EXPRESSION_CONSTANT));
+            Expression method;
+            method.index = Parser_AddConstant( parser, Parser_GetString(parser) );
+            method.type  = EXPRESSION_CONSTANT;
+            Parser_MakeRKEncodable(parser, &method);
+
+            Parser_EmitABC(parser, Opcode_Self, reg, dst->index, Parser_EncodeRK(parser, &method));
 
             // This is a bit of a hack. Since TryFunctionArguments will put the
             // expression onto the top of the stack, we just set it up to be a
