@@ -444,35 +444,6 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
 }
 
-/**
- * Looks up a variable name and sets the expression as either a global, a
- * local or an upvalue.
- */
-static void Parser_ResolveName(Parser* parser, Expression* dst, String* name)
-{
-    int index = Parser_GetLocalIndex( parser, name );
-    if (index != -1)
-    {
-        dst->type  = EXPRESSION_LOCAL;
-        dst->index = index;
-    }
-    else
-    {
-        // Check if this is an up value.
-        index = Parser_AddUpValue( parser, name );
-        if (index != -1)
-        {
-            dst->type  = EXPRESSION_UPVALUE;
-            dst->index = index;
-        }
-        else
-        {
-            dst->type  = EXPRESSION_GLOBAL;
-            dst->index = Parser_AddConstant( parser, name );
-        }
-   }
-}
-
 static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
 {
 

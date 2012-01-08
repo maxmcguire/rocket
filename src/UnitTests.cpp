@@ -1805,3 +1805,44 @@ TEST(LongString)
 
 }
 */
+
+TEST(Closure)
+{
+
+    const char* code =
+        "local l = 5\n"
+        "function f()\n"
+        "  v = l\n"
+        "end\n"
+        "f()";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "v");
+    CHECK( lua_tonumber(L, -1) == 5 );
+
+    lua_close(L);
+
+}
+
+TEST(ClosureInClosure)
+{
+
+    const char* code =
+        "local l = 5\n"
+        "function f()\n"
+        "  local function g() v = l end\n"
+        "  g()\n"
+        "end\n"
+        "f()";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "v");
+    CHECK( lua_tonumber(L, -1) == 5 );
+
+    lua_close(L);
+
+}

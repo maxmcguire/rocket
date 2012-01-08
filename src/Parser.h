@@ -340,4 +340,10 @@ void Parser_BreakBlock(Parser* parser);
 
 bool Parser_ConvertToBoolean(Parser* parser, Expression* value);
 
+/**
+ * Looks up a variable name and sets the expression as either a global, a
+ * local or an upvalue.
+ */
+void Parser_ResolveName(Parser* parser, Expression* dst, String* name);
+
 #endif

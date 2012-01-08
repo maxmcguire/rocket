@@ -151,10 +151,8 @@ static void Parser_MarkUpValue(Function* function, int local)
 
 }
 
-int Parser_AddUpValue(Parser* parser, String* name)
+static int Parser_AddUpValue(Parser* parser, Function* function, String* name)
 {
-
-    Function* function = parser->function;
 
     // Check to see if it's already an up value in our function.
     int index = Parser_GetUpValueIndex(function, name);
@@ -166,7 +164,8 @@ int Parser_AddUpValue(Parser* parser, String* name)
     // If not, and it's either a local or an up value in the parent, it should
     // become an up value of this function.
     Function* parent = function->parent;
-    while (parent != NULL)
+
+    if (parent != NULL)
     {
 
         int index = Parser_GetLocalIndex(parent, name);
@@ -177,14 +176,12 @@ int Parser_AddUpValue(Parser* parser, String* name)
             Parser_MarkUpValue(parent, index);
         }
 
-        if (index != -1 || Parser_GetUpValueIndex(parent, name) != -1)
+        if (index != -1 || Parser_AddUpValue(parser, parent, name) != -1)
         {
             if (function->numUpValues == LUAI_MAXUPVALUES)
             {
                 Lexer_Error(parser->lexer, "too many up values to function");
             }
-
-            // TODO: Mark the block as needing the locals to be closed.
 
             int n =  function->numUpValues;
             function->upValue[n] = name;
@@ -192,11 +189,17 @@ int Parser_AddUpValue(Parser* parser, String* name)
             ++function->numUpValues;
             return n;
         }
-        parent = parent->parent;
+        
     }
 
     return -1;
 
+}
+
+int Parser_AddUpValue(Parser* parser, String* name)
+{
+    Function* function = parser->function;
+    return Parser_AddUpValue(parser, parser->function, name);
 }
 
 int Parser_AddLocal(Parser* parser, String* name)
@@ -564,6 +567,31 @@ bool Parser_ConvertToRegister(Parser* parser, Expression* value)
         value->type = EXPRESSION_REGISTER;
     }
     return value->type == EXPRESSION_REGISTER;
+}
+
+void Parser_ResolveName(Parser* parser, Expression* dst, String* name)
+{
+    int index = Parser_GetLocalIndex( parser, name );
+    if (index != -1)
+    {
+        dst->type  = EXPRESSION_LOCAL;
+        dst->index = index;
+    }
+    else
+    {
+        // Check if this is an up value.
+        index = Parser_AddUpValue( parser, name );
+        if (index != -1)
+        {
+            dst->type  = EXPRESSION_UPVALUE;
+            dst->index = index;
+        }
+        else
+        {
+            dst->type  = EXPRESSION_GLOBAL;
+            dst->index = Parser_AddConstant( parser, name );
+        }
+   }
 }
 
 void Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
