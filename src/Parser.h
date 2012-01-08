@@ -232,6 +232,13 @@ void Parser_MoveToRegister(Parser* parser, Expression* value, int reg = -1);
 void Parser_MoveToRegisterOrConstant(Parser* parser, Expression* value, int reg = -1);
 
 /**
+ * Ensures that the expression specifies a location that can be encoded using 
+ * Parser_EncodeRK. If a register or a constant index is too high, this function
+ * will move it to a location that allows it to be encoded.
+ */
+void Parser_MakeRKEncodable(Parser* parser, Expression* value);
+
+/**
  * Moves the expression to the top of the register stack into a temporary
  * register.
  */

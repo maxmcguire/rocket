@@ -88,8 +88,8 @@ static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, int r
         }
     }
 
-    Parser_MoveToRegisterOrConstant(parser, arg1);
-    Parser_MoveToRegisterOrConstant(parser, arg2);
+    Parser_MakeRKEncodable(parser, arg1);
+    Parser_MakeRKEncodable(parser, arg2);
 
     if (regHint != -1)
     {
@@ -124,8 +124,8 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
     assert(dst != arg1);
     assert(dst != arg2);
 
-    Parser_MoveToRegisterOrConstant(parser, arg1);
-    Parser_MoveToRegisterOrConstant(parser, arg2);
+    Parser_MakeRKEncodable(parser, arg1);
+    Parser_MakeRKEncodable(parser, arg2);
 
     Opcode opcode;
     int    value;
@@ -349,14 +349,14 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
             
             Expression key;
             Parser_Expression0(parser, &key, -1);
-            Parser_MoveToRegisterOrConstant(parser, &key);
+            Parser_MakeRKEncodable(parser, &key);
             Parser_Expect(parser, ']');
 
             Parser_Expect(parser, '=');
 
             Expression value;
             Parser_Expression0(parser, &value, -1);
-            Parser_MoveToRegisterOrConstant(parser, &value);
+            Parser_MakeRKEncodable(parser, &value);
 
             Parser_EmitABC(parser, Opcode_SetTable, dst->index,
                 Parser_EncodeRK(key.index, key.type),
@@ -388,7 +388,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                     Expression value;
                     Parser_Expression0(parser, &value, -1);
 
-                    Parser_MoveToRegisterOrConstant(parser, &value);
+                    Parser_MakeRKEncodable(parser, &value);
                     Parser_EmitABC(parser, Opcode_SetTable, dst->index,
                         Parser_EncodeRK(key, EXPRESSION_CONSTANT),
                         Parser_EncodeRK(parser, &value));
@@ -849,10 +849,18 @@ static void Parser_EmitSet(Parser* parser, const Expression* dst, Expression* va
     }
     else if (dst->type == EXPRESSION_TABLE)
     {
-        Parser_MoveToRegisterOrConstant(parser, value);
+
+        Expression key;
+        key.type  = dst->keyType;
+        key.index = dst->key;
+
+        Parser_MakeRKEncodable(parser, value);
+        Parser_MakeRKEncodable(parser, &key);
+
         Parser_EmitABC(parser, Opcode_SetTable, dst->index,
-            Parser_EncodeRK(dst->key, dst->keyType),
+            Parser_EncodeRK(parser, &key),
             Parser_EncodeRK(parser, value));
+
     }   
     else if (dst->type == EXPRESSION_UPVALUE)
     {

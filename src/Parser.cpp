@@ -260,13 +260,6 @@ int Parser_AddConstant(Parser* parser, Value* value)
         return Value_GetInteger(result);
     }
 
-    if (function->numConstants == 256)
-    {
-        // Currently we cant use more than 256 constants in a function due to
-        // the encoding of the constants.
-        Lexer_Error(parser->lexer, "too many constants");
-    }
-
     Value index;
     SetValue(&index, function->numConstants);
 
@@ -709,6 +702,22 @@ void Parser_MoveToRegisterOrConstant(Parser* parser, Expression* value, int reg)
     // Anything else we move to a register.
     if (value->type != EXPRESSION_CONSTANT)
     {
+        Parser_MoveToRegister(parser, value, reg);
+    }
+}
+
+void Parser_MakeRKEncodable(Parser* parser, Expression* value)
+{
+    Parser_MoveToRegisterOrConstant(parser, value);
+    if (value->index >= 256)
+    {
+        // Values greater than 255 can't be RK encoded, so we need to move to a
+        // register which has a smaller index.
+        int reg = Parser_AllocateRegister(parser);
+        if (reg >= 256)
+        {
+            Lexer_Error(parser->lexer, "internal error RK encoding");
+        }
         Parser_MoveToRegister(parser, value, reg);
     }
 }
