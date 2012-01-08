@@ -256,7 +256,60 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
         // malformed number.
         Lexer_Error(lexer, "malformed number");
     }
+    return true;
 
+}
+
+static bool Lexer_ReadLongString(Lexer* lexer, int c)
+{
+
+    if (c != '[')
+    {
+        return false;
+    }
+
+    if (Input_PeekByte(lexer->input) != '[')
+    {
+        return false;
+    }
+    Input_ReadByte(lexer->input);
+
+    char buffer[1024];
+    size_t length = 0;
+
+    while (1)
+    {
+        c = Input_ReadByte(lexer->input);
+        if (Lexer_IsNewLine(c))
+        {
+            ++lexer->lineNumber;
+        }
+        if (c == END_OF_STREAM)
+        {
+            Lexer_Error(lexer, "unfinished long string");
+        }
+        else if (c == ']' && Input_PeekByte(lexer->input) == ']')
+        {
+            Input_ReadByte(lexer->input);
+            break;
+        }
+        else
+        {
+            if (length == 1024)
+            {
+                // TODO: remove this limitation.
+                Lexer_Error(lexer, "string is too long");
+            }
+            buffer[length] = c;
+            ++length;
+        }
+    }
+
+    lexer->token.type   = TokenType_String;
+    lexer->token.string = String_Create(lexer->L, buffer, length);
+
+    return true;
+    
 }
 
 void Lexer_NextToken(Lexer* lexer)
@@ -282,7 +335,8 @@ void Lexer_NextToken(Lexer* lexer)
 
         int c = Input_ReadByte(lexer->input);
 
-        if (Lexer_ReadNumber(lexer, c))
+        if (Lexer_ReadNumber(lexer, c) ||
+            Lexer_ReadLongString(lexer, c))
         {
             return;
         }
