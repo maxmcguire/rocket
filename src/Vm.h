@@ -15,9 +15,9 @@ extern "C" void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 
 // These trigger metamethods.
 extern "C" void Vm_SetTable(lua_State* L, Value* table, Value* key, Value* value);
-extern "C" const Value* Vm_GetTable(lua_State* L, const Value* table, const Value* key);
+extern "C" void Vm_GetTable(lua_State* L, const Value* table, const Value* key, Value* dst);
 
-extern "C" const Value* Vm_GetGlobal(lua_State* L, const Value* key);
+extern "C" void Vm_GetGlobal(lua_State* L, const Value* key, Value* dst);
 extern "C" void Vm_SetGlobal(lua_State* L, Value* key, Value* value);
 
 int Vm_ValuesEqual(const Value* arg1, const Value* arg2);

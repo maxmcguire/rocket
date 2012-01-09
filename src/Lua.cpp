@@ -316,24 +316,21 @@ void lua_setfield(lua_State* L, int index, const char* name)
     Pop(L, 1);
 }
 
+void lua_gettable(lua_State *L, int index)
+{
+    Value* key   = GetValueForIndex( L, -1 );
+    Value* table = GetValueForIndex( L, index );
+    Vm_GetTable(L, table, key, L->stackTop);
+    ++L->stackTop;
+}
+
 void lua_getfield(lua_State *L, int index, const char* name)
 {
-    
     Value key;
     SetValue( &key, String_Create(L, name, strlen(name)) );
-    
     Value* table = GetValueForIndex( L, index );
-    const Value* value = Vm_GetTable(L, table, &key);
-
-    if (value == NULL)
-    {
-        PushNil(L);
-    }
-    else
-    {
-        PushValue(L, value);
-    }
-
+    Vm_GetTable(L, table, &key, L->stackTop);
+    ++L->stackTop;
 }
 
 void lua_setglobal(lua_State* L, const char* name)
@@ -523,7 +520,7 @@ LUA_API void lua_rawget(lua_State* L, int index)
     assert( Value_GetIsTable(table) );
 
     const Value* key = GetValueForIndex(L, -1);
-    const Value* value = Vm_GetTable(L, table, key);
+    const Value* value = Table_GetTable(L, table->table, key);
 
     if (value == NULL)
     {

@@ -226,23 +226,16 @@ Opcode_GetGlobal::
     UNPACK_ABx
     
     push        ecx
+    
+    lea			eax, DWORD PTR [ esi + ecx * sizeof_Value ]
+    push		eax
     lea         edx, DWORD PTR [ edi + edx * sizeof_Value ]
     push        edx
     push        DWORD PTR [ ebp + 8 ]   ; L
     call        Vm_GetGlobal
-    add         esp, 2 * 4
+    add         esp, 3 * 4
+    
     pop         ecx
-    
-    ; Check for the case where the global doesn't exist
-    cmp         eax, 0
-    jne         l1
-    mov         DWORD PTR [ esi + ecx * sizeof_Value ], tag_Nil
-    DISPATCH
-    
-    ; stackBase[a] = result
-    l1:
-    movsd       xmm0, QWORD PTR [eax]
-    movsd       QWORD PTR [ esi + ecx * sizeof_Value ], xmm0
     DISPATCH
     
 ;-------------------------------------------------------------------------------    

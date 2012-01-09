@@ -136,7 +136,7 @@ static void CallTagMethod2Result(lua_State* L, const Value* method, const Value*
     PushValue(L, arg1);
     PushValue(L, arg2);
     Vm_Call(L, L->stackTop - 3, 2, 1);
-    *result = *L->stackTop;
+    *result = *(L->stackTop - 1);
     Pop(L, 1);
 }
 
@@ -199,9 +199,8 @@ void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
 
 }
 
-const Value* Vm_GetTable(lua_State* L, const Value* value, const Value* key)
+void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst)
 {
-    Value temp;
     for (int i = 0; i < MAXTAGLOOP; ++i)
     {
 
@@ -211,7 +210,8 @@ const Value* Vm_GetTable(lua_State* L, const Value* value, const Value* key)
             const Value* result = Table_GetTable(L, value->table, key);
             if (result != NULL)
             {
-                return result;
+                *dst = *result;
+                return;
             }
             method = GetTagMethod(L, value, TagMethod_Index);
         }
@@ -219,35 +219,33 @@ const Value* Vm_GetTable(lua_State* L, const Value* value, const Value* key)
         {
             TypeError(L, value, "index");
         }
-
         if (method == NULL)
         {
             // No metamethod.
-            return NULL;
+            break;
         }
         if (Value_GetIsFunction(method))
         {
-            CallTagMethod2Result(L, method, value, key, &temp);
-            value = &temp;
+            CallTagMethod2Result(L, method, value, key, dst);
+            return;
         }
         else
         {
             // Assume the tag method is a table.
             value = method;
         }
-
     }
-    return NULL;
+    SetNil(dst);
 }
 
-const Value* Vm_GetGlobal(lua_State* L, const Value* key)
+void Vm_GetGlobal(lua_State* L, const Value* key, Value* dst)
 {
-    return Vm_GetTable(L, &L->globals, key);
+    Vm_GetTable(L, &L->globals, key, dst);
 }
 
 void Vm_SetGlobal(lua_State* L, Value* key, Value* value)
 {
-    return Vm_SetTable(L, &L->globals, key, value);
+    Vm_SetTable(L, &L->globals, key, value);
 }
 
 // Overwrites the value of an element on the stack.
@@ -461,8 +459,7 @@ static int Execute(lua_State* L, int numArgs)
                     int b = GET_B(inst);
                     const Value* key = RESOLVE_RK( GET_C(inst) );
                     stackBase[a + 1] = stackBase[b];
-                    const Value* value = Vm_GetTable(L, &stackBase[b], key);
-                    stackBase[a] = *value;
+                    Vm_GetTable(L, &stackBase[b], key, &stackBase[a]);
                 )
             }
             break;
@@ -489,8 +486,7 @@ static int Execute(lua_State* L, int numArgs)
                     int bx = GET_Bx(inst);
                     assert(bx >= 0 && bx < prototype->numConstants);
                     const Value* key = &constant[bx];
-                    const Value* value = Vm_GetGlobal(L, key);
-                    SetValue(L, a, value);
+                    Vm_GetGlobal(L, key, &L->stackBase[a]);
                 )
             }
             break;
@@ -512,8 +508,7 @@ static int Execute(lua_State* L, int numArgs)
                     int b = GET_B(inst);
                     const Value* table = &stackBase[b];
                     const Value* key   = RESOLVE_RK( GET_C(inst) );
-                    const Value* value = Vm_GetTable(L, table, key);
-                    SetValue(L, a, value);
+                    Vm_GetTable(L, table, key, &L->stackBase[a]);
                 )
             }
             break;

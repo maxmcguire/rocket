@@ -156,6 +156,10 @@ void Test_Check(bool value, const char* description, const char* fileName, int l
 
 bool Test_Equal(const char* x, const char* y)
 {
+    if (x == NULL && x != y)
+    {
+        return false;
+    }
     return strcmp(x, y) == 0;
 }
 
