@@ -87,6 +87,7 @@ struct lua_State
     void*           userdata;
     ErrorHandler*   errorHandler;
     Value           globals;
+    Value           registry;
     Gc              gc;
     size_t          totalBytes;
     String*         tagMethodName[TagMethod_NumMethods];
@@ -125,8 +126,8 @@ void GrowArray(lua_State* L, T*& p, int numElements, int& maxElements)
  */
 void Free(lua_State* L, void* p, size_t size);
 
-lua_State* NewState(lua_Alloc alloc, void* userdata);
-void DestroyState(lua_State* L);
+lua_State* State_Create(lua_Alloc alloc, void* userdata);
+void State_Destroy(lua_State* L);
 
 /** Returns true if the value represents a number type. This function must be
  used in lieu of directly comparing the tag to the TAG_NUMBER value */

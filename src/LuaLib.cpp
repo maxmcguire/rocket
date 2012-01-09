@@ -331,12 +331,29 @@ LUALIB_API int luaL_ref (lua_State *L, int t)
 }
 
 
-LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
-  if (ref >= 0) {
+LUALIB_API void luaL_unref (lua_State *L, int t, int ref)
+{
+  if (ref >= 0)
+  {
     t = abs_index(L, t);
     lua_rawgeti(L, t, FREELIST_REF);
     lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
     lua_pushinteger(L, ref);
     lua_rawseti(L, t, FREELIST_REF);  /* t[FREELIST_REF] = ref */
   }
+}
+
+LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname)
+{
+    lua_getfield(L, LUA_REGISTRYINDEX, tname);  /* get registry.name */
+    /* name already in use? */
+    if (!lua_isnil(L, -1))
+    {
+        return 0;  /* leave previous value on top, but return 0 */
+    }
+    lua_pop(L, 1);
+    lua_newtable(L);  /* create metatable */
+    lua_pushvalue(L, -1);
+    lua_setfield(L, LUA_REGISTRYINDEX, tname);  /* registry.name = metatable */
+    return 1;
 }

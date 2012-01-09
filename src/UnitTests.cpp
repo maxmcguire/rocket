@@ -311,7 +311,7 @@ TEST(RemoveTest)
 
 }
 
-TEST(MetatableTest)
+TEST(Metatable)
 {
 
     lua_State* L = luaL_newstate();
@@ -346,6 +346,27 @@ TEST(MetatableTest)
     // Test a value that doesn't exist in either.
     lua_getfield(L, table, "c");
     CHECK( lua_isnil(L, -1) == 1 );
+    lua_pop(L, 1);
+
+    lua_close(L);
+
+}
+
+TEST(NewMetatable)
+{
+
+    lua_State* L = luaL_newstate();
+
+    CHECK( luaL_newmetatable(L, "test") == 1 );
+    CHECK( lua_istable(L, -1) );
+    lua_pop(L, 1);
+
+    lua_getfield(L, LUA_REGISTRYINDEX, "test");
+    CHECK( lua_istable(L, -1) );
+    lua_pop(L, 1);
+
+    CHECK( luaL_newmetatable(L, "test") == 0 );
+    CHECK( lua_istable(L, -1) );
     lua_pop(L, 1);
 
     lua_close(L);

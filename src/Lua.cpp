@@ -60,6 +60,11 @@ static Value* GetValueForIndex(lua_State* L, int index)
         // Global.
         result = &L->globals;
     }
+    else if (index == LUA_REGISTRYINDEX)
+    {
+        // Register.
+        result = &L->registry;
+    }
     else
     {
         // C up value.
@@ -78,14 +83,14 @@ static Value* GetValueForIndex(lua_State* L, int index)
 
 lua_State* lua_newstate(lua_Alloc alloc, void* userdata)
 {
-    lua_State* L = NewState(alloc, userdata);
+    lua_State* L = State_Create(alloc, userdata);
     OpenBaseLib(L);
     return L;
 }
 
 void lua_close(lua_State* L)
 {
-    DestroyState(L);
+    State_Destroy(L);
 }
 
 static Prototype* LoadBinary(lua_State* L, Input* input, const char* name)

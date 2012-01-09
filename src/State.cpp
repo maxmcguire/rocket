@@ -86,7 +86,7 @@ void* GrowArray(lua_State* L, void* p, int numElements, int* maxElements, size_t
     return p;
 }
 
-lua_State* NewState(lua_Alloc alloc, void* userdata)
+lua_State* State_Create(lua_Alloc alloc, void* userdata)
 {
 
     const int stackSize = LUAI_MAXCSTACK;
@@ -118,6 +118,7 @@ lua_State* NewState(lua_Alloc alloc, void* userdata)
     Gc_Initialize(&L->gc);
 
     SetValue( &L->globals, Table_Create(L) );
+    SetValue( &L->registry, Table_Create(L) );
 
     // Store the tag method names so we don't need to create new strings
     // every time we want to access them.
@@ -131,7 +132,7 @@ lua_State* NewState(lua_Alloc alloc, void* userdata)
 
 }
 
-void DestroyState(lua_State* L)
+void State_Destroy(lua_State* L)
 {
     L->alloc( L->userdata, L, 0, 0 );
 }
