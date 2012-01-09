@@ -95,6 +95,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     lua_State* L = reinterpret_cast<lua_State*>( alloc(userdata, NULL, 0, size) );
 
     L->alloc        = alloc;
+    L->gchook       = NULL;
     L->userdata     = userdata;
     L->stack        = reinterpret_cast<Value*>(L + 1);
     L->stackBase    = L->stack;

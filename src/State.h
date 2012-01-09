@@ -84,6 +84,7 @@ struct lua_State
     UpValue*        openUpValue;
     CallFrame*      callStackTop;
     lua_Alloc       alloc;
+    lua_GCHook      gchook;
     void*           userdata;
     ErrorHandler*   errorHandler;
     Value           globals;
