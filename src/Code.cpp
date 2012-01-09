@@ -324,6 +324,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
     int listReg = Parser_AllocateRegister(parser);
     int listSize = 0;
     int hashSize = 0;
+    int numFields = 0;
 
     int num = 0;
     bool varArg = false;
@@ -331,7 +332,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
     while (!Parser_Accept(parser, '}'))
     {
 
-        if (num > 0)
+        if (listSize + hashSize > 0)
         {
             Parser_Expect(parser, ',', ';');
             // Allow the table constructor to end with a separator token for
@@ -410,41 +411,53 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
             if (!accepted)
             {
+                
+                int reg = listReg + numFields;
 
                 Expression exp;
-                Parser_Expression0(parser, &exp, listReg + listSize);
+                Parser_Expression0(parser, &exp, reg);
 
                 // Check if this is the last expression in the list.
                 if (Parser_Accept(parser, '}'))
                 {
                     Parser_Unaccept(parser);
                     if ( Parser_ResolveCall(parser, &exp, -1) ||
-                         Parser_ResolveVarArg(parser, &exp, -1, listReg + listSize))
+                         Parser_ResolveVarArg(parser, &exp, -1, reg))
                     {
                         varArg = true;
                     }
                 }
 
-                Parser_MoveToRegister(parser, &exp, listReg + listSize);
+                Parser_MoveToRegister(parser, &exp, reg);
                 if (!varArg)
                 {
                     ++listSize;
+                    ++numFields;
+                    if (numFields == LFIELDS_PER_FLUSH)
+                    {
+                        // We have a maximum number of fields to set with a single setlist
+                        // opcode, so dispatch now.
+                        int block = (listSize + LFIELDS_PER_FLUSH - 1) / LFIELDS_PER_FLUSH;
+                        Parser_EmitABC(parser, Opcode_SetList,  dst->index, numFields, block);
+                        numFields = 0;
+                    }
                 }
 
             }
 
         }
-        ++num;
-        Parser_SetLastRegister(parser, listReg + listSize - 1);
+        
+        Parser_SetLastRegister(parser, listReg + numFields - 1);
 
     }
     
     Instruction inst = Parser_EncodeABC(Opcode_NewTable, dst->index, listSize, hashSize);
     Parser_UpdateInstruction( parser, start, inst );
 
-    if (listSize > 0)
+    if (numFields > 0)
     {
-        Parser_EmitABC(parser, Opcode_SetList,  dst->index, varArg ? 0 : listSize, 1);
+        int block = (listSize + LFIELDS_PER_FLUSH - 1) / LFIELDS_PER_FLUSH;
+        Parser_EmitABC(parser, Opcode_SetList,  dst->index, varArg ? 0 : numFields, block);
     }
 
     return true;

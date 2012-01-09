@@ -23,9 +23,6 @@
 #include <string.h>
 #include <math.h>
 
-// Number of list items to accumulate before a SETLIST instruction
-#define LFIELDS_PER_FLUSH	50
-
 // Limit for table tag-method chains (to avoid loops)
 #define MAXTAGLOOP	100
 

@@ -7,6 +7,9 @@
 #ifndef ROCKETVM_OPCODE_H
 #define ROCKETVM_OPCODE_H
 
+// Number of list items to accumulate before a SETLIST instruction
+#define LFIELDS_PER_FLUSH	50
+
 // These macros are used to unpack the opcode and arguments of a
 // 32-bit instruction.
 #define GET_OPCODE(inst)    static_cast<Opcode>((inst) & 0x3F)
