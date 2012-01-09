@@ -1990,3 +1990,24 @@ TEST(LargeArray)
     lua_close(L);
 
 }
+
+TEST(LocalInit)
+{
+    
+    const char* code =
+        "function f() end\n"
+        "f(1, 2, 3, 4, 5, 6)\n"
+        "do\n"
+        "  local _a\n"
+        "  a = _a\n"
+        "end";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_isnil(L, -1) );
+    
+    lua_close(L);
+
+}

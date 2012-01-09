@@ -1249,6 +1249,8 @@ static bool Parser_TryLocal(Parser* parser)
         return true;
     }
 
+    int maxStackSize = parser->function->maxStackSize;
+
     int reg;
     int numVars = 0;
     do
@@ -1267,6 +1269,25 @@ static bool Parser_TryLocal(Parser* parser)
     if (Parser_Accept(parser, '='))
     {
         Parser_AssignLocals(parser, reg, numVars);
+    }
+    else
+    {   
+
+        // We have to assign local variables nil if they use registers that
+        // we've already used as temporary storage (if they haven't been used
+        // as temporaries, then the VM will set them to nil).
+
+        Expression value;
+        value.type = EXPRESSION_NIL;
+
+        for (int i = reg; i < maxStackSize && i < reg + numVars; ++i)
+        {
+            Expression dst;
+            dst.type  = EXPRESSION_REGISTER;
+            dst.index = i;
+            Parser_EmitSet(parser, &dst, &value);
+        }        
+
     }
     Parser_CommitLocals(parser);
     
