@@ -25,7 +25,7 @@ static int OsLib_GetEnv(lua_State *L)
     return 1;
 }
 
-LUALIB_API int luaopen_os(lua_State *L)
+int luaopen_os(lua_State *L)
 {
 
     static const luaL_Reg functions[] =

@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="RocketVM"
-	ProjectGUID="{EB8040EE-80EB-4576-A921-9B8A47211AFA}"
-	RootNamespace="RocketVM"
+	Name="Test"
+	ProjectGUID="{85540C04-E2CC-4700-9B30-82DC67F89FE2}"
+	RootNamespace="Test"
 	Keyword="Win32Proj"
 	>
 	<Platforms>
@@ -13,15 +13,12 @@
 		/>
 	</Platforms>
 	<ToolFiles>
-		<DefaultToolFile
-			FileName="masm.rules"
-		/>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="bin\$(ConfigurationName)"
-			IntermediateDirectory="intermediate\$(ConfigurationName)"
+			OutputDirectory="..\..\bin\$(ConfigurationName)"
+			IntermediateDirectory="..\..\intermediate\$(ProjectName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			>
@@ -30,9 +27,6 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="MASM"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -46,8 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -68,7 +61,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories=""
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -100,8 +92,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="bin\$(ConfigurationName)"
-			IntermediateDirectory="intermediate\$(ConfigurationName)"
+			OutputDirectory="..\..\bin\$(ConfigurationName)"
+			IntermediateDirectory="..\..\intermediate\$(ProjectName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -111,9 +103,6 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="MASM"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -126,8 +115,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -146,7 +134,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories=""
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -180,6 +167,10 @@
 		</Configuration>
 	</Configurations>
 	<References>
+		<ProjectReference
+			ReferencedProjectIdentifier="{21BA7EE8-198B-4BAB-A584-250E2954A4E1}"
+			RelativePathToProject=".\Rocket.vcproj"
+		/>
 	</References>
 	<Files>
 		<Filter
@@ -188,83 +179,15 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\src\BaseLib.cpp"
+				RelativePath="..\..\src\Main.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\src\Code.cpp"
+				RelativePath="..\..\src\Test.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\src\Compiler.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Function.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Gc.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Input.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\IoLib.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Lexer.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Lua.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\LuaLib.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\MathLib.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Opcode.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\OsLib.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Parser.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\State.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\String.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\StringLib.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Table.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Vm.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Vm_x86.asm"
+				RelativePath="..\..\src\UnitTests.cpp"
 				>
 			</File>
 		</Filter>
@@ -274,91 +197,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\src\BaseLib.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Code.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Compiler.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Function.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Gc.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Input.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\lauxlib.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Lexer.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\lua.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\luaconf.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\lualib.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Opcode.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Parser.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\State.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\String.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Table.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Vm.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="Tests"
-			>
-			<File
-				RelativePath=".\src\Main.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Test.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\Test.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\UnitTests.cpp"
+				RelativePath="..\..\src\Test.h"
 				>
 			</File>
 		</Filter>

@@ -38,7 +38,7 @@ static int IoLib_Write(lua_State* L)
     return Write(L, stdout);
 }
 
-LUALIB_API int luaopen_io(lua_State *L)
+int luaopen_io(lua_State *L)
 {
 
     static const luaL_Reg functions[] =

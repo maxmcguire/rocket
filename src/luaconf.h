@@ -1,18 +1,10 @@
 #ifndef LUACONF_H
 #define LUACONF_H
 
-#if defined(LUA_BUILD_AS_DLL)
-
-#if defined(LUA_CORE) || defined(LUA_LIB)
+#if defined(ROCKET_EXPORTS)
 #define LUA_API __declspec(dllexport)
 #else
 #define LUA_API __declspec(dllimport)
-#endif
-
-#else
-
-#define LUA_API		extern
-
 #endif
 
 /* more often than not the libs go together with the core */

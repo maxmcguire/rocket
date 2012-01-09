@@ -83,7 +83,7 @@ lua_State* lua_newstate(lua_Alloc alloc, void* userdata)
     return L;
 }
 
-LUA_API void lua_close(lua_State* L)
+void lua_close(lua_State* L)
 {
     DestroyState(L);
 }
@@ -295,13 +295,13 @@ LUA_API void lua_remove(lua_State *L, int index)
     --L->stackTop;
 }
 
-LUA_API void lua_register(lua_State *L, const char *name, lua_CFunction f)
+void lua_register(lua_State *L, const char *name, lua_CFunction f)
 {
     lua_pushcfunction(L, f);
     lua_setglobal(L, name);
 }
 
-LUA_API void lua_setfield(lua_State* L, int index, const char* name)
+void lua_setfield(lua_State* L, int index, const char* name)
 {
     Value key;
     SetValue( &key, String_Create(L, name, strlen(name)) );
@@ -311,7 +311,7 @@ LUA_API void lua_setfield(lua_State* L, int index, const char* name)
     Pop(L, 1);
 }
 
-LUA_API void lua_getfield(lua_State *L, int index, const char* name)
+void lua_getfield(lua_State *L, int index, const char* name)
 {
     
     Value key;
@@ -582,36 +582,36 @@ LUA_API void lua_insert(lua_State *L, int index)
     *p = *L->stackTop;
 }
 
-LUA_API int lua_checkstack(lua_State *L, int size)
+int lua_checkstack(lua_State *L, int size)
 {
     // lua_checkstack just reserves space for us on the stack, and since we're
     // not checking for stack overflow, we don't need to do anything.
     return 1;
 }
 
-LUA_API void lua_newtable(lua_State* L)
+void lua_newtable(lua_State* L)
 {
     Value value;
     SetValue( &value, Table_Create(L) );
     PushValue( L, &value );
 }
 
-LUA_API void lua_concat(lua_State *L, int n)
+void lua_concat(lua_State *L, int n)
 {
     Concat(L, n);
 }
 
-LUA_API int lua_getstack(lua_State *L, int level, lua_Debug *ar)
+int lua_getstack(lua_State *L, int level, lua_Debug *ar)
 {
     return 0;
 }
 
-LUA_API int lua_getinfo(lua_State *L, const char *what, lua_Debug *ar)
+int lua_getinfo(lua_State *L, const char *what, lua_Debug *ar)
 {
     return 0;
 }
 
-LUA_API int lua_next(lua_State* L, int index)
+int lua_next(lua_State* L, int index)
 {
 
     Value* table = GetValueForIndex(L, index);
@@ -629,7 +629,7 @@ LUA_API int lua_next(lua_State* L, int index)
 
 }
 
-LUA_API int lua_setmetatable(lua_State* L, int index)
+int lua_setmetatable(lua_State* L, int index)
 {
 
     Value* object = GetValueForIndex(L, index);
@@ -653,7 +653,7 @@ LUA_API int lua_setmetatable(lua_State* L, int index)
 
 }
 
-LUA_API int lua_getmetatable(lua_State* L, int index)
+int lua_getmetatable(lua_State* L, int index)
 {
 
     const Value* object = GetValueForIndex(L, index);
@@ -669,7 +669,7 @@ LUA_API int lua_getmetatable(lua_State* L, int index)
 
 }
 
-LUA_API int lua_gc(lua_State* L, int what, int data)
+int lua_gc(lua_State* L, int what, int data)
 {
     if (what == LUA_GCCOLLECT)
     {

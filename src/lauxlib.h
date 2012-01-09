@@ -18,9 +18,9 @@ struct luaL_Reg
 /* extra error code for `luaL_load' */
 #define LUA_ERRFILE     (LUA_ERRERR+1)
 
-lua_State* luaL_newstate();
+LUALIB_API lua_State* luaL_newstate();
 
-void luaL_register(lua_State *L, const char* libname, const luaL_Reg* l);
+LUALIB_API void luaL_register(lua_State *L, const char* libname, const luaL_Reg* l);
 
 LUALIB_API int luaL_loadfile(lua_State *L, const char *filename);
 LUALIB_API int luaL_loadbuffer(lua_State *L, const char *buff, size_t sz, const char *name);

@@ -1,6 +1,6 @@
 /*
  * RocketVM
- * Copyright (c) 2011 Max McGuire
+ * Copyright (c) 2011-2012 Max McGuire
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -80,7 +80,7 @@ typedef const char* (*lua_Reader)(lua_State* L, void* ud, size_t* sz);
 
 lua_State* lua_newstate(lua_Alloc f, void* ud);
 
-void lua_close(lua_State* L);
+LUA_API void lua_close(lua_State* L);
 
 // Miscellaneous functions
 LUA_API int   (lua_error) (lua_State *L);
@@ -162,21 +162,21 @@ LUA_API void  (lua_rawseti) (lua_State *L, int idx, int n);
 LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
 LUA_API int   (lua_setfenv) (lua_State *L, int idx);
 
-void lua_register(lua_State *L, const char *name, lua_CFunction f);
+LUA_API void lua_register(lua_State *L, const char *name, lua_CFunction f);
 
-void lua_setfield(lua_State *L, int index, const char* name);
-void lua_getfield(lua_State *L, int index, const char* name);
+LUA_API void lua_setfield(lua_State *L, int index, const char* name);
+LUA_API void lua_getfield(lua_State *L, int index, const char* name);
 
-void lua_setglobal(lua_State *L, const char* name);
-void lua_getglobal(lua_State *L, const char *name);
+LUA_API void lua_setglobal(lua_State *L, const char* name);
+LUA_API void lua_getglobal(lua_State *L, const char *name);
 
-int lua_type(lua_State* L, int index);
-const char* lua_typename(lua_State *L, int tp);
+LUA_API int lua_type(lua_State* L, int index);
+LUA_API const char* lua_typename(lua_State *L, int tp);
 
 #define lua_pushliteral(L, s) \
 	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
 
-void lua_newtable(lua_State* L);
+LUA_API void lua_newtable(lua_State* L);
 
 LUA_API int lua_isfunction(lua_State* L, int n);
 LUA_API int lua_istable(lua_State* L, int n);
