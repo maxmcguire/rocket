@@ -59,6 +59,38 @@ TEST(GcTest)
 }
 */
 
+TEST(ToCFunction)
+{
+
+    struct Locals
+    {
+        static int F(lua_State* L)
+        {
+            return 0;
+        }
+    };
+
+    lua_State* L = luaL_newstate();
+
+    lua_pushcfunction(L, Locals::F);
+    CHECK( lua_tocfunction(L, -1) == Locals::F );
+
+    const char* code = "function f() end\n";
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "f");
+    CHECK( lua_tocfunction(L, -1) == NULL );
+
+    lua_pushstring(L, "test");
+    CHECK( lua_tocfunction(L, -1) == NULL );
+
+    lua_pushnumber(L, 1.0);
+    CHECK( lua_tocfunction(L, -1) == NULL );
+
+    lua_close(L);
+
+}
+
 TEST(ConcatTest)
 {
 

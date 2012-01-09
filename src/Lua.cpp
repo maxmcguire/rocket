@@ -456,6 +456,20 @@ LUA_API const char* lua_tostring(lua_State* L, int index)
     return lua_tolstring(L, index, NULL);
 }
 
+LUA_API lua_CFunction lua_tocfunction(lua_State* L, int index)
+{
+    const Value* value = GetValueForIndex(L, index);
+    if (value->tag == TAG_FUNCTION)
+    {
+        Closure* closure = value->closure;
+        if (closure->c)
+        {
+            return closure->cclosure.function;
+        }
+    }
+    return NULL;
+}
+
 LUA_API const void* lua_topointer(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
