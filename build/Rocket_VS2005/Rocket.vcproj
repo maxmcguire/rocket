@@ -262,6 +262,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\UserData.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Vm.cpp"
 				>
 			</File>
@@ -337,6 +341,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\Table.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\UserData.h"
 				>
 			</File>
 			<File

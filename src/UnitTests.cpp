@@ -584,6 +584,23 @@ TEST(LightUserData)
 
 }
 
+TEST(UserData)
+{
+
+    lua_State* L = luaL_newstate();
+
+    void* buffer = lua_newuserdata(L, 10);
+    CHECK( buffer != NULL );
+
+    CHECK( lua_type(L, -1) == LUA_TUSERDATA );
+    CHECK( lua_touserdata(L, -1) == buffer );
+
+    lua_pop(L, 1);
+
+    lua_close(L);
+
+}
+
 TEST(NewIndexMetamethod)
 {
 

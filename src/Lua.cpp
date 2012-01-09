@@ -11,6 +11,7 @@
 #include "Function.h"
 #include "String.h"
 #include "Table.h"
+#include "UserData.h"
 #include "Vm.h"
 #include "Input.h"
 #include "Code.h"
@@ -472,14 +473,14 @@ LUA_API const void* lua_topointer(lua_State* L, int index)
     const Value* value = GetValueForIndex(L, index);
     switch (value->tag)
     {
-    case TAG_LIGHTUSERDATA:
-        return value->lightUserdata;
-    case TAG_STRING:
     case TAG_TABLE:
     case TAG_FUNCTION:
     case TAG_THREAD:
-    case TAG_USERDATA:
         return value->object;
+    case TAG_LIGHTUSERDATA:
+        return value->lightUserdata;
+    case TAG_USERDATA:
+        return UserData_GetData(value->userData);
     }
     return NULL;
 }
@@ -491,10 +492,12 @@ LUA_API void* lua_touserdata(lua_State* L, int index)
     {
         return value->lightUserdata;
     }
-    // TODO: Handle full userdata.
+    else if (value->tag == TAG_USERDATA)
+    {
+        return UserData_GetData(value->userData);
+    }
     return NULL;
 }
-
 
 LUA_API size_t lua_objlen(lua_State* L, int index)
 {
@@ -668,6 +671,13 @@ int lua_next(lua_State* L, int index)
     PushValue(L, value);
     return 1;
 
+}
+
+void* lua_newuserdata(lua_State* L, size_t size)
+{
+    UserData* userData = UserData_Create(L, size);
+    PushUserData(L, userData);
+    return UserData_GetData(userData);
 }
 
 int lua_setmetatable(lua_State* L, int index)

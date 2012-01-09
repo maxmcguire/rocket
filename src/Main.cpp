@@ -9,6 +9,6 @@
 
 int main(int argc, char* argv[])
 {
-    Test_RunTests();
+    Test_RunTests("UserData");
     return 0;
 } 

@@ -16,6 +16,7 @@ struct Gc_Object;
 struct Closure;
 struct String;
 struct Table;
+struct UserData;
 struct UpValue;
 
 #define LUAI_MAXCSTACK	    8000
@@ -58,6 +59,7 @@ union Value
             String*     string;
             Table*      table;
             Closure*    closure;
+            UserData*   userData;
             Gc_Object*  object;         // Alias for string, table, closure.
         };
     };
@@ -202,6 +204,8 @@ inline void SetValue(Value* value, Closure* closure)
     { value->tag = TAG_FUNCTION; value->closure = closure; }
 inline void SetValue(Value* value, void* userdata)
     { value->tag = TAG_LIGHTUSERDATA; value->lightUserdata = userdata; }
+inline void SetValue(Value* value, UserData* userData)
+    { value->tag = TAG_USERDATA; value->userData = userData; }
 
 inline void PushTable(lua_State* L, Table* table)
 {
@@ -224,6 +228,12 @@ inline void PushBoolean(lua_State* L, bool boolean)
 inline void PushLightUserdata(lua_State* L, void* userdata)
 {
     SetValue( L->stackTop, userdata );
+    ++L->stackTop;
+}
+
+inline void PushUserData(lua_State* L, UserData* userData)
+{
+    SetValue( L->stackTop, userData );
     ++L->stackTop;
 }
 
