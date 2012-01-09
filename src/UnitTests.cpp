@@ -181,6 +181,54 @@ TEST(RawGetITest)
 
 }
 
+TEST(RawSetITest)
+{
+
+    struct Locals
+    {
+        static int Error(lua_State* L)
+        {
+            Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
+            locals->called = true;
+            return 0;
+        }
+        bool called;
+    };
+
+    Locals locals;
+    locals.called = false;
+
+    lua_State* L = luaL_newstate();
+
+    lua_newtable(L);
+    int table = lua_gettop(L);
+
+    // Setup a metatable for the table.
+    lua_newtable(L);
+    lua_pushlightuserdata(L, &locals);
+    lua_pushcclosure(L, Locals::Error, 1);
+    lua_setfield(L, -2, "__index");
+    lua_setmetatable(L, table);
+
+    lua_pushstring(L, "one");
+    lua_rawseti(L, table, 1);
+
+    lua_pushstring(L, "three");
+    lua_rawseti(L, table, 3);
+
+    lua_rawgeti(L, table, 1);
+    CHECK_EQ( lua_tostring(L, -1), "one" );
+
+    lua_rawgeti(L, table, 2);
+    CHECK( lua_isnil(L, -1) );
+
+    lua_rawgeti(L, table, 3);
+    CHECK_EQ( lua_tostring(L, -1), "three" );
+
+    lua_close(L);
+
+}
+
 TEST(NextTest)
 {
 
@@ -2007,6 +2055,38 @@ TEST(LocalInit)
 
     lua_getglobal(L, "a");
     CHECK( lua_isnil(L, -1) );
+    
+    lua_close(L);
+
+}
+
+TEST(OperatorPrecedence)
+{
+    
+    const char* code =
+        "a = 1 + 2 * 3\n"
+        "b = 1 + 4 / 2\n"
+        "c = 1 - 2 * 3\n"
+        "d = 1 - 4 / 2\n"
+        "e = 2 * -3 ^ 4 * 5\n";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK_CLOSE( lua_tonumber(L, -1), 7);
+
+    lua_getglobal(L, "b");
+    CHECK_CLOSE( lua_tonumber(L, -1),  3);
+
+    lua_getglobal(L, "c");
+    CHECK_CLOSE( lua_tonumber(L, -1),  -5);
+
+    lua_getglobal(L, "d");
+    CHECK_CLOSE( lua_tonumber(L, -1),  -1);
+
+    lua_getglobal(L, "e");
+    CHECK_CLOSE( lua_tonumber(L, -1),  -810);
     
     lua_close(L);
 

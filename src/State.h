@@ -7,7 +7,7 @@
 #ifndef ROCKETVM_STATE_H
 #define ROCKETVM_STATE_H
 
-#include "Lua.h"
+#include "lua.h"
 #include "String.h"
 
 #include <setjmp.h>

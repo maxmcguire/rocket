@@ -15,6 +15,13 @@
 #include <string.h>
 #include <stdio.h>
 
+// Free list of references
+#define FREELIST_REF    0       
+
+// Convert a stack index to positive
+#define abs_index(L, i) \
+    ((i) > 0 || (i) <= LUA_REGISTRYINDEX ? (i) : lua_gettop(L) + (i) + 1)
+
 static void* DefaultAlloc(void *ud, void *ptr, size_t osize, size_t nsize)
 {
     if (nsize == 0)
@@ -298,4 +305,38 @@ LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char* event)
     // Remove only metatable.
     lua_remove(L, -2);
     return 1;
+}
+
+LUALIB_API int luaL_ref (lua_State *L, int t)
+{
+  int ref;
+  t = abs_index(L, t);
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 1);  /* remove from stack */
+    return LUA_REFNIL;  /* `nil' has a unique fixed reference */
+  }
+  lua_rawgeti(L, t, FREELIST_REF);  /* get first free element */
+  ref = (int)lua_tointeger(L, -1);  /* ref = t[FREELIST_REF] */
+  lua_pop(L, 1);  /* remove it from stack */
+  if (ref != 0) {  /* any free element? */
+    lua_rawgeti(L, t, ref);  /* remove it from list */
+    lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
+  }
+  else {  /* no free elements */
+    ref = (int)lua_objlen(L, t);
+    ref++;  /* create new reference */
+  }
+  lua_rawseti(L, t, ref);
+  return ref;
+}
+
+
+LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
+  if (ref >= 0) {
+    t = abs_index(L, t);
+    lua_rawgeti(L, t, FREELIST_REF);
+    lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
+    lua_pushinteger(L, ref);
+    lua_rawseti(L, t, FREELIST_REF);  /* t[FREELIST_REF] = ref */
+  }
 }

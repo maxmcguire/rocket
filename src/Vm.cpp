@@ -5,7 +5,7 @@
  * See copyright notice in lua.h
  */
 
-#include "Lua.h"
+#include "lua.h"
 #include "Opcode.h"
 #include "Vm.h"
 #include "State.h"
