@@ -711,7 +711,7 @@ int lua_gc(lua_State* L, int what, int data)
     return 0;
 }
 
-LUA_API void lua_setgchook (lua_State *L, lua_GCHook func)
+LUA_API void lua_setgchook(lua_State *L, lua_GCHook func)
 {
     L->gchook = func;
 }

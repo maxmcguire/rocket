@@ -190,6 +190,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\BitLib.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Code.cpp"
 				>
 			</File>
