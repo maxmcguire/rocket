@@ -181,6 +181,55 @@ TEST(RawGetITest)
 
 }
 
+TEST(RawSetTest)
+{
+
+    struct Locals
+    {
+        static int Error(lua_State* L)
+        {
+            Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
+            locals->called = true;
+            return 0;
+        }
+        bool called;
+    };
+
+    Locals locals;
+    locals.called = false;
+
+    lua_State* L = luaL_newstate();
+
+    lua_newtable(L);
+    int table = lua_gettop(L);
+
+    // Setup a metatable for the table.
+    lua_newtable(L);
+    lua_pushlightuserdata(L, &locals);
+    lua_pushcclosure(L, Locals::Error, 1);
+    lua_setfield(L, -2, "__index");
+    lua_setmetatable(L, table);
+
+    lua_pushstring(L, "one");
+    lua_pushnumber(L, 1.0);
+    lua_rawset(L, table);
+
+    lua_pushstring(L, "two");
+    lua_pushnumber(L, 2.0);
+    lua_rawset(L, table);
+
+    lua_pushstring(L, "one");
+    lua_rawget(L, table);
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_pushstring(L, "two");
+    lua_rawget(L, table);
+    CHECK( lua_tonumber(L, -1) == 2.0 );
+
+    lua_close(L);
+
+}
+
 TEST(RawSetITest)
 {
 

@@ -540,6 +540,19 @@ LUA_API void lua_rawgeti(lua_State *L, int index, int n)
 
 }
 
+LUA_API void lua_rawset(lua_State *L, int index)
+{
+
+    Value* key   = GetValueForIndex(L, -2);
+    Value* value = GetValueForIndex(L, -1);
+    Value* table = GetValueForIndex(L, index);
+
+    assert( Value_GetIsTable(table) );
+    Table_SetTable( L, table->table, key, value );
+    Pop(L, 2);
+
+}
+
 LUA_API void lua_rawseti(lua_State* L, int index, int n)
 {
 
