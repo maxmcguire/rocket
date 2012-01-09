@@ -626,6 +626,14 @@ LUA_API void lua_insert(lua_State *L, int index)
     *p = *L->stackTop;
 }
 
+void lua_replace(lua_State *L, int index)
+{
+    Value* dst = GetValueForIndex(L, index);
+    --L->stackTop;
+    *dst = *L->stackTop;
+    // TODO: Handle special cases like Lua does?
+}
+
 int lua_checkstack(lua_State *L, int size)
 {
     // lua_checkstack just reserves space for us on the stack, and since we're

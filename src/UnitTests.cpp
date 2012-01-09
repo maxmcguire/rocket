@@ -133,6 +133,27 @@ TEST(InsertTest)
 
 }
 
+TEST(Replace)
+{
+
+    lua_State* L = luaL_newstate();
+
+    int top = lua_gettop(L);
+
+    lua_pushinteger(L, 1);
+    lua_pushinteger(L, 3);
+    lua_pushinteger(L, 2);
+    lua_replace(L, -3);
+
+    CHECK( lua_tointeger(L, -2) == 2 );
+    CHECK( lua_tointeger(L, -1) == 3 );
+    
+    CHECK( lua_gettop(L) - top == 2 );
+
+    lua_close(L);
+
+}
+
 TEST(PCallTest)
 {
 
