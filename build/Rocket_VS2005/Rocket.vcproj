@@ -348,6 +348,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Value.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Vm.h"
 				>
 			</File>

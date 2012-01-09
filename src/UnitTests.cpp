@@ -154,6 +154,35 @@ TEST(Replace)
 
 }
 
+TEST(RawEqual)
+{
+
+    lua_State* L = luaL_newstate();
+
+    lua_pushinteger(L, 1);
+    lua_pushinteger(L, 3);
+    CHECK( lua_rawequal(L, -1, -2) == 0 );
+    lua_pop(L, 2);
+
+    lua_pushinteger(L, 1);
+    lua_pushinteger(L, 1);
+    CHECK( lua_rawequal(L, -1, -2) == 1 );
+    lua_pop(L, 2);
+
+    lua_pushstring(L, "test1");
+    lua_pushstring(L, "test2");
+    CHECK( lua_rawequal(L, -1, -2) == 0 );
+    lua_pop(L, 2);
+
+    lua_pushstring(L, "test1");
+    lua_pushstring(L, "test1");
+    CHECK( lua_rawequal(L, -1, -2) == 1 );
+    lua_pop(L, 2);
+
+    lua_close(L);
+
+}
+
 TEST(PCallTest)
 {
 

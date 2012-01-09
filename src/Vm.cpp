@@ -280,15 +280,8 @@ static void MoveResults(lua_State* L, Value* dst, Value* src, int numResults)
 // Returns 0 or 1 depending on whether or not the values are equal
 int Vm_ValuesEqual(const Value* arg1, const Value* arg2)
 {
-    if (arg1->tag != arg2->tag)
-    {
-        return 0;
-    }
-    if (Value_GetIsNil(arg1))
-    {
-        return 1;
-    }
-    return arg1->object == arg2->object;
+    // TODO: invoke metamethod.
+    return Value_Equal(arg1, arg2);
 }
 
 int ValuesLess(const Value* arg1, const Value* arg2)

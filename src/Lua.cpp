@@ -599,6 +599,13 @@ LUA_API const char* lua_typename(lua_State* L, int type)
     return State_TypeName(L, type);
 }
 
+int lua_rawequal(lua_State* L, int index1, int index2)
+{
+    const Value* value1 = GetValueForIndex(L, index1);
+    const Value* value2 = GetValueForIndex(L, index2);
+    return Value_Equal(value1, value2);
+}
+
 LUA_API int lua_gettop(lua_State* L)
 {
     return static_cast<int>(L->stackTop - L->stackBase);

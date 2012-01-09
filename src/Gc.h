@@ -4,6 +4,7 @@
  *
  * See copyright notice in lua.h
  */
+
 #ifndef ROCKETVM_GC_H
 #define ROCKETVM_GC_H
 
