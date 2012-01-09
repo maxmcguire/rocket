@@ -19,8 +19,25 @@ static void Parser_Statement(Parser* parser);
 static void Parser_Expression0(Parser* parser, Expression* dst, int regHint);
 
 /**
- * Attempts to fold the two values together using the specified operator. If
- * the constants can not be folded, the method returns false.
+ * Attempts to fold the expression opcode arg and store the result in dst.
+ * If the constant can not be folded, the method returns false.
+ */
+static bool Parser_FoldConstant(Opcode opcode, lua_Number& dst, lua_Number arg)
+{
+    switch (opcode)
+    {
+    case Opcode_Unm:
+        dst = -arg;
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Attempts to fold the expression arg1 opcode arg2 and store the result in dst.
+ * If the constants can not be folded, the method returns false.
  */
 static bool Parser_FoldConstants(Opcode opcode, lua_Number& dst, lua_Number arg1, lua_Number arg2)
 {
@@ -37,6 +54,12 @@ static bool Parser_FoldConstants(Opcode opcode, lua_Number& dst, lua_Number arg1
         break;
     case Opcode_Div:
         dst = luai_numdiv(arg1, arg2);
+        break;
+    case Opcode_Pow:
+        dst = luai_numpow(arg1, arg2);
+        break;
+    case Opcode_Mod:
+        dst = luai_nummod(arg1, arg2);
         break;
     default:
         return false;
@@ -683,6 +706,17 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
         }
 
         Parser_Expression0(parser, dst, regHint);
+
+        // Perform constant folding.
+        if (dst->type == EXPRESSION_NUMBER)
+        {
+            if (Parser_FoldConstant(opcode, dst->number, dst->number))
+            {
+                dst->type = EXPRESSION_NUMBER;
+                return;
+            }
+        }
+
         if (!Parser_ConvertToRegister(parser, dst))
         {
             Parser_MoveToRegister(parser, dst, regHint);
@@ -695,6 +729,7 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
         Parser_EmitAB(parser, opcode, regHint, dst->index);
         dst->index = regHint;
         dst->type  = EXPRESSION_REGISTER;
+
     }
     else
     {

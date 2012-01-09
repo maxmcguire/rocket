@@ -1708,6 +1708,22 @@ TEST(UnaryMinusOperator)
 
 }
 
+TEST(UnaryMinusOperatorConstant)
+{
+
+    const char* code =
+        "x = -5";
+
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "x");
+    CHECK( lua_tonumber(L, -1) == -5 );
+
+    lua_close(L);
+
+}
+
 TEST(ModuloOperator)
 {
 
