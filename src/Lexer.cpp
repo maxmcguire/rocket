@@ -349,11 +349,11 @@ void Lexer_NextToken(Lexer* lexer)
         switch (c)
         {
         case '\n':
-        case '\r':
             ++lexer->lineNumber;
             break;
         case ' ':
         case '\t':
+        case '\r':
             break;
         case END_OF_STREAM:
             lexer->token.type = TokenType_EndOfStream;
