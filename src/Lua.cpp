@@ -736,9 +736,15 @@ int lua_setmetatable(lua_State* L, int index)
 {
     Value* object = GetValueForIndex(L, index);
     Value* metatable = GetValueForIndex(L, -1);
-    assert( Value_GetIsTable(metatable) );
 
-    Value_SetMetatable( L, object, metatable->table );
+    Table* table = NULL;
+    if (!Value_GetIsNil(metatable))
+    {
+        assert( Value_GetIsTable(metatable) );
+        table = metatable->table;
+    }
+
+    Value_SetMetatable( L, object, table );
 
     Pop(L, 1);
     return 1;

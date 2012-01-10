@@ -672,6 +672,26 @@ TEST(SetMetatableUserData)
 
 }
 
+TEST(SetMetatableNil)
+{
+
+    lua_State* L = luaL_newstate();
+
+    lua_newuserdata(L, 10);
+    int object = lua_gettop(L);
+
+    int top = lua_gettop(L);
+    lua_pushnil(L);
+    lua_setmetatable(L, object);
+    CHECK( lua_gettop(L) - top == 0);
+
+    top = lua_gettop(L);
+    CHECK( lua_getmetatable(L, object) == 0 );
+    CHECK( lua_gettop(L) - top == 0 );
+    
+    lua_close(L);
+
+}
 
 TEST(CClosure)
 {

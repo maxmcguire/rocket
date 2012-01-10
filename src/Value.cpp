@@ -19,11 +19,17 @@ void Value_SetMetatable(lua_State* L, Value* value, Table* table)
     {
     case TAG_TABLE:
         value->table->metatable = table;
-        Gc_WriteBarrier(L, value->table, table);
+        if (table != NULL)
+        {
+            Gc_WriteBarrier(L, value->table, table);
+        }
         break;
     case TAG_USERDATA:
         value->userData->metatable = table;
-        Gc_WriteBarrier(L, value->userData, table);
+        if (table != NULL)
+        {
+            Gc_WriteBarrier(L, value->userData, table);
+        }
         break;
     default:
         // TODO: Set the global metatable for the type.
