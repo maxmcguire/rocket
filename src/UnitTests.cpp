@@ -703,6 +703,71 @@ TEST(NewIndexMetamethod)
 
 }
 
+TEST(GetUpValueCFunction)
+{
+
+    struct Locals
+    {
+        static int F(lua_State* L)
+        {
+            return 0;
+        }
+    };
+
+    lua_State* L = luaL_newstate();
+
+    lua_pushstring(L, "test1");
+    lua_pushstring(L, "test2");
+    lua_pushcclosure(L, Locals::F, 2);
+    int func = lua_gettop(L);
+
+    CHECK_EQ( lua_getupvalue(L, func, 1), "" );
+    CHECK_EQ( lua_tostring(L, -1), "test1" );
+    lua_pop(L, 1);
+
+    CHECK_EQ( lua_getupvalue(L, func, 2), "" );
+    CHECK_EQ( lua_tostring(L, -1), "test2" );
+    lua_pop(L, 1);
+    
+    CHECK( lua_getupvalue(L, func, 3) == NULL );
+
+    lua_close(L);
+
+}
+
+TEST(GetUpValueLuaFunction)
+{
+
+    const char* code =
+        "local a = 'test1'\n"
+        "local b = 'test2'\n"
+        "function f()\n"
+        "  local x = a\n"
+        "  local y = b\n"
+        "end";
+
+    lua_State* L = luaL_newstate();
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "f");
+    CHECK( lua_isfunction(L, -1) );
+    int func = lua_gettop(L);
+
+    CHECK_EQ( lua_getupvalue(L, func, 1), "a" );
+    CHECK_EQ( lua_tostring(L, -1), "test1" );
+    lua_pop(L, 1);
+
+    CHECK_EQ( lua_getupvalue(L, func, 2), "b" );
+    CHECK_EQ( lua_tostring(L, -1), "test2" );
+    lua_pop(L, 1);
+    
+    CHECK( lua_getupvalue(L, func, 3) == NULL );
+
+    lua_close(L);
+
+}
+
 TEST(MultipleAssignment)
 {
 

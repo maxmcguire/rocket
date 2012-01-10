@@ -960,7 +960,11 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
         L,
         function->codeSize,
         function->numConstants,
-        function->numFunctions);
+        function->numFunctions,
+        function->numUpValues);
+
+    // Store the up values.
+    memcpy(prototype->upValue, function->upValue, sizeof(String*) * function->numUpValues);
 
     // Store the code.
     memcpy(prototype->code, function->code, function->codeSize * sizeof(Instruction));

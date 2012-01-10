@@ -670,6 +670,37 @@ int lua_getinfo(lua_State *L, const char *what, lua_Debug *ar)
     return 0;
 }
 
+const char* lua_getupvalue(lua_State *L, int funcIndex, int n)
+{
+
+    const Value* func = GetValueForIndex(L, funcIndex);
+    assert( Value_GetIsFunction(func) );
+
+    Closure* closure = func->closure;
+
+    if (closure->c)
+    {
+        if (n <= closure->cclosure.numUpValues)
+        {
+            PushValue(L, &closure->cclosure.upValue[n - 1]);
+            // Up values to a C function are unnamed.
+            return "";
+        }
+    }
+    else
+    {
+        if (n <= closure->lclosure.numUpValues)
+        {
+            PushValue(L, closure->lclosure.upValue[n - 1]->value);
+            // Get the name of the up value from the prototype.
+            String* name = closure->lclosure.prototype->upValue[n - 1];
+            return String_GetData(name);
+        }
+    }
+    return NULL;
+
+}
+
 int lua_next(lua_State* L, int index)
 {
 

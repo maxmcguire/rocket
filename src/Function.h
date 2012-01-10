@@ -22,6 +22,7 @@ struct Prototype : public Gc_Object
     int                 numConstants;
     Value*              constant;
     int                 numUpValues;
+    String**            upValue;
     int                 numPrototypes;
     Prototype**         prototype;
 
@@ -75,7 +76,7 @@ struct Closure : public Gc_Object
  * Creates a prototype with the specified fields. The caller will fill in the
  * appropriate fields.
  */
-Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int numPrototypes);
+Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int numPrototypes, int numUpValues);
 
 /**
  * Creates a new function prototype from compiled Lua code.

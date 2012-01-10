@@ -66,13 +66,14 @@ void Prototype_GetName(Prototype* prototype, char *out, size_t bufflen)
     }
 }
 
-Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int numPrototypes)
+Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int numPrototypes, int numUpValues)
 {
 
     size_t size = sizeof(Prototype);
     size += codeSize      * sizeof(Instruction);
     size += numConstants  * sizeof(Value);
     size += numPrototypes * sizeof(Prototype*);
+    size += numUpValues   * sizeof(String*);  
     size += codeSize      * sizeof(int);
 
     Prototype* prototype = static_cast<Prototype*>(Gc_AllocateObject(L, LUA_TPROTOTYPE, size));
@@ -94,8 +95,12 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
     prototype->numPrototypes = numPrototypes;
     prototype->prototype     = reinterpret_cast<Prototype**>(prototype->constant + numConstants);
 
-    // Debug info is stored after the prototypes.
-    prototype->sourceLine = reinterpret_cast<int*>(prototype->prototype + numPrototypes);
+    // Up values are is stored after the prototypes.
+    prototype->numUpValues   = numUpValues;
+    prototype->upValue       = reinterpret_cast<String**>(prototype->prototype + numPrototypes);
+
+    // Debug info is stored after the up values.
+    prototype->sourceLine = reinterpret_cast<int*>(prototype->upValue + numUpValues);
     memset(prototype->sourceLine, 0, sizeof(int) * codeSize);
 
     return prototype;
@@ -168,7 +173,7 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
     const char* prototypes = data;
 
     // Create the function object.
-    Prototype* prototype = Prototype_Create(L, codeSize, numConstants, numPrototypes);
+    Prototype* prototype = Prototype_Create(L, codeSize, numConstants, numPrototypes, numUpValues);
     if (prototype == NULL)
     {
         return NULL;
@@ -184,8 +189,6 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
     }
 
     memcpy(prototype->code, code, codeSize * sizeof(Instruction));
-
-    prototype->numUpValues = numUpValues;
 
     for (int i = 0; i < numConstants; ++i)
     {
