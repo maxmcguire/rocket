@@ -202,6 +202,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\DebugLib.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Function.cpp"
 				>
 			</File>
@@ -239,6 +243,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\OsLib.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\PackageLib.cpp"
 				>
 			</File>
 			<File
