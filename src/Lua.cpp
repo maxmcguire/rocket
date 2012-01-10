@@ -760,7 +760,38 @@ int lua_gc(lua_State* L, int what, int data)
     return 0;
 }
 
-LUA_API void lua_setgchook(lua_State *L, lua_GCHook func)
+void lua_setgchook(lua_State *L, lua_GCHook func)
 {
     L->gchook = func;
+}
+
+int lua_sethook(lua_State *L, lua_Hook hook, int mask, int count)
+{
+    if (hook == NULL || mask == 0)
+    {
+        L->hookMask = 0;
+        L->hook     = NULL;
+    }
+    else
+    {
+        L->hook     = hook;
+        L->hookMask = mask;
+    }
+    L->hookCount = count;
+    return 1;
+}
+
+lua_Hook lua_gethook(lua_State* L)
+{
+    return L->hook;
+}
+
+int lua_gethookmask(lua_State* L)
+{
+  return L->hookMask;
+}
+
+int lua_gethookcount(lua_State* L)
+{
+    return L->hookCount;
 }

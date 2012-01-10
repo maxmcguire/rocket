@@ -48,6 +48,9 @@ struct lua_State
     UpValue*        openUpValue;
     CallFrame*      callStackTop;
     lua_Alloc       alloc;
+    lua_Hook        hook;
+    int             hookMask;
+    int             hookCount;
     lua_GCHook      gchook;
     void*           userdata;
     ErrorHandler*   errorHandler;
