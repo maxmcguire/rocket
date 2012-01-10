@@ -320,12 +320,3 @@ const char* State_TypeName(lua_State* L, int type)
     }
     return "unknown";
 }
-
-Table* Value_GetMetatable(lua_State* L, const Value* value)
-{
-    if (Value_GetIsTable(value))
-    {
-        return value->table->metatable;
-    }
-    return NULL;
-}

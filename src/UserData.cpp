@@ -13,7 +13,8 @@
 UserData* UserData_Create(lua_State* L, size_t size)
 {
     UserData* userData = static_cast<UserData*>(Gc_AllocateObject(L, LUA_TUSERDATA, sizeof(UserData) + size));
-    userData->size = size;
-    userData->env  = NULL;
+    userData->size      = size;
+    userData->metatable = NULL;
+    userData->env       = NULL;
     return userData;
 }

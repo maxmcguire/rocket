@@ -646,6 +646,33 @@ TEST(EnvTable)
 
 }
 
+TEST(SetMetatableUserData)
+{
+
+    lua_State* L = luaL_newstate();
+
+    lua_newuserdata(L, 10);
+    int object = lua_gettop(L);
+    
+    lua_newtable(L);
+    int mt = lua_gettop(L);
+
+    int top = lua_gettop(L);
+    lua_pushvalue(L, mt);
+    lua_setmetatable(L, object);
+    CHECK( lua_gettop(L) - top == 0);
+
+    top = lua_gettop(L);
+    CHECK( lua_getmetatable(L, object) == 1 );
+    CHECK( lua_gettop(L) - top == 1);
+    
+    CHECK( lua_rawequal(L, -1, mt) );
+    
+    lua_close(L);
+
+}
+
+
 TEST(CClosure)
 {
 

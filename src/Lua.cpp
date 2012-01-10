@@ -734,26 +734,14 @@ void* lua_newuserdata(lua_State* L, size_t size)
 
 int lua_setmetatable(lua_State* L, int index)
 {
-
     Value* object = GetValueForIndex(L, index);
-    
     Value* metatable = GetValueForIndex(L, -1);
     assert( Value_GetIsTable(metatable) );
 
-    if (Value_GetIsTable(object))
-    {
-        object->table->metatable = metatable->table;
-        Gc_WriteBarrier(L, object->table, metatable);
-    }
-    else
-    {
-        // TODO: Set the metatable for the userdata or the common type.
-        assert(0);
-    }
+    Value_SetMetatable( L, object, metatable->table );
 
     Pop(L, 1);
     return 1;
-
 }
 
 int lua_getmetatable(lua_State* L, int index)

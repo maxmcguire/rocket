@@ -83,12 +83,6 @@ inline bool Value_GetIsFunction(const Value* value)
 inline bool Value_GetIsObject(const Value* value)
     { return Value_GetIsString(value) || Value_GetIsTable(value) || Value_GetIsFunction(value); }
 
-/**
- * Returns the metatable for the value, or NULL if it doesn't have a
- * metatable.
- */
-Table* Value_GetMetatable(lua_State* L, const Value* value);
-
 /** Returns the Lua type (LUA_NIL, LUA_TNUMBER, etc.) for the value */
 inline int Value_GetType(const Value* value)
 {
@@ -150,6 +144,16 @@ inline int Value_Equal(const Value* arg1, const Value* arg2)
     }
     return arg1->object == arg2->object;
 }
+
+/**
+ * Sets the metatable table for the value. 
+ */
+void Value_SetMetatable(lua_State* L, Value* value, Table* table);
+
+/**
+ * Retursn the metatable for the value.
+ */
+Table* Value_GetMetatable(lua_State* L, const Value* value);
 
 /**
  * Sets the environment table for the value. If the value is not a function

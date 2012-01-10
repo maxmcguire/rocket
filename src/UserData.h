@@ -19,6 +19,7 @@ struct Table;
 struct UserData : public Gc_Object
 {
     size_t      size;
+    Table*      metatable;
     Table*      env;    // Environment table.
 };
 
