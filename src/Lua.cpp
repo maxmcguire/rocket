@@ -606,6 +606,13 @@ int lua_rawequal(lua_State* L, int index1, int index2)
     return Value_Equal(value1, value2);
 }
 
+int lua_lessthan(lua_State *L, int index1, int index2)
+{
+    const Value* value1 = GetValueForIndex(L, index1);
+    const Value* value2 = GetValueForIndex(L, index2);
+    return Vm_Less(value1, value2);
+}
+
 LUA_API int lua_gettop(lua_State* L)
 {
     return static_cast<int>(L->stackTop - L->stackBase);

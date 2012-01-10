@@ -284,7 +284,7 @@ int Vm_ValuesEqual(const Value* arg1, const Value* arg2)
     return Value_Equal(arg1, arg2);
 }
 
-int ValuesLess(const Value* arg1, const Value* arg2)
+int Vm_Less(const Value* arg1, const Value* arg2)
 {
     if (arg1->tag != arg2->tag)
     {
@@ -636,7 +636,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 const Value* arg1 = RESOLVE_RK( GET_B(inst) );
                 const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                if (ValuesLess(arg1, arg2) != a)
+                if (Vm_Less(arg1, arg2) != a)
                 {
                     ++ip;
                 }

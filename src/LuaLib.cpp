@@ -159,7 +159,7 @@ LUALIB_API void luaL_openlibs(lua_State *L)
         {
             {"", luaopen_base},
             //{LUA_LOADLIBNAME, luaopen_package},
-            //{LUA_TABLIBNAME, luaopen_table},
+            {LUA_TABLIBNAME, luaopen_table},
             {LUA_IOLIBNAME, luaopen_io},
             {LUA_OSLIBNAME, luaopen_os},
             {LUA_STRLIBNAME, luaopen_string},
@@ -226,6 +226,19 @@ LUALIB_API int luaL_optint(lua_State* L, int n, int d)
     return static_cast<int>( luaL_optinteger(L, n, d) );
 }
 
+LUALIB_API const char* luaL_optlstring(lua_State *L, int narg, const char* def, size_t* len)
+{
+    if (lua_isnoneornil(L, narg))
+    {
+        if (len)
+        {
+            *len = (def ? strlen(def) : 0);
+        }
+        return def;
+    }
+    return luaL_checklstring(L, narg, len);
+}
+
 LUALIB_API const char* luaL_typename(lua_State* L, int index)
 {
     return lua_typename( L, lua_type(L, index) );
@@ -236,6 +249,14 @@ LUALIB_API void luaL_checktype (lua_State *L, int narg, int type)
     if (lua_type(L, narg) != type)
     {
         luaL_typerror(L, narg, lua_typename(L, type));
+    }
+}
+
+LUALIB_API void luaL_checkstack(lua_State *L, int space, const char *message)
+{
+    if (!lua_checkstack(L, space))
+    {
+        luaL_error(L, "stack overflow (%s)", message);
     }
 }
 
@@ -356,4 +377,98 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname)
     lua_pushvalue(L, -1);
     lua_setfield(L, LUA_REGISTRYINDEX, tname);  /* registry.name = metatable */
     return 1;
+}
+
+#define bufflen(B)      ((B)->p - (B)->buffer)
+#define bufffree(B)     ((size_t)(LUAL_BUFFERSIZE - bufflen(B)))
+#define LIMIT           (LUA_MINSTACK/2)
+
+static int emptybuffer(luaL_Buffer *B)
+{
+    size_t l = bufflen(B);
+    if (l == 0)
+    {
+        /* put nothing on stack */
+        return 0;}
+    else
+    {
+        lua_pushlstring(B->L, B->buffer, l);
+        B->p = B->buffer;
+        B->lvl++;
+        return 1;
+    }
+}
+
+static void adjuststack (luaL_Buffer *B)
+{
+  if (B->lvl > 1) {
+    lua_State *L = B->L;
+    int toget = 1;  /* number of levels to concat */
+    size_t toplen = lua_objlen(L, -1);
+    do {
+      size_t l = lua_objlen(L, -(toget+1));
+      if (B->lvl - toget + 1 >= LIMIT || toplen > l) {
+        toplen += l;
+        toget++;
+      }
+      else break;
+    } while (toget < B->lvl);
+    lua_concat(L, toget);
+    B->lvl = B->lvl - toget + 1;
+  }
+}
+
+LUALIB_API char *luaL_prepbuffer (luaL_Buffer *B)
+{
+    if (emptybuffer(B))
+    {
+        adjuststack(B);
+    }
+    return B->buffer;
+}
+
+LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l)
+{
+    while (l--)
+    {
+        luaL_addchar(B, *s++);
+    }
+}
+
+LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s)
+{
+    luaL_addlstring(B, s, strlen(s));
+}
+
+LUALIB_API void luaL_pushresult(luaL_Buffer *B)
+{
+    emptybuffer(B);
+    lua_concat(B->L, B->lvl);
+    B->lvl = 1;
+}
+
+LUALIB_API void luaL_addvalue(luaL_Buffer *B)
+{
+  lua_State *L = B->L;
+  size_t vl;
+  const char *s = lua_tolstring(L, -1, &vl);
+  if (vl <= bufffree(B)) {  /* fit into buffer? */
+    memcpy(B->p, s, vl);  /* put it there */
+    B->p += vl;
+    lua_pop(L, 1);  /* remove from stack */
+  }
+  else {
+    if (emptybuffer(B))
+      lua_insert(L, -2);  /* put buffer before new value */
+    B->lvl++;  /* add new value into B stack */
+    adjuststack(B);
+  }
+}
+
+
+LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B)
+{
+  B->L = L;
+  B->p = B->buffer;
+  B->lvl = 0;
 }

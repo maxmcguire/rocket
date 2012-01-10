@@ -21,7 +21,7 @@ extern "C" void Vm_GetGlobal(lua_State* L, const Value* key, Value* dst);
 extern "C" void Vm_SetGlobal(lua_State* L, Value* key, Value* value);
 
 int Vm_ValuesEqual(const Value* arg1, const Value* arg2);
-int ValuesLess(const Value* arg1, const Value* arg2);
+int Vm_Less(const Value* arg1, const Value* arg2);
 int ValuesLessEqual(const Value* arg1, const Value* arg2);
 
 // Coerces a value into a boolean. Booleans convert to their own value. nil

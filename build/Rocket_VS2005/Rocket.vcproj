@@ -262,6 +262,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\TableLib.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\UserData.cpp"
 				>
 			</File>

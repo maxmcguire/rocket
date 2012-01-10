@@ -191,6 +191,32 @@ TEST(RawEqual)
 
 }
 
+TEST(Less)
+{
+
+    lua_State* L = luaL_newstate();
+
+    lua_pushinteger(L, 1);
+    lua_pushinteger(L, 3);
+    CHECK( lua_lessthan(L, -2, -1) == 1 );
+    lua_pop(L, 2);
+
+    lua_pushinteger(L, 3);
+    lua_pushinteger(L, 1);
+    CHECK( lua_lessthan(L, -2, -1) == 0 );
+    lua_pop(L, 2);
+
+    lua_pushinteger(L, 3);
+    lua_pushinteger(L, 3);
+    CHECK( lua_lessthan(L, -2, -1) == 0 );
+    lua_pop(L, 2);
+
+    // TODO: Test metamethods.
+
+    lua_close(L);
+
+}
+
 TEST(PCallTest)
 {
 
