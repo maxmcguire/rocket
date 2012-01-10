@@ -680,7 +680,7 @@ const char* lua_getupvalue(lua_State *L, int funcIndex, int n)
 
     if (closure->c)
     {
-        if (n <= closure->cclosure.numUpValues)
+        if (n >= 1 && n <= closure->cclosure.numUpValues)
         {
             PushValue(L, &closure->cclosure.upValue[n - 1]);
             // Up values to a C function are unnamed.
@@ -689,7 +689,7 @@ const char* lua_getupvalue(lua_State *L, int funcIndex, int n)
     }
     else
     {
-        if (n <= closure->lclosure.numUpValues)
+        if (n >= 1 && n <= closure->lclosure.numUpValues)
         {
             PushValue(L, closure->lclosure.upValue[n - 1]->value);
             // Get the name of the up value from the prototype.
