@@ -297,6 +297,7 @@ Closure* Closure_Create(lua_State* L, Prototype* prototype)
 
     Closure* closure = static_cast<Closure*>(Gc_AllocateObject(L, LUA_TFUNCTION, size));
     
+    closure->env = NULL;
     closure->c = false;
     closure->lclosure.prototype = prototype;
 
@@ -315,6 +316,8 @@ Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValu
     size += numUpValues * sizeof(Value);
 
     Closure* closure = static_cast<Closure*>(Gc_AllocateObject(L, LUA_TFUNCTION, size));
+
+    closure->env = NULL;
     closure->c = true;
     closure->cclosure.function      = function;
 

@@ -10,9 +10,16 @@
 
 #include "Gc.h"
 
+//
+// Forward declarations.
+//
+
+struct Table;
+
 struct UserData : public Gc_Object
 {
-    size_t  size;
+    size_t      size;
+    Table*      env;    // Environment table.
 };
 
 UserData* UserData_Create(lua_State* L, size_t size);

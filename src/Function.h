@@ -64,7 +64,8 @@ struct LClosure
 
 struct Closure : public Gc_Object
 {
-    int             c;  // Whether or not the function is implemented in C.
+    int             c;      // Whether or not the function is implemented in C.
+    Table*          env;    // Environment table.
     union
     {
         CClosure    cclosure;

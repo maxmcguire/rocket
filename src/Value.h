@@ -8,6 +8,8 @@
 #ifndef ROCKETVM_VALUE_H
 #define ROCKETVM_VALUE_H
 
+#include "lua.h"
+
 //
 // Forward declarations.
 //
@@ -148,5 +150,16 @@ inline int Value_Equal(const Value* arg1, const Value* arg2)
     }
     return arg1->object == arg2->object;
 }
+
+/**
+ * Sets the environment table for the value. If the value is not a function
+ * a thread or a userdata, the function does nothing and returns false.
+ */
+int Value_SetEnv(lua_State* L, Value* value, Table* table);
+
+/**
+ * Returns the environment table for the object if there is one.
+ */
+Table* Value_GetEnv(const Value* value);
 
 #endif

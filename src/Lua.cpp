@@ -766,6 +766,31 @@ int lua_getmetatable(lua_State* L, int index)
 
 }
 
+int lua_setfenv(lua_State *L, int index)
+{
+    Value* object = GetValueForIndex(L, index);
+    Value* env = GetValueForIndex(L, -1);
+    assert( Value_GetIsTable(env) );
+    int result = Value_SetEnv(L, object, env->table);
+    Pop(L, 1);
+    return result;
+}
+
+void lua_getfenv(lua_State *L, int index)
+{
+    const Value* object = GetValueForIndex(L, index);
+    Table* table = Value_GetEnv(object);
+    if (table == NULL)
+    {
+        PushNil(L);
+    }
+    else
+    {
+        SetValue(L->stackTop, table);
+        ++L->stackTop;
+    }
+}
+
 int lua_gc(lua_State* L, int what, int data)
 {
     if (what == LUA_GCCOLLECT)

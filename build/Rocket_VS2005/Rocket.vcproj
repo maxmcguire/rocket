@@ -266,6 +266,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Value.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Vm.cpp"
 				>
 			</File>

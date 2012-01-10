@@ -583,6 +583,39 @@ TEST(NewMetatable)
 
 }
 
+TEST(EnvTable)
+{
+
+    lua_State* L = luaL_newstate();
+
+    lua_newtable(L);
+    int env = lua_gettop(L);
+
+    int top = lua_gettop(L);
+
+    // Can't set the environment table on a table.
+    lua_newtable(L);
+    lua_pushvalue(L, env);
+    CHECK( lua_setfenv(L, -2) == 0 );
+    CHECK( lua_gettop(L) - top == 1 );
+    lua_getfenv(L, -1);
+    CHECK( lua_isnil(L, -1) );
+    lua_pop(L, 2);
+
+    // Set the environment table on a user data.
+    lua_newuserdata(L, 10);
+    lua_pushvalue(L, env);
+    CHECK( lua_setfenv(L, -2) == 1 );
+    CHECK( lua_gettop(L) - top == 1 );
+    lua_getfenv(L, -1);
+    CHECK( lua_istable(L, -1) );
+    CHECK( lua_rawequal(L, -1, env) );
+    lua_pop(L, 2);
+
+    lua_close(L);
+
+}
+
 TEST(CClosure)
 {
 

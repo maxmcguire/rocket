@@ -390,14 +390,21 @@ void Gc_Collect(lua_State* L, Gc* gc)
     }
 }
 
+void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, Gc_Object* child)
+{
+    if (parent->color == Color_Black)
+    {
+        if (child->color == Color_White)
+        {
+            Gc_MarkObject(&L->gc, child);
+        }
+    }
+}
+
 void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, Value* child)
 {
-    if (parent->color == Color_Black && Value_GetIsObject(child))
+    if (Value_GetIsObject(child))
     {
-        Gc_Object* object = child->object;
-        if (object->color == Color_White)
-        {
-            Gc_MarkObject(&L->gc, object);
-        }
+        Gc_WriteBarrier(L, parent, child->object);
     }
 }
