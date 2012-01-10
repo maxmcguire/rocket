@@ -7,6 +7,7 @@
 
 #include "lua.h"
 #include "lauxlib.h"
+#include "lualib.h"
 
 LUALIB_API int luaopen_debug(lua_State *L)
 {
