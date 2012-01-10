@@ -321,8 +321,7 @@ void lua_gettable(lua_State *L, int index)
 {
     Value* key   = GetValueForIndex( L, -1 );
     Value* table = GetValueForIndex( L, index );
-    Vm_GetTable(L, table, key, L->stackTop);
-    ++L->stackTop;
+    Vm_GetTable(L, table, key, L->stackTop - 1);
 }
 
 void lua_getfield(lua_State *L, int index, const char* name)

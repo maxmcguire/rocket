@@ -286,13 +286,17 @@ TEST(GetTable)
     lua_pushstring(L, "value");
     lua_settable(L, table);
 
+    int top = lua_gettop(L);
     lua_pushstring(L, "key");
     lua_gettable(L, table);
     CHECK_EQ( lua_tostring(L, -1), "value" );
+    CHECK( lua_gettop(L) - top == 1 );
 
+    top = lua_gettop(L);
     lua_pushstring(L, "dummy");
     lua_gettable(L, table);
     CHECK( lua_isnil(L, -1) );
+    CHECK( lua_gettop(L) - top == 1 );
 
     lua_close(L);
 
