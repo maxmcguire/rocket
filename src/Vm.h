@@ -35,4 +35,9 @@ const char* GetString(const Value* value);
 void ArithmeticError(lua_State* L, const Value* arg1, const Value* arg2);
 void MoveResults(lua_State* L, int start, int numResults);
 
+/**
+ * Returns the number of entries in the current call stack.
+ */
+int Vm_GetCallStackSize(lua_State* L);
+
 #endif

@@ -671,14 +671,117 @@ void lua_concat(lua_State *L, int n)
     Concat(L, n);
 }
 
-int lua_getstack(lua_State *L, int level, lua_Debug *ar)
+int lua_getstack(lua_State* L, int level, lua_Debug* ar)
 {
-    return 0;
+    int callStackSize = Vm_GetCallStackSize(L);
+    // Get the absolute index in the call stack.
+    int activeFunction = callStackSize - level - 1;
+    if (activeFunction < 0)
+    {
+        return 0;
+    }
+    ar->activeFunction = activeFunction;
+    return 1;
 }
 
-int lua_getinfo(lua_State *L, const char *what, lua_Debug *ar)
+int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
 {
-    return 0;
+
+    const Closure* function = NULL;
+    const CallFrame* frame  = NULL;
+    
+    if (what[0] == '>')
+    {
+        const Value* value = L->stackTop - 1;
+        LUA_API_CHECK( Value_GetIsFunction(value) );
+        function = value->closure;
+        ++what;
+    }
+    else
+    {
+        LUA_API_CHECK( ar->activeFunction < Vm_GetCallStackSize(L) );
+        frame = L->callStackBase + ar->activeFunction;
+        assert( Value_GetIsFunction(frame->function) );
+        function = frame->function->closure;
+    }
+
+    int result = 1;
+
+    while (what[0] != 0)
+    {
+
+        switch (what[0])
+        {
+        case 'n':
+            ar->name            = NULL;
+            ar->namewhat        = NULL;
+            break;
+        case 'S':
+            ar->source          = NULL;
+            ar->short_src[0]    = 0;
+            ar->linedefined     = -1;
+            ar->lastlinedefined = -1;
+            if (function == NULL)
+            {
+                ar->what   = "main";
+                ar->source = NULL;
+            }
+            else if (function->c)
+            {
+                ar->what    = "C";
+                ar->source = "=[C]";;
+            }
+            else
+            {
+                ar->what  = "Lua";
+                ar->source = String_GetData(function->lclosure.prototype->source);
+                Prototype_GetName(function->lclosure.prototype, ar->short_src, LUA_IDSIZE);
+            }
+            break;
+        case 'l':
+            if (function != NULL && function->c)
+            {
+                ar->currentline = -1;
+            }
+            else
+            {
+                size_t ip = frame->ip - function->lclosure.prototype->code;
+                ar->currentline = function->lclosure.prototype->sourceLine[ip];
+            }
+            break;
+        case 'u':
+            if (function != NULL)
+            {
+                ar->nups = 0;
+            }
+            else if (function->c)
+            {
+                ar->nups = function->cclosure.numUpValues;
+            }
+            else
+            {
+                ar->nups = function->lclosure.numUpValues;
+            }
+            break;
+        case 'f':
+            // Pushes onto the stack the function that is running at the given level
+            assert(0);
+            break;
+        case 'L':
+            //  pushes onto the stack a table whose indices are the numbers of the lines that
+            // are valid on the function. (A valid line is a line with some associated code,
+            // that is, a line where you can put a break point. Non-valid lines include empty
+            // lines and comments
+            assert(0);
+            break;
+        default:
+            result = 0;
+        }
+        ++what;
+    }
+
+    return result;
+
 }
 
 const char* lua_getupvalue(lua_State *L, int funcIndex, int n)

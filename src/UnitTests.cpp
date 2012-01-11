@@ -989,6 +989,53 @@ TEST(GetUpValueLuaFunction)
 
 }
 
+/*
+TEST(GetStack)
+{
+
+    // Test the lua_getstack function.
+    
+    lua_State* L = luaL_newstate();
+
+    lua_getstack(L, 
+
+
+    lua_close(L);
+
+}
+*/
+
+TEST(GetInfo)
+{
+
+    // Test the lua_getinfo function.
+
+    struct Locals
+    {
+        static int F(lua_State* L)
+        {
+            Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
+            if (lua_getstack(L, 0, &locals->top) == 1)
+            {
+                lua_getinfo(L, "lnS", &locals->top);
+            }
+            return 0;
+        }
+        lua_Debug top;
+    };
+
+    lua_State* L = luaL_newstate();
+
+    Locals locals;
+
+    lua_pushlightuserdata(L, &locals);
+    lua_pushcclosure(L, &Locals::F, 1);
+    lua_call(L, 0, 0);
+
+    lua_close(L);
+
+}
+
 TEST(MultipleAssignment)
 {
 

@@ -1068,3 +1068,8 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
     --L->callStackTop;
 
 }
+
+int Vm_GetCallStackSize(lua_State* L)
+{
+    return static_cast<int>(L->callStackTop - L->callStackBase);
+}
