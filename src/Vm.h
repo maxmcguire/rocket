@@ -10,7 +10,7 @@
 #include "lua.h"
 #include "State.h"
 
-int ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, int errorHandler);
+int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Value* errorHandler);
 extern "C" void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults);
 
 // These trigger metamethods.

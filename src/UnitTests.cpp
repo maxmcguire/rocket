@@ -240,16 +240,16 @@ TEST(PCallTest)
 
 }
 
-TEST(ErrorRestoreTest)
+TEST(ErrorRestore)
 {
 
     struct Locals
     {
         static int ErrorFunction(lua_State* L)
         {
-            lua_pushnumber(L, 1.0);
-            lua_pushnumber(L, 2.0);
             lua_pushnumber(L, 3.0);
+            lua_pushnumber(L, 4.0);
+            lua_pushnumber(L, 5.0);
             lua_pushstring(L, "Error message");
             lua_error(L);
             return 0;
@@ -260,8 +260,12 @@ TEST(ErrorRestoreTest)
 
     lua_pushstring(L, "test");
 
+    int top = lua_gettop(L);
     lua_pushcfunction(L, Locals::ErrorFunction);
-    CHECK( lua_pcall(L, 0, 0, 0) == LUA_ERRRUN );
+    lua_pushnumber(L, 1.0);
+    lua_pushnumber(L, 2.0);
+    CHECK( lua_pcall(L, 2, 0, 0) == LUA_ERRRUN );
+    CHECK( lua_gettop(L) - top == 1 );
 
     CHECK( lua_isstring(L, -1) );
     CHECK( strcmp( lua_tostring(L, -1), "Error message") == 0 );
@@ -269,6 +273,91 @@ TEST(ErrorRestoreTest)
     // Check that the stack is in the correct state.
     CHECK( lua_isstring(L, -2) );
     CHECK( strcmp( lua_tostring(L, -2), "test") == 0);
+
+    lua_close(L);
+
+}
+
+TEST(ErrorHandler)
+{
+
+    // Test an error handler for lua_pcall.
+
+    struct Locals
+    {
+        static int ErrorFunction(lua_State* L)
+        {
+            lua_pushnumber(L, 3);
+            lua_pushnumber(L, 4);
+            lua_pushstring(L, "Error message");
+            lua_error(L);
+            return 0;
+        }
+        static int ErrorHandler(lua_State* L)
+        {
+            const char* msg = lua_tostring(L, 1);
+            if (msg != NULL && strcmp(msg, "Error message") == 0)
+            {
+                lua_pushstring(L, "Error handler");
+            }
+            return 1;
+        }
+    };
+
+    lua_State* L = luaL_newstate();
+
+    lua_pushcfunction(L, Locals::ErrorHandler );
+    int err = lua_gettop(L);
+
+    int top = lua_gettop(L);
+    lua_pushcfunction(L, Locals::ErrorFunction);
+    lua_pushnumber(L, 1);
+    lua_pushnumber(L, 2);
+    CHECK( lua_pcall(L, 2, 0, err) == LUA_ERRRUN );
+    CHECK( strcmp( lua_tostring(L, -1), "Error handler") == 0 );
+    CHECK( lua_gettop(L) - top == 1 );
+
+    lua_close(L);
+
+}
+
+TEST(ErrorHandlerError)
+{
+
+    // Test generating an error from inside the error handler for lua_pcall.
+
+    struct Locals
+    {
+        static int ErrorFunction(lua_State* L)
+        {
+            lua_pushnumber(L, 3);
+            lua_pushnumber(L, 4);
+            lua_pushstring(L, "Error message");
+            lua_error(L);
+            return 0;
+        }
+        static int ErrorHandler(lua_State* L)
+        {
+            lua_pushnumber(L, 5);
+            lua_pushnumber(L, 6);
+            lua_pushstring(L, "Error handler error");
+            lua_error(L);
+            return 1;
+        }
+    };
+
+    lua_State* L = luaL_newstate();
+
+    lua_pushcfunction(L, Locals::ErrorHandler );
+    int err = lua_gettop(L);
+
+    int top = lua_gettop(L);
+    lua_pushcfunction(L, Locals::ErrorFunction);
+    lua_pushnumber(L, 1);
+    lua_pushnumber(L, 2);
+    CHECK( lua_pcall(L, 2, 0, err) == LUA_ERRERR );
+    CHECK( lua_isstring(L, -1) );
+    CHECK( lua_gettop(L) - top == 1 );
 
     lua_close(L);
 

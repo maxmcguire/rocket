@@ -208,7 +208,12 @@ LUA_API void lua_call(lua_State* L, int nargs, int nresults)
 LUA_API int lua_pcall(lua_State* L, int numArgs, int numResults, int errFunc)
 {
     Value* value = L->stackTop - (numArgs + 1);
-    return ProtectedCall(L, value, numArgs, numResults, errFunc);
+    Value* errHandler = NULL;
+    if (errFunc != NULL)
+    {        
+        errHandler = GetValueForIndex(L, errFunc);
+    }
+    return Vm_ProtectedCall(L, value, numArgs, numResults, errHandler);
 }
 
 LUA_API void lua_pushnil(lua_State* L)

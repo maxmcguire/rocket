@@ -7,11 +7,6 @@
 
 #include "Test.h"
 
-#include "lua.h"
-#include "lauxlib.h"
-
-#include <stdio.h>
-
 int main(int argc, char* argv[])
 {
     Test_RunTests();
