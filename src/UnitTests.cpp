@@ -438,6 +438,57 @@ TEST(GetTableMetamethod)
 
 }
 
+TEST(CallMetamethod)
+{
+    
+    // Test the __call metamethod.
+
+    struct Locals
+    {
+        static int Call(lua_State* L)
+        {
+            Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
+            if (lua_gettop(L) == 3
+                && lua_touserdata(L, 1) == locals->userData
+                && lua_tonumber(L, 2) == 1.0
+                && lua_tonumber(L, 3) == 2.0)
+            {
+                locals->success = true;
+            }
+            lua_pushstring(L, "result");
+            return 1;
+        }
+        bool  success;
+        void* userData;
+    };
+
+    lua_State* L = luaL_newstate();
+
+    Locals locals;
+    locals.success = false;
+    locals.userData = lua_newuserdata(L, 10);
+    int object = lua_gettop(L);
+
+    lua_newtable(L);
+    int mt = lua_gettop(L);
+
+    lua_pushlightuserdata(L, &locals);
+    lua_pushcclosure(L, Locals::Call, 1);
+    lua_setfield(L, mt, "__call");
+
+    CHECK( lua_setmetatable(L, object) == 1 );
+
+    lua_pushnumber(L, 1.0);
+    lua_pushnumber(L, 2.0);
+    CHECK( lua_pcall(L, 2, 1, 0) == 0 );
+    CHECK( locals.success );
+    CHECK_EQ( lua_tostring(L, -1), "result" );    
+
+    lua_close(L);
+
+}
+
+
 TEST(RawGetITest)
 {
 
@@ -702,6 +753,7 @@ TEST(Metatable)
     lua_close(L);
 
 }
+
 
 TEST(NewMetatable)
 {

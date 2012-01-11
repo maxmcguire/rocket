@@ -701,8 +701,11 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
     {
         LUA_API_CHECK( ar->activeFunction < Vm_GetCallStackSize(L) );
         frame = L->callStackBase + ar->activeFunction;
-        assert( Value_GetIsFunction(frame->function) );
-        function = frame->function->closure;
+        if (frame->function != NULL)
+        {
+            assert( Value_GetIsFunction(frame->function) );
+            function = frame->function->closure;
+        }
     }
 
     int result = 1;
@@ -739,7 +742,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
             }
             break;
         case 'l':
-            if (function != NULL && function->c)
+            if (function == NULL || function->c)
             {
                 ar->currentline = -1;
             }

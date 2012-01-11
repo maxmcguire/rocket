@@ -922,6 +922,11 @@ int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Va
 void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 {
 
+    if (numArgs == -1)
+    {
+        numArgs = static_cast<int>(L->stackTop - value) - 1;
+    }
+
     if (!Value_GetIsFunction(value))
     {
         // Try the "call" tag method.
@@ -932,17 +937,13 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         }
         // Move the method onto the stack before the function so we can
         // call it.
-        for (Value* q = L->stackTop; q > value; q--)
+        for (Value* q = value + numArgs + 1; q > value; q--)
         {
             *q = *(q - 1);
         }
         *value = *method;
         ++L->stackTop;
-    }
-
-    if (numArgs == -1)
-    {
-        numArgs = static_cast<int>(L->stackTop - value) - 1;
+        ++numArgs;
     }
 
     Closure* closure = value->closure;
