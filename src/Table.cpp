@@ -312,6 +312,7 @@ Start:
             node->key   = *key;
             node->value = *value;
             node->next  = freeNode;
+            assert(node->next != node);
 
         }
         else
@@ -321,7 +322,9 @@ Start:
             freeNode->key   = *key;
             freeNode->value = *value;
             freeNode->next  = node->next;
+            assert(freeNode->next != freeNode);
             node->next      = freeNode;
+            assert(node->next != node);
         }
 
     }
