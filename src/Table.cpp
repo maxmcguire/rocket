@@ -276,15 +276,25 @@ static bool Table_Remove(Table* table, const Value* key)
     }
     else
     {
-        node = node->next;
-        if ( node != NULL && KeysEqual(&node->key, key) )
+
+        TableNode* prevNode = node;
+        TableNode* nextNode = node->next;
+        
+        while ( nextNode != NULL && !KeysEqual(&nextNode->key, key) )
         {
-            SetNil(&node->key);
+            prevNode = nextNode;
+            nextNode = nextNode->next;
         }
-        else
+        if (nextNode == NULL)
         {
+            // Not in the table.
             return false;
         }
+
+        prevNode->next = nextNode->next;
+        SetNil(&nextNode->key);
+        nextNode->next = NULL;
+
     }
 
     assert( Table_CheckConsistency(table) );

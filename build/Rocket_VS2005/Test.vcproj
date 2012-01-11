@@ -193,6 +193,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\TableTests.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Test.cpp"
 				>
 			</File>
