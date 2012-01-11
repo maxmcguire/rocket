@@ -92,7 +92,7 @@ static inline bool KeysEqual(const Value* key1, const Value* key2)
     return key1->object == key2->object;
 }
 
-static inline size_t Table_GetMainIndex(Table* table, const Value* key)
+static inline size_t Table_GetMainIndex(const Table* table, const Value* key)
 {
     return Hash(key) & (table->numNodes - 1);
 }
@@ -100,6 +100,82 @@ static inline size_t Table_GetMainIndex(Table* table, const Value* key)
 static inline bool Table_NodeIsEmpty(const TableNode* node)
 {
     return Value_GetIsNil(&node->key);
+}
+
+/**
+ * Returns true if the node pointer is valid for the table. This is used
+ * for debugging.
+ */
+static bool Table_GetIsValidNode(const Table* table, const TableNode* node)
+{
+    return (node >= table->nodes) && (node < table->nodes + table->numNodes);
+}
+
+/**
+ * Checks various aspects of the table to make sure they are correct. Returns
+ * true if everything in the table structure appears valid. This function is 
+ * not fast and should only be used for debugging.
+ */
+static bool Table_CheckConsistency(const Table* table)
+{
+
+    for (int i = 0; i < table->numNodes; ++i)
+    {
+        const TableNode* node = &table->nodes[i]; 
+        
+        if (Table_NodeIsEmpty(node))
+        {
+            // Check that empty nodes do not have a next pointer set.
+            if (node->next != NULL)
+            {
+                assert(0);
+                return false;
+            }
+        }
+        else
+        {
+            // Check that all of the "next" pointers point to a valid element
+            if (!Table_GetIsValidNode(table, node))
+            {
+                assert(0);
+                return false;
+            }
+
+            // Check the invariant that either this node is in its main index,
+            // or the element in its main index is in its *own* main index.
+
+            size_t mainIndex = Table_GetMainIndex(table, &node->key);
+            const TableNode* collidingNode = &table->nodes[i];
+
+            if (collidingNode != node)
+            {
+                if (Table_GetMainIndex(table, &collidingNode->key) != mainIndex)
+                {
+                    assert(0);
+                    return false;
+                }
+
+                // Check that our node is somewhere in the chain from the
+                // colliding node.
+                const TableNode* n = collidingNode->next;
+                while (n != NULL && n != node)
+                {
+                    n = n->next;
+                }
+                if (n != node)
+                {
+                    assert(0);
+                    return false;
+                }
+
+            }
+
+        }
+
+    }
+
+    return true;
+
 }
 
 static bool Table_Resize(lua_State* L, Table* table, int numNodes)
@@ -138,6 +214,8 @@ static bool Table_Resize(lua_State* L, Table* table, int numNodes)
     }
 
     Free(L, nodes, numNodes * sizeof(TableNode));
+    
+    assert( Table_CheckConsistency(table) );
     return true;
 
 }
@@ -180,10 +258,14 @@ static bool Table_Remove(Table* table, const Value* key)
 
     if ( KeysEqual(&node->key, key) )
     {
-        if (node->next != NULL)
+
+        // The node is in its main index, which means it is the first element
+        // in the chain (if there were any collisions).
+
+        TableNode* nextNode = node->next;
+        if (nextNode != NULL)
         {
-            TableNode* nextNode = node->next;
-            *node = *node->next;
+            *node = *nextNode;
             SetNil(&nextNode->key);
             assert(nextNode->next == NULL);
         }
@@ -205,6 +287,7 @@ static bool Table_Remove(Table* table, const Value* key)
         }
     }
 
+    assert( Table_CheckConsistency(table) );
     return true;
 
 }
@@ -321,13 +404,15 @@ Start:
             // the free slot and chain it to the other node.
             freeNode->key   = *key;
             freeNode->value = *value;
+            assert(node->next != freeNode);
             freeNode->next  = node->next;
-            assert(freeNode->next != freeNode);
             node->next      = freeNode;
             assert(node->next != node);
         }
 
     }
+
+    assert( Table_CheckConsistency(table) );
 
 }
 
