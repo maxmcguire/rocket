@@ -50,6 +50,27 @@ int BaseLib_Pairs(lua_State* L)
     return 3;
 }
 
+static int BaseLib_INext(lua_State *L)
+{
+    int i = luaL_checkint(L, 2);
+    luaL_checktype(L, 1, LUA_TTABLE);
+    i++;  // Next value
+    lua_pushinteger(L, i);
+    lua_rawgeti(L, 1, i);
+    return (lua_isnil(L, -1)) ? 0 : 2;
+}
+
+
+static int BaseLib_IPairs(lua_State* L)
+{
+    luaL_checktype(L, 1, LUA_TTABLE);
+    // Return generator, state and initial value.
+    lua_pushvalue(L, lua_upvalueindex(1));
+    lua_pushvalue(L, 1);
+    lua_pushinteger(L, 0);
+    return 3;
+}
+
 int BaseLib_Print(lua_State* L)
 {
 
@@ -294,7 +315,6 @@ void OpenBaseLib(lua_State* L)
     // TODO: baselib functions
     // dofile
     // getfenv
-    // ipairs
     // load
     // loadfile
     // loadstring
@@ -326,9 +346,14 @@ void OpenBaseLib(lua_State* L)
 
     // Register these separately, since we use up values to provide fast access
     // to the "next" function.
+
     lua_pushcfunction( L, BaseLib_Next );
     lua_pushcclosure( L, BaseLib_Pairs, 1 );
     lua_setglobal(L, "pairs");
+
+    lua_pushcfunction( L, BaseLib_INext );
+    lua_pushcclosure( L, BaseLib_IPairs, 1 );
+    lua_setglobal(L, "ipairs");
 
     lua_pushvalue(L, LUA_GLOBALSINDEX);
     lua_setglobal(L, "_G");

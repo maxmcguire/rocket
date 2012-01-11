@@ -6,24 +6,11 @@
  */
 
 #include "Test.h"
-
-#include "lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
+#include "LuaTest.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-static bool DoString(lua_State* L, const char* string)
-{
-    if (luaL_dostring(L, string) != 0)
-    {
-        fprintf(stderr, "%s\n", lua_tostring(L, -1));
-        return false;
-    }
-    return true;
-}
 
 static size_t GetTotalBytes(lua_State* L)
 {
