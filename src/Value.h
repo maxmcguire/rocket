@@ -20,16 +20,18 @@ struct Closure;
 struct UserData;
 struct Gc_Object;
 
-#define TAG_NIL		        (~0u)
-#define TAG_NONE		    (~1u)
-#define TAG_BOOLEAN		    (~2u)
-#define TAG_LIGHTUSERDATA	(~3u)
-#define TAG_STRING		    (~4u)
-#define TAG_TABLE		    (~5u)
-#define TAG_FUNCTION		(~6u)
-#define TAG_USERDATA		(~7u)
-#define TAG_THREAD		    (~8u)
-#define TAG_NUMBER		    (~9u)
+#define TAG_NIL		        (~0u)   // 0xffffffff
+#define TAG_NONE		    (~1u)   // 0xfffffffe
+#define TAG_BOOLEAN		    (~2u)   // 0xfffffffd
+#define TAG_LIGHTUSERDATA	(~3u)   // 0xfffffffc
+#define TAG_STRING		    (~4u)   // 0xfffffffb
+#define TAG_TABLE		    (~5u)   // 0xfffffffa
+#define TAG_FUNCTION		(~6u)   // 0xfffffff9
+#define TAG_USERDATA		(~7u)   // 0xfffffff8
+#define TAG_THREAD		    (~8u)   // 0xfffffff7
+#define TAG_NUMBER		    (~9u)   // 0xfffffff6
+
+#define NUM_TYPES           10        
 
 typedef unsigned long UInt32;
 

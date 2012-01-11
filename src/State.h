@@ -58,6 +58,7 @@ struct lua_State
     Value           registry;
     Gc              gc;
     size_t          totalBytes;
+    Table*          metatable[NUM_TYPES];  // Metatables for basic types.
     String*         tagMethodName[TagMethod_NumMethods];
     CallFrame       callStackBase[LUAI_MAXCCALLS];
     String*         stringPoolEntry[LUAI_MAXSTRINGPOOL];

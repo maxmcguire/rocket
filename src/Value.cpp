@@ -32,8 +32,14 @@ void Value_SetMetatable(lua_State* L, Value* value, Table* table)
         }
         break;
     default:
-        // TODO: Set the global metatable for the type.
-        assert(0);
+        {
+            // Set the global metatable for the type.
+            int type = Value_GetType(value);
+            assert(type >= 0 && type < NUM_TYPES );
+            L->metatable[type] = table;
+            // TODO: Gc_WriteBarrier?
+        }
+        break;
     }
 }
 
@@ -46,9 +52,10 @@ Table* Value_GetMetatable(lua_State* L, const Value* value)
     case TAG_USERDATA:
         return value->userData->metatable;
     }
-    // TODO: Get the global metatable for the type.
-    assert(0);
-    return NULL;
+    // Get the global metatable for the type.
+    int type = Value_GetType(value);
+    assert(type >= 0 && type < NUM_TYPES );
+    return L->metatable[type];
 }
 
 int Value_SetEnv(lua_State* L, Value* value, Table* table)

@@ -439,11 +439,6 @@ static void Parser_ConvertLiteralToConstant(Parser* parser, Expression* value)
     {
         Value constant;
         SetNil(&constant);
-
-        if (parser->lexer->lineNumber == 79)
-        {
-            int a =0;
-        }
         value->type = EXPRESSION_CONSTANT;
         value->index = Parser_AddConstant(parser, &constant);
     }

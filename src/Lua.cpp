@@ -519,18 +519,18 @@ LUA_API void lua_rawget(lua_State* L, int index)
 {
 
     Value* table = GetValueForIndex( L, index );
-    assert( Value_GetIsTable(table) );
+    LUA_API_CHECK( Value_GetIsTable(table) );
 
     const Value* key = GetValueForIndex(L, -1);
     const Value* value = Table_GetTable(L, table->table, key);
 
-    if (value == NULL)
+    if (value != NULL)
     {
-        PushNil(L);
+        *(L->stackTop - 1) = *value;
     }
     else
     {
-        PushValue(L, value);
+        SetNil(L->stackTop - 1);
     }
 
 }
@@ -539,7 +539,7 @@ LUA_API void lua_rawgeti(lua_State *L, int index, int n)
 {
 
     Value* table = GetValueForIndex(L, index);
-    assert( Value_GetIsTable(table) );    
+    LUA_API_CHECK( Value_GetIsTable(table) );    
 
     const Value* value = Table_GetTable(L, table->table, n);
     if (value == NULL)
@@ -560,7 +560,7 @@ LUA_API void lua_rawset(lua_State *L, int index)
     Value* value = GetValueForIndex(L, -1);
     Value* table = GetValueForIndex(L, index);
 
-    assert( Value_GetIsTable(table) );
+    LUA_API_CHECK( Value_GetIsTable(table) );
     Table_SetTable( L, table->table, key, value );
     Pop(L, 2);
 
@@ -570,7 +570,7 @@ LUA_API void lua_rawseti(lua_State* L, int index, int n)
 {
 
     Value* table = GetValueForIndex(L, index);
-    assert( Value_GetIsTable(table) );    
+    LUA_API_CHECK( Value_GetIsTable(table) );    
 
     Value* value = GetValueForIndex(L, -1);
     Table_SetTable(L, table->table, n, value);
@@ -680,7 +680,7 @@ const char* lua_getupvalue(lua_State *L, int funcIndex, int n)
 {
 
     const Value* func = GetValueForIndex(L, funcIndex);
-    assert( Value_GetIsFunction(func) );
+    LUA_API_CHECK( Value_GetIsFunction(func) );
 
     Closure* closure = func->closure;
 
@@ -711,7 +711,7 @@ int lua_next(lua_State* L, int index)
 {
 
     Value* table = GetValueForIndex(L, index);
-    assert( Value_GetIsTable(table) );
+    LUA_API_CHECK( Value_GetIsTable(table) );
     
     Value* key = GetValueForIndex(L, -1);
 
@@ -735,12 +735,14 @@ void* lua_newuserdata(lua_State* L, size_t size)
 int lua_setmetatable(lua_State* L, int index)
 {
     Value* object = GetValueForIndex(L, index);
+    LUA_API_CHECK( !Value_GetIsNil(object) );
+    
     Value* metatable = GetValueForIndex(L, -1);
 
     Table* table = NULL;
     if (!Value_GetIsNil(metatable))
     {
-        assert( Value_GetIsTable(metatable) );
+        LUA_API_CHECK( Value_GetIsTable(metatable) );
         table = metatable->table;
     }
 
@@ -770,7 +772,7 @@ int lua_setfenv(lua_State *L, int index)
 {
     Value* object = GetValueForIndex(L, index);
     Value* env = GetValueForIndex(L, -1);
-    assert( Value_GetIsTable(env) );
+    LUA_API_CHECK( Value_GetIsTable(env) );
     int result = Value_SetEnv(L, object, env->table);
     Pop(L, 1);
     return result;

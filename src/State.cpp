@@ -124,6 +124,11 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     SetValue( &L->globals, Table_Create(L) );
     SetValue( &L->registry, Table_Create(L) );
 
+    for (int i = 0; i < NUM_TYPES; ++i)
+    {
+        L->metatable[i] = NULL;
+    }
+
     // Store the tag method names so we don't need to create new strings
     // every time we want to access them.
     const char* tagMethodName[] = { "__index", "__newindex", "__call" };

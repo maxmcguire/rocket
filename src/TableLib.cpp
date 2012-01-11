@@ -57,7 +57,7 @@ static int tinsert (lua_State *L) {
 
 
 static int tremove (lua_State *L) {
-  int e = aux_getn(L, 1);
+  int e = (int)aux_getn(L, 1);
   int pos = luaL_optint(L, 2, e);
   if (e == 0) return 0;  /* table is `empty' */
   lua_rawgeti(L, 1, pos);  /* result = t[pos] */
@@ -79,7 +79,7 @@ static int tconcat (lua_State *L)
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
   luaL_checktype(L, 1, LUA_TTABLE);
   i = luaL_optint(L, 3, 1);
-  last = luaL_opt(L, luaL_checkint, 4, lua_objlen(L, 1));
+  last = luaL_opt(L, luaL_checkint, 4, (int)lua_objlen(L, 1));
   luaL_buffinit(L, &b);
   for (; i <= last; i++) {
     lua_rawgeti(L, 1, i);
@@ -187,7 +187,7 @@ static void auxsort (lua_State *L, int l, int u) {
 
 static int TableLib_Sort(lua_State *L)
 {
-    int n = aux_getn(L, 1);
+    int n = (int)aux_getn(L, 1);
     luaL_checkstack(L, 40, "");  /* assume array is smaller than 2^40 */
     /* is there a 2nd argument? */
     if (!lua_isnoneornil(L, 2))

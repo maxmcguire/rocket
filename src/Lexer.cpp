@@ -105,7 +105,10 @@ static void Lexer_ReadComment(Lexer* lexer, int c)
     {
         c = Input_ReadByte(lexer->input);
     }
-    ++lexer->lineNumber;
+    if (c == '\n')
+    {
+        ++lexer->lineNumber;
+    }
 }
 
 /**
@@ -122,7 +125,7 @@ static void Lexer_ReadBlockComment(Lexer* lexer)
             Input_ReadByte(lexer->input);
             break;
         }
-        if (Lexer_IsNewLine(c))
+        if (c == '\n')
         {
             ++lexer->lineNumber;
         }
@@ -282,7 +285,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
     while (1)
     {
         c = Input_ReadByte(lexer->input);
-        if (Lexer_IsNewLine(c))
+        if (c == '\n')
         {
             ++lexer->lineNumber;
         }
@@ -479,7 +482,7 @@ void Lexer_NextToken(Lexer* lexer)
                 while (length < 1024)
                 {
                     c = Input_ReadByte(lexer->input);
-                    if (c == '\n')
+                    if (Lexer_IsNewLine(c))
                     {
                         State_Error(lexer->L);
                     }
@@ -491,7 +494,7 @@ void Lexer_NextToken(Lexer* lexer)
                     {
                         // Handle escape sequences.
                         c = Input_ReadByte(lexer->input);
-                        if (c == '\n')
+                        if (Lexer_IsNewLine(c))
                         {
                         }
                         else if (Lexer_IsDigit(c))

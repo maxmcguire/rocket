@@ -372,6 +372,28 @@ TEST(RawGetITest)
 
 }
 
+TEST(RawGetTest)
+{
+
+    lua_State* L = luaL_newstate();
+
+    lua_newtable(L);
+    int table = lua_gettop(L);
+
+    lua_pushinteger(L, 1);
+    lua_pushstring(L, "one");
+    lua_settable(L, table);
+
+    int top = lua_gettop(L);
+    lua_pushinteger(L, 1);
+    lua_rawget(L, table);
+    CHECK_EQ( lua_tostring(L, -1), "one" );
+    CHECK( lua_gettop(L) - top == 1 );
+
+    lua_close(L);
+
+}
+
 TEST(RawSetTest)
 {
 
@@ -2511,6 +2533,35 @@ TEST(OperatorPrecedence)
     lua_getglobal(L, "e");
     CHECK_CLOSE( lua_tonumber(L, -1),  -810);
     
+    lua_close(L);
+
+}
+
+TEST(LocalTable)
+{
+
+    const char* code =
+        "local _t = { 'one', 'two', 'three' }\n"
+        "t = _t";
+    
+    lua_State* L = luaL_newstate();
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "t");
+    CHECK( lua_istable(L, -1) );
+    
+    lua_rawgeti(L, -1, 1);
+    CHECK_EQ( lua_tostring(L, -1), "one" );
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, -1, 2);
+    CHECK_EQ( lua_tostring(L, -1), "two" );
+    lua_pop(L, 1);
+
+    lua_rawgeti(L, -1, 3);
+    CHECK_EQ( lua_tostring(L, -1), "three" );
+    lua_pop(L, 1);
+
     lua_close(L);
 
 }
