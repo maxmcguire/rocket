@@ -148,6 +148,34 @@ static int StringLib_Format(lua_State* L)
 
 }
 
+static int StringLib_Upper(lua_State* L)
+{
+    luaL_Buffer b;
+    luaL_buffinit(L, &b);
+    size_t l;
+    const char* s = luaL_checklstring(L, 1, &l);
+    for (size_t i = 0; i < l; i++)
+    {
+        luaL_addchar(&b, toupper(static_cast<unsigned char>(s[i])));
+    }
+    luaL_pushresult(&b);
+    return 1;
+}
+
+static int StringLib_Lower(lua_State* L)
+{
+    luaL_Buffer b;
+    luaL_buffinit(L, &b);
+    size_t l;
+    const char* s = luaL_checklstring(L, 1, &l);
+    for (size_t i = 0; i < l; i++)
+    {
+        luaL_addchar(&b, tolower(static_cast<unsigned char>(s[i])));
+    }
+    luaL_pushresult(&b);
+    return 1;
+}
+
 LUALIB_API int luaopen_string(lua_State *L)
 {
 
@@ -155,6 +183,8 @@ LUALIB_API int luaopen_string(lua_State *L)
         {
             { "char",   StringLib_Char      },
             { "format", StringLib_Format    },
+            { "upper",  StringLib_Upper     },
+            { "lower",  StringLib_Lower     },
             { NULL, NULL }
         };
 
