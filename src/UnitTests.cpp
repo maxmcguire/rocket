@@ -523,7 +523,6 @@ TEST(CallMetamethod)
 
 }
 
-
 TEST(RawGetITest)
 {
 
@@ -899,8 +898,8 @@ TEST(CClosure)
         static int Function(lua_State* L)
         {
             Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
-            int a = lua_tointeger(L, lua_upvalueindex(2));
-            int b = lua_tointeger(L, lua_upvalueindex(3));
+            lua_Integer a = lua_tointeger(L, lua_upvalueindex(2));
+            lua_Integer b = lua_tointeger(L, lua_upvalueindex(3));
             CHECK( a == 10 );
             CHECK( b == 20 );
             CHECK( lua_isnil(L, lua_upvalueindex(4)) == 1 );
@@ -2799,6 +2798,33 @@ TEST(LocalTable)
     lua_rawgeti(L, -1, 3);
     CHECK_EQ( lua_tostring(L, -1), "three" );
     lua_pop(L, 1);
+
+    lua_close(L);
+
+}
+
+TEST(CallPreserveStack)
+{
+
+    // This test checks that calling a function doesn't corrupt the stack downstream.
+
+    lua_State*  L = luaL_newstate();
+
+    const char* code =     
+        "function F()\n"
+        "end\n"
+        "local t = { }\n"
+        "local mt = { __newindex = F  }\n"
+        "setmetatable(t, mt)\n"
+        "F()\n"
+        "local _a = 1\n"
+        "t.test = 5\n"
+        "a = _a";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
 
     lua_close(L);
 

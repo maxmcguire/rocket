@@ -522,6 +522,13 @@ static int Execute(lua_State* L, int numArgs)
                     int numResults  = GET_C(inst) - 1;
                     Value* value   = &stackBase[a];
                     Vm_Call(L, value, numArgs, numResults);
+                    if (numResults >= 0)
+                    {
+                        // Restore the stack top, since the call instruction is
+                        // used in such a way that we have precise control over
+                        // the affected registers.
+                        L->stackTop = frame->stackTop; 
+                    }
                 )
             }
             break;
