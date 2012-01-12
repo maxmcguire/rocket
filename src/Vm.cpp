@@ -213,15 +213,15 @@ void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst)
                 *dst = *result;
                 return;
             }
-            method = GetTagMethod(L, value, TagMethod_Index);
         }
-        else
-        {
-            TypeError(L, value, "index");
-        }
+        method = GetTagMethod(L, value, TagMethod_Index);
         if (method == NULL)
         {
-            // No metamethod.
+            if (!Value_GetIsTable(value))
+            {
+                // No metamethod.
+                TypeError(L, value, "index");
+            }
             break;
         }
         if (Value_GetIsFunction(method))

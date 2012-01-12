@@ -21,7 +21,6 @@ struct Table;
 struct UserData;
 struct UpValue;
 
-#define LUAI_MAXCSTACK	    8000
 #define LUAI_MAXCCALLS      200
 #define LUAI_MAXSTRINGPOOL  256
 

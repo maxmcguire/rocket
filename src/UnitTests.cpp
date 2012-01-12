@@ -425,6 +425,54 @@ TEST(GetTableMetamethod)
 
 }
 
+TEST(UserDataGetTableMetamethod)
+{
+
+    struct Locals
+    {
+        static int Index(lua_State* L)
+        {
+            Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
+            ++locals->calls;
+            const char* key = lua_tostring(L, 2);
+            if (key != NULL && strcmp(key, "key") == 0)
+            {
+                locals->success = true;
+            }
+            lua_pushstring(L, "value");
+            return 1;
+        }
+        int  calls;
+        bool success;
+    };
+
+    Locals locals;
+    locals.success = false;
+    locals.calls   = 0;
+
+    lua_State* L = luaL_newstate();
+
+    lua_newuserdata(L, 10);
+    int object = lua_gettop(L);
+
+    // Setup a metatable for the object.
+    lua_newtable(L);
+    lua_pushlightuserdata(L, &locals);
+    lua_pushcclosure(L, Locals::Index, 1);
+    lua_setfield(L, -2, "__index");
+    lua_setmetatable(L, object);
+
+    lua_pushstring(L, "key");
+    lua_gettable(L, object);
+    CHECK_EQ( lua_tostring(L, -1), "value" );
+    CHECK( locals.success );
+    CHECK( locals.calls == 1 );
+
+    lua_close(L);
+
+}
+
+
 TEST(CallMetamethod)
 {
     

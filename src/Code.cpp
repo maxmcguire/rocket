@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
+#include <math.h>
 
 static void Parser_Block(Parser* parser, int endToken);
 static void Parser_Statement(Parser* parser);
@@ -1534,27 +1535,27 @@ static void Parser_Statement(Parser* parser)
     
     // Handle expression statements.
 
-    Expression dst[LUA_MAXASSIGNS];
+    Expression dst[LUAI_MAXASSIGNS];
     Parser_Expression0(parser, &dst[0], -1);
     
     if (!Parser_ResolveCall(parser, &dst[0], 0))
     {
         
         int numVars = 1;
-        while (numVars < LUA_MAXASSIGNS && Parser_Accept(parser, ','))
+        while (numVars < LUAI_MAXASSIGNS && Parser_Accept(parser, ','))
         {
             Parser_Expression0(parser, &dst[numVars], -1);
             ++numVars;
         }
 
-        if (numVars == LUA_MAXASSIGNS)
+        if (numVars == LUAI_MAXASSIGNS)
         {
             // Because we use a fixed sized array, we impose a limit on the
             // maximum number of assignments for a single statement. This
             // shouldn't be a factor for most code, but if it is the statement
             // can easily be broken into two statements.
             Lexer_Error(parser->lexer, "maximum number of assignments for a single statment (%d) reached",
-                LUA_MAXASSIGNS);
+                LUAI_MAXASSIGNS);
         }
 
         Parser_Expect(parser, '=');

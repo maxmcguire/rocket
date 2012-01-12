@@ -193,6 +193,12 @@ LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char
 
 }
 
+LUA_API int lua_dump(lua_State *L, lua_Writer writer, void *data)
+{
+    assert(0);
+    return 0;
+}
+
 LUA_API int lua_error(lua_State* L)
 {
     State_Error(L);
@@ -660,6 +666,11 @@ int lua_checkstack(lua_State *L, int size)
 }
 
 void lua_newtable(lua_State* L)
+{
+    lua_createtable(L, 0, 0);
+}
+
+void lua_createtable(lua_State *L, int narr, int nrec)
 {
     Value value;
     SetValue( &value, Table_Create(L) );

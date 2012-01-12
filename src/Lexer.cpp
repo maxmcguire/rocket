@@ -540,10 +540,10 @@ void Lexer_NextToken(Lexer* lexer)
             return;
         default:
             {
-                char buffer[LUA_MAXNAME];
+                char buffer[LUAI_MAXNAME];
                 size_t bufferLength = 1;
                 buffer[0] = c;
-                while (bufferLength < LUA_MAXNAME)
+                while (bufferLength < LUAI_MAXNAME)
                 {
                     c = Input_PeekByte(lexer->input);
                     if (c < 128 && (isalpha(c) || c == '_' || isdigit(c)))
