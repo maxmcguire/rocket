@@ -1707,7 +1707,6 @@ TEST(ForLoop2)
 
 }
 
-/*
 TEST(ForLoop3)
 {
 
@@ -1749,19 +1748,35 @@ TEST(ForLoop3)
     lua_close(L);
 
 }
-*/
 
-TEST(ForLoop3)
+TEST(ForLoop4)
 {
 
-    const char* code = 
-        "values = { first=1, second=2 }\n"
-        "for k,v in pairs(values) do\n"
+    const char* code =
+        "_t = { 'one', 'two', 'three' }\n"
+        "t = { }\n"
+        "num = 1\n"
+        "for i, v in ipairs(_t) do\n"
+        "  if i ~= num then break end\n"
+        "  t[num] = v\n"
+        "  num = num + 1\n"
         "end";
 
     lua_State* L = luaL_newstate();
-
+    
     CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "t");
+    int t = lua_gettop(L);
+    
+    lua_rawgeti(L, t, 1);
+    CHECK_EQ( lua_tostring(L, -1), "one" );
+
+    lua_rawgeti(L, t, 2);
+    CHECK_EQ( lua_tostring(L, -1), "two" );
+
+    lua_rawgeti(L, t, 3);
+    CHECK_EQ( lua_tostring(L, -1), "three" );
 
     lua_close(L);
 

@@ -719,9 +719,11 @@ static int Execute(lua_State* L, int numArgs)
                     base[0] = stackBase[a];     // Iterator function.
                     base[1] = stackBase[a + 1]; // State.
                     base[2] = stackBase[a + 2]; // Enumeration index.
+                    L->stackTop = base + 3;
+
                     Vm_Call(L, base, 2, numResults);
 
-                    if (!Value_GetIsNil(&base[3]))
+                    if (!Value_GetIsNil(base))
                     {
                         stackBase[a + 2] = stackBase[a + 3];
                     }
