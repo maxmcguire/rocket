@@ -640,11 +640,15 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
         {
 
             // Handle Foo:Bar()
-
+      
             Parser_Expect(parser, TokenType_Name);
             Parser_MoveToRegister(parser, dst, -1);
 
-            int reg = Parser_AllocateRegister(parser);
+            int reg = regHint;
+            if (reg == -1)
+            {
+                reg = Parser_AllocateRegister(parser);
+            }
 
             Expression method;
             method.index = Parser_AddConstant( parser, Parser_GetString(parser) );
@@ -656,8 +660,9 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
             // This is a bit of a hack. Since TryFunctionArguments will put the
             // expression onto the top of the stack, we just set it up to be a
             // register since our Self opcode has already setup the stack.
+            Parser_SetLastRegister(parser, reg + 1);
             dst->type  = EXPRESSION_REGISTER;
-            dst->index = Parser_AllocateRegister(parser);
+            dst->index = reg + 1;
 
             if (!Parser_TryFunctionArguments(parser, dst, -1))
             {
@@ -924,7 +929,7 @@ static void Parser_EmitSet(Parser* parser, const Expression* dst, Expression* va
     else if (dst->type == EXPRESSION_UPVALUE)
     {
         Parser_MoveToRegister(parser, value);
-        Parser_EmitAB(parser, Opcode_SetUpVal, dst->index, value->index);
+        Parser_EmitAB(parser, Opcode_SetUpVal, value->index, dst->index);
     }
     else
     {

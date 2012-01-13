@@ -15,8 +15,6 @@
 #include "Function.h"
 #include "BaseLib.h"
 
-#include "lauxlib.h"
-
 #include <memory.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -521,12 +519,16 @@ static int Execute(lua_State* L, int numArgs)
                     int numArgs     = GET_B(inst) - 1;
                     int numResults  = GET_C(inst) - 1;
                     Value* value   = &stackBase[a];
+                    if (numArgs >= 0)
+                    {
+                        L->stackTop = value + numArgs;
+                    }
                     Vm_Call(L, value, numArgs, numResults);
                     if (numResults >= 0)
                     {
-                        // Restore the stack top, since the call instruction is
-                        // used in such a way that we have precise control over
-                        // the affected registers.
+                        // If we are expecting a specific number of results, then
+                        // we have already prepared the destination registers in
+                        // such a way that we don't want to adjust the stack top.
                         L->stackTop = frame->stackTop; 
                     }
                 )

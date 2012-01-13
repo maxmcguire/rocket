@@ -2806,7 +2806,8 @@ TEST(LocalTable)
 TEST(CallPreserveStack)
 {
 
-    // This test checks that calling a function doesn't corrupt the stack downstream.
+    // This test checks that calling a function doesn't corrupt the stack
+    // downstream.
 
     lua_State*  L = luaL_newstate();
 
@@ -2824,6 +2825,32 @@ TEST(CallPreserveStack)
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
+    CHECK( lua_tonumber(L, -1) == 1.0 );
+
+    lua_close(L);
+
+}
+
+TEST(FunctionUpValue)
+{
+
+    lua_State*  L = luaL_newstate();
+
+    const char* code =
+        "local a = 1\n"
+        "function F()\n"
+        "  _b = a\n"
+        "  a = 2\n"
+        "end\n"
+        "F()\n"
+        "_a = a";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "_a");
+    CHECK( lua_tonumber(L, -1) == 2.0 );
+
+    lua_getglobal(L, "_b");
     CHECK( lua_tonumber(L, -1) == 1.0 );
 
     lua_close(L);
