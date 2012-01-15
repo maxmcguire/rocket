@@ -2,12 +2,23 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
 #include "LuaTest.h"
 
 #include <stdio.h>
+
+LuaFixture::LuaFixture()
+{
+    L = luaL_newstate();
+    luaL_openlibs(L);
+}
+
+LuaFixture::~LuaFixture()
+{
+    lua_close(L);
+}
 
 bool DoString(lua_State* L, const char* string)
 {

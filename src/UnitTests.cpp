@@ -2,7 +2,7 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
 #include "Test.h"
@@ -46,7 +46,7 @@ TEST(GcTest)
 }
 */
 
-TEST(ToCFunction)
+TEST_FIXTURE(ToCFunction, LuaFixture)
 {
 
     struct Locals
@@ -56,8 +56,6 @@ TEST(ToCFunction)
             return 0;
         }
     };
-
-    lua_State* L = luaL_newstate();
 
     lua_pushcfunction(L, Locals::F);
     CHECK( lua_tocfunction(L, -1) == Locals::F );
@@ -74,14 +72,10 @@ TEST(ToCFunction)
     lua_pushnumber(L, 1.0);
     CHECK( lua_tocfunction(L, -1) == NULL );
 
-    lua_close(L);
-
 }
 
-TEST(ConcatTest)
+TEST_FIXTURE(ConcatTest, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     int top = lua_gettop(L);
 
@@ -94,14 +88,10 @@ TEST(ConcatTest)
     CHECK( strcmp(result, "Hello 5 goodbye") == 0 );
     CHECK( lua_gettop(L) - top == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(InsertTest)
+TEST_FIXTURE(InsertTest, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     int top = lua_gettop(L);
 
@@ -116,14 +106,10 @@ TEST(InsertTest)
     
     CHECK( lua_gettop(L) - top == 3 );
 
-    lua_close(L);
-
 }
 
-TEST(Replace)
+TEST_FIXTURE(Replace, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     int top = lua_gettop(L);
 
@@ -137,14 +123,10 @@ TEST(Replace)
     
     CHECK( lua_gettop(L) - top == 2 );
 
-    lua_close(L);
-
 }
 
-TEST(RawEqual)
+TEST_FIXTURE(RawEqual, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_pushinteger(L, 1);
     lua_pushinteger(L, 3);
@@ -174,14 +156,10 @@ TEST(RawEqual)
     CHECK( lua_rawequal(L, LUA_REGISTRYINDEX, lua_gettop(L)) == 1 );
     lua_pop(L, 2);
 
-    lua_close(L);
-
 }
 
-TEST(Less)
+TEST_FIXTURE(Less, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_pushinteger(L, 1);
     lua_pushinteger(L, 3);
@@ -200,11 +178,9 @@ TEST(Less)
 
     // TODO: Test metamethods.
 
-    lua_close(L);
-
 }
 
-TEST(PCallTest)
+TEST_FIXTURE(PCallTest, LuaFixture)
 {
 
     struct Locals
@@ -217,17 +193,13 @@ TEST(PCallTest)
         }
     };
 
-    lua_State* L = luaL_newstate();
-
     lua_pushcfunction(L, Locals::ErrorFunction);
     CHECK( lua_pcall(L, 0, 0, 0) == LUA_ERRRUN );
     CHECK( strcmp( lua_tostring(L, -1), "Error message") == 0 );
 
-    lua_close(L);
-
 }
 
-TEST(ErrorRestore)
+TEST_FIXTURE(ErrorRestore, LuaFixture)
 {
 
     struct Locals
@@ -242,8 +214,6 @@ TEST(ErrorRestore)
             return 0;
         }
     };
-
-    lua_State* L = luaL_newstate();
 
     lua_pushstring(L, "test");
 
@@ -261,11 +231,9 @@ TEST(ErrorRestore)
     CHECK( lua_isstring(L, -2) );
     CHECK( strcmp( lua_tostring(L, -2), "test") == 0);
 
-    lua_close(L);
-
 }
 
-TEST(ErrorHandler)
+TEST_FIXTURE(ErrorHandler, LuaFixture)
 {
 
     // Test an error handler for lua_pcall.
@@ -291,8 +259,6 @@ TEST(ErrorHandler)
         }
     };
 
-    lua_State* L = luaL_newstate();
-
     lua_pushcfunction(L, Locals::ErrorHandler );
     int err = lua_gettop(L);
 
@@ -304,11 +270,9 @@ TEST(ErrorHandler)
     CHECK( strcmp( lua_tostring(L, -1), "Error handler") == 0 );
     CHECK( lua_gettop(L) - top == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(ErrorHandlerError)
+TEST_FIXTURE(ErrorHandlerError, LuaFixture)
 {
 
     // Test generating an error from inside the error handler for lua_pcall.
@@ -333,8 +297,6 @@ TEST(ErrorHandlerError)
         }
     };
 
-    lua_State* L = luaL_newstate();
-
     lua_pushcfunction(L, Locals::ErrorHandler );
     int err = lua_gettop(L);
 
@@ -346,14 +308,10 @@ TEST(ErrorHandlerError)
     CHECK( lua_isstring(L, -1) );
     CHECK( lua_gettop(L) - top == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(GetTable)
+TEST_FIXTURE(GetTable, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -374,11 +332,9 @@ TEST(GetTable)
     CHECK( lua_isnil(L, -1) );
     CHECK( lua_gettop(L) - top == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(GetTableMetamethod)
+TEST_FIXTURE(GetTableMetamethod, LuaFixture)
 {
 
     struct Locals
@@ -402,8 +358,6 @@ TEST(GetTableMetamethod)
     Locals locals;
     locals.success = false;
     locals.calls   = 0;
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -421,11 +375,9 @@ TEST(GetTableMetamethod)
     CHECK( locals.success );
     CHECK( locals.calls == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(UserDataGetTableMetamethod)
+TEST_FIXTURE(UserDataGetTableMetamethod, LuaFixture)
 {
 
     struct Locals
@@ -450,8 +402,6 @@ TEST(UserDataGetTableMetamethod)
     locals.success = false;
     locals.calls   = 0;
 
-    lua_State* L = luaL_newstate();
-
     lua_newuserdata(L, 10);
     int object = lua_gettop(L);
 
@@ -468,12 +418,9 @@ TEST(UserDataGetTableMetamethod)
     CHECK( locals.success );
     CHECK( locals.calls == 1 );
 
-    lua_close(L);
-
 }
 
-
-TEST(CallMetamethod)
+TEST_FIXTURE(CallMetamethod, LuaFixture)
 {
     
     // Test the __call metamethod.
@@ -497,8 +444,6 @@ TEST(CallMetamethod)
         void* userData;
     };
 
-    lua_State* L = luaL_newstate();
-
     Locals locals;
     locals.success = false;
     locals.userData = lua_newuserdata(L, 10);
@@ -519,14 +464,10 @@ TEST(CallMetamethod)
     CHECK( locals.success );
     CHECK_EQ( lua_tostring(L, -1), "result" );    
 
-    lua_close(L);
-
 }
 
-TEST(RawGetITest)
+TEST_FIXTURE(RawGetITest, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -542,14 +483,10 @@ TEST(RawGetITest)
     lua_rawgeti(L, table, 1);
     CHECK( strcmp( lua_tostring(L, -1), "one") == 0 );
 
-    lua_close(L);
-
 }
 
-TEST(RawGetTest)
+TEST_FIXTURE(RawGetTest, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -564,11 +501,9 @@ TEST(RawGetTest)
     CHECK_EQ( lua_tostring(L, -1), "one" );
     CHECK( lua_gettop(L) - top == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(RawSetTest)
+TEST_FIXTURE(RawSetTest, LuaFixture)
 {
 
     struct Locals
@@ -584,8 +519,6 @@ TEST(RawSetTest)
 
     Locals locals;
     locals.called = false;
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -613,11 +546,9 @@ TEST(RawSetTest)
     lua_rawget(L, table);
     CHECK( lua_tonumber(L, -1) == 2.0 );
 
-    lua_close(L);
-
 }
 
-TEST(RawSetITest)
+TEST_FIXTURE(RawSetITest, LuaFixture)
 {
 
     struct Locals
@@ -633,8 +564,6 @@ TEST(RawSetITest)
 
     Locals locals;
     locals.called = false;
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -661,14 +590,10 @@ TEST(RawSetITest)
     lua_rawgeti(L, table, 3);
     CHECK_EQ( lua_tostring(L, -1), "three" );
 
-    lua_close(L);
-
 }
 
-TEST(NextTest)
+TEST_FIXTURE(NextTest, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -722,14 +647,10 @@ TEST(NextTest)
     CHECK(count[1] == 1);
     CHECK(count[2] == 1);
 
-    lua_close(L);
-
 }
 
-TEST(RemoveTest)
+TEST_FIXTURE(RemoveTest, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_pushinteger(L, 1);
     int start = lua_gettop(L);
@@ -743,14 +664,10 @@ TEST(RemoveTest)
     lua_remove(L, -1);
     CHECK( lua_tointeger(L, -1) == 3 );
 
-    lua_close(L);
-
 }
 
-TEST(Metatable)
+TEST_FIXTURE(Metatable, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -784,15 +701,10 @@ TEST(Metatable)
     CHECK( lua_isnil(L, -1) == 1 );
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-
-TEST(NewMetatable)
+TEST_FIXTURE(NewMetatable, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     CHECK( luaL_newmetatable(L, "test") == 1 );
     CHECK( lua_istable(L, -1) );
@@ -806,14 +718,10 @@ TEST(NewMetatable)
     CHECK( lua_istable(L, -1) );
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(EnvTable)
+TEST_FIXTURE(EnvTable, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int env = lua_gettop(L);
@@ -839,14 +747,10 @@ TEST(EnvTable)
     CHECK( lua_rawequal(L, -1, env) );
     lua_pop(L, 2);
 
-    lua_close(L);
-
 }
 
-TEST(SetMetatableUserData)
+TEST_FIXTURE(SetMetatableUserData, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_newuserdata(L, 10);
     int object = lua_gettop(L);
@@ -864,15 +768,11 @@ TEST(SetMetatableUserData)
     CHECK( lua_gettop(L) - top == 1);
     
     CHECK( lua_rawequal(L, -1, mt) );
-    
-    lua_close(L);
 
 }
 
-TEST(SetMetatableNil)
+TEST_FIXTURE(SetMetatableNil, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     lua_newuserdata(L, 10);
     int object = lua_gettop(L);
@@ -885,12 +785,10 @@ TEST(SetMetatableNil)
     top = lua_gettop(L);
     CHECK( lua_getmetatable(L, object) == 0 );
     CHECK( lua_gettop(L) - top == 0 );
-    
-    lua_close(L);
 
 }
 
-TEST(CClosure)
+TEST_FIXTURE(CClosure, LuaFixture)
 {
 
     struct Locals
@@ -909,8 +807,6 @@ TEST(CClosure)
         bool called;
     };
 
-    lua_State* L = luaL_newstate();
-
     int start = lua_gettop(L);
 
     Locals locals;
@@ -927,14 +823,10 @@ TEST(CClosure)
     lua_call(L, 0, 0);
     CHECK( locals.called );
 
-    lua_close(L);
-
 }
 
-TEST(LightUserData)
+TEST_FIXTURE(LightUserData, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     void* p = reinterpret_cast<void*>(0x12345678);
 
@@ -945,14 +837,10 @@ TEST(LightUserData)
 
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(UserData)
+TEST_FIXTURE(UserData, LuaFixture)
 {
-
-    lua_State* L = luaL_newstate();
 
     void* buffer = lua_newuserdata(L, 10);
     CHECK( buffer != NULL );
@@ -962,11 +850,9 @@ TEST(UserData)
 
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(NewIndexMetamethod)
+TEST_FIXTURE(NewIndexMetamethod, LuaFixture)
 {
 
     struct Locals
@@ -982,8 +868,6 @@ TEST(NewIndexMetamethod)
         }
         bool called;
     };
-
-    lua_State* L = luaL_newstate();
 
     lua_newtable(L);
     int table = lua_gettop(L);
@@ -1006,11 +890,9 @@ TEST(NewIndexMetamethod)
 
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(GetUpValueCFunction)
+TEST_FIXTURE(GetUpValueCFunction, LuaFixture)
 {
 
     struct Locals
@@ -1020,8 +902,6 @@ TEST(GetUpValueCFunction)
             return 0;
         }
     };
-
-    lua_State* L = luaL_newstate();
 
     lua_pushstring(L, "test1");
     lua_pushstring(L, "test2");
@@ -1038,11 +918,9 @@ TEST(GetUpValueCFunction)
     
     CHECK( lua_getupvalue(L, func, 3) == NULL );
 
-    lua_close(L);
-
 }
 
-TEST(GetUpValueLuaFunction)
+TEST_FIXTURE(GetUpValueLuaFunction, LuaFixture)
 {
 
     const char* code =
@@ -1052,8 +930,6 @@ TEST(GetUpValueLuaFunction)
         "  local x = a\n"
         "  local y = b\n"
         "end";
-
-    lua_State* L = luaL_newstate();
 
     CHECK( DoString(L, code) );
 
@@ -1071,27 +947,9 @@ TEST(GetUpValueLuaFunction)
     
     CHECK( lua_getupvalue(L, func, 3) == NULL );
 
-    lua_close(L);
-
 }
 
-/*
-TEST(GetStack)
-{
-
-    // Test the lua_getstack function.
-    
-    lua_State* L = luaL_newstate();
-
-    lua_getstack(L, 
-
-
-    lua_close(L);
-
-}
-*/
-
-TEST(GetInfo)
+TEST_FIXTURE(GetInfo, LuaFixture)
 {
 
     // Test the lua_getinfo function.
@@ -1110,25 +968,20 @@ TEST(GetInfo)
         lua_Debug top;
     };
 
-    lua_State* L = luaL_newstate();
-
     Locals locals;
 
     lua_pushlightuserdata(L, &locals);
     lua_pushcclosure(L, &Locals::F, 1);
     lua_call(L, 0, 0);
 
-    lua_close(L);
-
 }
 
-TEST(MultipleAssignment)
+TEST_FIXTURE(MultipleAssignment, LuaFixture)
 {
 
    const char* code =
         "a, b, c = 1, 2";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
@@ -1140,11 +993,9 @@ TEST(MultipleAssignment)
     lua_getglobal(L, "c");
     CHECK( lua_isnil(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(MultipleAssignment2)
+TEST_FIXTURE(MultipleAssignment2, LuaFixture)
 {
 
     struct Locals
@@ -1160,8 +1011,6 @@ TEST(MultipleAssignment2)
    const char* code =
         "a, b, c = 1, F()";
 
-    lua_State* L = luaL_newstate();
-
     lua_register(L, "F", Locals::Function);
     CHECK( DoString(L, code) );
 
@@ -1174,18 +1023,15 @@ TEST(MultipleAssignment2)
     lua_getglobal(L, "c");
     CHECK( lua_tonumber(L, -1) == 3.0 );
 
-    lua_close(L);
-
 }
 
-TEST(AssignmentSideEffect)
+TEST_FIXTURE(AssignmentSideEffect, LuaFixture)
 {
 
    const char* code =
         "function F() b = 2 end\n"
         "a = 1, F(), 3";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
@@ -1194,11 +1040,9 @@ TEST(AssignmentSideEffect)
     lua_getglobal(L, "b");
     CHECK( lua_tonumber(L, -1) == 2 );
 
-    lua_close(L);
-
 }
 
-TEST(LocalMultipleAssignment)
+TEST_FIXTURE(LocalMultipleAssignment, LuaFixture)
 {
 
    const char* code =
@@ -1207,7 +1051,6 @@ TEST(LocalMultipleAssignment)
         "b = _b\n"
         "c = _c\n";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
@@ -1219,11 +1062,9 @@ TEST(LocalMultipleAssignment)
     lua_getglobal(L, "c");
     CHECK( lua_isnil(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(LocalMultipleAssignment2)
+TEST_FIXTURE(LocalMultipleAssignment2, LuaFixture)
 {
 
     struct Locals
@@ -1242,8 +1083,6 @@ TEST(LocalMultipleAssignment2)
         "b = _b\n"
         "c = _c\n";
 
-    lua_State* L = luaL_newstate();
-
     lua_register(L, "F", Locals::Function);
     CHECK( DoString(L, code) );
 
@@ -1256,19 +1095,15 @@ TEST(LocalMultipleAssignment2)
     lua_getglobal(L, "c");
     CHECK( lua_tonumber(L, -1) == 3.0 );
 
-    lua_close(L);
-
 }
 
-TEST(LocalMultipleAssignment3)
+TEST_FIXTURE(LocalMultipleAssignment3, LuaFixture)
 {
 
    const char* code =
         "local _a, _b = 1, _a\n"
         "a = _a\n"
         "b = _b";
-
-    lua_State* L = luaL_newstate();
 
     CHECK( DoString(L, code) );
     
@@ -1279,16 +1114,13 @@ TEST(LocalMultipleAssignment3)
     lua_getglobal(L, "b");
     CHECK( lua_isnil(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(TableConstructor)
+TEST_FIXTURE(TableConstructor, LuaFixture)
 {
     const char* code =
         "t = { 'one', three = 3, 'two', [2 + 2] = 'four', (function () return 3 end)() }";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "t");
@@ -1314,11 +1146,9 @@ TEST(TableConstructor)
     CHECK( lua_tonumber(L, -1) == 3.0 );
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(TableConstructorVarArg)
+TEST_FIXTURE(TableConstructorVarArg, LuaFixture)
 {
 
     const char* code =
@@ -1327,7 +1157,6 @@ TEST(TableConstructorVarArg)
         "end\n"
         "f('one', 'two', 'three')";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "t");
@@ -1353,11 +1182,9 @@ TEST(TableConstructorVarArg)
     CHECK( strcmp(lua_tostring(L, -1), "three") == 0 );
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(TableConstructorFunction)
+TEST_FIXTURE(TableConstructorFunction, LuaFixture)
 {
 
     const char* code =
@@ -1366,7 +1193,6 @@ TEST(TableConstructorFunction)
         "end\n"
         "t = { 'zero', f() }";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "t");
@@ -1392,11 +1218,9 @@ TEST(TableConstructorFunction)
     CHECK( strcmp(lua_tostring(L, -1), "three") == 0 );
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(TableConstructorTrailingComma)
+TEST_FIXTURE(TableConstructorTrailingComma, LuaFixture)
 {
 
     // Lua allows for a trailing comma in a table, even though it doesn't
@@ -1405,7 +1229,6 @@ TEST(TableConstructorTrailingComma)
     const char* code =
         "t = { 'one', }";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "t");
@@ -1416,11 +1239,9 @@ TEST(TableConstructorTrailingComma)
     CHECK( strcmp(lua_tostring(L, -1), "one") == 0 );
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(Return)
+TEST_FIXTURE(Return, LuaFixture)
 {
 
     const char* code =
@@ -1429,17 +1250,14 @@ TEST(Return)
         "end\n"
         "v = Foo()";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
     
     lua_getglobal(L, "v");
     CHECK( lua_tonumber(L, -1) == 5.0 );
     
-    lua_close(L);
-
 }
 
-TEST(ReturnMultiple)
+TEST_FIXTURE(ReturnMultiple, LuaFixture)
 {
 
     const char* code =
@@ -1448,7 +1266,6 @@ TEST(ReturnMultiple)
         "end\n"
         "v1, v2 = Foo()";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
     
     lua_getglobal(L, "v1");
@@ -1457,11 +1274,9 @@ TEST(ReturnMultiple)
     lua_getglobal(L, "v2");
     CHECK( lua_tonumber(L, -1) == 6.0 );
     
-    lua_close(L);
-
 }
 
-TEST(ReturnEmpty)
+TEST_FIXTURE(ReturnEmpty, LuaFixture)
 {
 
     const char* code =
@@ -1469,14 +1284,11 @@ TEST(ReturnEmpty)
         "  return ;\n"
         "end";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
-
-    lua_close(L);
 
 }
 
-TEST(FunctionStringArgument)
+TEST_FIXTURE(FunctionStringArgument, LuaFixture)
 {
 
     const char* code =
@@ -1486,7 +1298,6 @@ TEST(FunctionStringArgument)
         "end\n"
         "Foo 'test'";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "s");
@@ -1496,11 +1307,9 @@ TEST(FunctionStringArgument)
     lua_getglobal(L, "n");
     CHECK( lua_isnil(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(FunctionTableArgument)
+TEST_FIXTURE(FunctionTableArgument, LuaFixture)
 {
 
     const char* code =
@@ -1510,7 +1319,6 @@ TEST(FunctionTableArgument)
         "end\n"
         "Foo { }";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "t");
@@ -1519,11 +1327,9 @@ TEST(FunctionTableArgument)
     lua_getglobal(L, "n");
     CHECK( lua_isnil(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(FunctionMethod)
+TEST_FIXTURE(FunctionMethod, LuaFixture)
 {
 
     const char* code =
@@ -1534,7 +1340,6 @@ TEST(FunctionMethod)
         "end\n"
         "Foo:Bar()\n";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
     
     // Check that the function was properly created.
@@ -1547,11 +1352,9 @@ TEST(FunctionMethod)
     lua_getglobal(L, "result");
     CHECK( lua_toboolean(L, -1) == 1 );
     
-    lua_close(L);
-
 }
 
-TEST(FunctionMethodStringArg)
+TEST_FIXTURE(FunctionMethodStringArg, LuaFixture)
 {
 
     const char* code =
@@ -1563,7 +1366,6 @@ TEST(FunctionMethodStringArg)
         "end\n"
         "Foo:Bar 'test'\n";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "result");
@@ -1573,33 +1375,26 @@ TEST(FunctionMethodStringArg)
     CHECK( lua_isstring(L, -1) );
     CHECK( strcmp(lua_tostring(L, -1), "test") == 0 );
     
-    lua_close(L);
-
 }
 
-TEST(FunctionDefinition)
+TEST_FIXTURE(FunctionDefinition, LuaFixture)
 {
     const char* code = "function Foo() end";
 
-    lua_State* L = luaL_newstate();
     CHECK( luaL_dostring(L, code) == 0 );
 
     lua_getglobal(L, "Foo");
     CHECK( lua_type(L, -1) == LUA_TFUNCTION );
-    
-    lua_close(L);
 
 }
 
-TEST(ScopedFunctionDefinition)
+TEST_FIXTURE(ScopedFunctionDefinition, LuaFixture)
 {
     
     const char* code = 
         "Foo = { }\n"
         "Foo.Bar = { }\n"
         "function Foo.Bar.Baz() end";
-    
-    lua_State* L = luaL_newstate();
 
     CHECK( luaL_dostring(L, code) == 0 );
     
@@ -1609,35 +1404,30 @@ TEST(ScopedFunctionDefinition)
     
     CHECK( lua_type(L, -1) == LUA_TFUNCTION );
     
-    lua_close(L);
-
 }
 
-TEST(FunctionMethodDefinition)
+TEST_FIXTURE(FunctionMethodDefinition, LuaFixture)
 {
 
     const char* code =
         "Foo = { }\n"
         "function Foo:Bar() end";
 
-    lua_State* L = luaL_newstate();
     CHECK( luaL_dostring(L, code) == 0 );
     
     lua_getglobal(L, "Foo");
     lua_getfield(L, -1, "Bar");
     CHECK( lua_type(L, -1) == LUA_TFUNCTION );
-    
-    lua_close(L);
 
 }
 
-TEST(LocalFunctionDefinition)
+TEST_FIXTURE(LocalFunctionDefinition, LuaFixture)
 {
+
     const char* code =
         "local function Foo() end\n"
         "Bar = Foo";
 
-    lua_State* L = luaL_newstate();
     CHECK( luaL_dostring(L, code) == 0 );
     
     lua_getglobal(L, "Bar");
@@ -1646,11 +1436,9 @@ TEST(LocalFunctionDefinition)
     lua_getglobal(L, "Foo");
     CHECK( lua_type(L, -1) == LUA_TNIL );
 
-    lua_close(L);
-
 }
 
-TEST(LocalScopedFunctionDefinition)
+TEST_FIXTURE(LocalScopedFunctionDefinition, LuaFixture)
 {
     
     const char* code = 
@@ -1658,14 +1446,11 @@ TEST(LocalScopedFunctionDefinition)
         "local function Foo.Bar() end";
 
     // Scoping makes no sense when we're defining a local.
-    lua_State* L = luaL_newstate();
     CHECK( luaL_dostring(L, code) == 1 );
-    
-    lua_close(L);
 
 }
 
-TEST(LocalMethod)
+TEST_FIXTURE(LocalMethod, LuaFixture)
 {
 
     const char* code =
@@ -1673,17 +1458,14 @@ TEST(LocalMethod)
         "function t:c() return { d = 5 } end\n"
         "a = t:c().d";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
     CHECK( lua_tonumber(L, -1) == 5 );
 
-    lua_close(L);
-
 }
 
-TEST(WhileLoop)
+TEST_FIXTURE(WhileLoop, LuaFixture)
 {
 
     const char* code = 
@@ -1692,19 +1474,15 @@ TEST(WhileLoop)
         "  index = index + 1\n"
         "end";
 
-    lua_State* L = luaL_newstate();
-
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "index");
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 10 );
 
-    lua_close(L);
-
 }
 
-TEST(ForLoop1)
+TEST_FIXTURE(ForLoop1, LuaFixture)
 {
 
     const char* code = 
@@ -1712,8 +1490,6 @@ TEST(ForLoop1)
         "for i = 1,10 do\n"
         "  index = index + 1\n"
         "end";
-
-    lua_State* L = luaL_newstate();
 
     CHECK( DoString(L, code) );
 
@@ -1725,11 +1501,9 @@ TEST(ForLoop1)
     lua_getglobal(L, "i");
     CHECK( lua_isnil(L, -1) != 0 );
 
-    lua_close(L);
-
 }
 
-TEST(ForLoop2)
+TEST_FIXTURE(ForLoop2, LuaFixture)
 {
 
     const char* code = 
@@ -1737,8 +1511,6 @@ TEST(ForLoop2)
         "for i = 1,10,2 do\n"
         "  index = index + 1\n"
         "end";
-
-    lua_State* L = luaL_newstate();
 
     CHECK( DoString(L, code) );
 
@@ -1750,11 +1522,9 @@ TEST(ForLoop2)
     lua_getglobal(L, "i");
     CHECK( lua_isnil(L, -1) != 0 );
 
-    lua_close(L);
-
 }
 
-TEST(ForLoop3)
+TEST_FIXTURE(ForLoop3, LuaFixture)
 {
 
     const char* code = 
@@ -1765,8 +1535,6 @@ TEST(ForLoop3)
         "  index = index + 1\n"
         "  results[v] = k\n"
         "end";
-
-    lua_State* L = luaL_newstate();
 
     CHECK( DoString(L, code) );
 
@@ -1792,11 +1560,9 @@ TEST(ForLoop3)
     CHECK( strcmp( lua_tostring(L, -1), "second" ) == 0 );
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(ForLoop4)
+TEST_FIXTURE(ForLoop4, LuaFixture)
 {
 
     const char* code =
@@ -1809,8 +1575,6 @@ TEST(ForLoop4)
         "  num = num + 1\n"
         "end";
 
-    lua_State* L = luaL_newstate();
-    
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "t");
@@ -1825,11 +1589,9 @@ TEST(ForLoop4)
     lua_rawgeti(L, t, 3);
     CHECK_EQ( lua_tostring(L, -1), "three" );
 
-    lua_close(L);
-
 }
 
-TEST(RepeatLoop)
+TEST_FIXTURE(RepeatLoop, LuaFixture)
 {
 
     const char* code = 
@@ -1838,19 +1600,15 @@ TEST(RepeatLoop)
         "  index = index + 1\n"
         "until index == 10";
 
-    lua_State* L = luaL_newstate();
-
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "index");
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 10 );
 
-    lua_close(L);
-
 }
 
-TEST(WhileLoopBreak)
+TEST_FIXTURE(WhileLoopBreak, LuaFixture)
 {
 
     const char* code = 
@@ -1860,19 +1618,15 @@ TEST(WhileLoopBreak)
         "  break\n"
         "end";
 
-    lua_State* L = luaL_newstate();
-
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "index");
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(ForLoopBreak)
+TEST_FIXTURE(ForLoopBreak, LuaFixture)
 {
 
     const char* code = 
@@ -1882,19 +1636,15 @@ TEST(ForLoopBreak)
         "  break\n"
         "end";
 
-    lua_State* L = luaL_newstate();
-
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "index");
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(RepeatLoopBreak)
+TEST_FIXTURE(RepeatLoopBreak, LuaFixture)
 {
 
     const char* code = 
@@ -1904,29 +1654,23 @@ TEST(RepeatLoopBreak)
         "  break\n"
         "until index == 10";
 
-    lua_State* L = luaL_newstate();
-
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "index");
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(IllegalBreak)
+TEST_FIXTURE(IllegalBreak, LuaFixture)
 {
     const char* code = 
         "print('test')\n"
         "break";
-    lua_State* L = luaL_newstate();
     CHECK( luaL_loadstring(L, code) != 0 );
-    lua_close(L);
 }
 
-TEST(FunctionCallStringArg)
+TEST_FIXTURE(FunctionCallStringArg, LuaFixture)
 {
 
     const char* code =
@@ -1950,8 +1694,6 @@ TEST(FunctionCallStringArg)
 
     locals.passed = false;
 
-    lua_State* L = luaL_newstate();
-
     lua_pushlightuserdata(L, &locals);
     lua_pushcclosure(L, Locals::Function, 1);
     lua_setglobal(L, "Function");
@@ -1959,11 +1701,9 @@ TEST(FunctionCallStringArg)
     CHECK( DoString(L, code) );
     CHECK( locals.passed );
 
-    lua_close(L);
-
 }
 
-TEST(FunctionCallTableArgument)
+TEST_FIXTURE(FunctionCallTableArgument, LuaFixture)
 {
 
     const char* code =
@@ -1986,8 +1726,6 @@ TEST(FunctionCallTableArgument)
 
     locals.passed = false;
 
-    lua_State* L = luaL_newstate();
-
     lua_pushlightuserdata(L, &locals);
     lua_pushcclosure(L, Locals::Function, 1);
     lua_setglobal(L, "Function");
@@ -1995,35 +1733,29 @@ TEST(FunctionCallTableArgument)
     CHECK( DoString(L, code) );
     CHECK( locals.passed );
 
-    lua_close(L);
-
 }
 
-TEST(LengthOperator)
+TEST_FIXTURE(LengthOperator, LuaFixture)
 {
 
     const char* code =
         "t = { 1 }\n"
         "l = #t";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
     
     lua_getglobal(L, "l");
     CHECK( lua_isnumber(L, -1) );
     CHECK( lua_tonumber(L, -1) == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(ConcatOperator)
+TEST_FIXTURE(ConcatOperator, LuaFixture)
 {
 
     const char* code =
         "s = 'a' .. 'b' .. 'c'";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "s");
@@ -2032,11 +1764,9 @@ TEST(ConcatOperator)
     CHECK( s != NULL );
     CHECK( strcmp(s, "abc") == 0 );
 
-    lua_close(L);
-
 }
 
-TEST(VarArg1)
+TEST_FIXTURE(VarArg1, LuaFixture)
 {
 
     const char* code =
@@ -2045,7 +1775,6 @@ TEST(VarArg1)
         "end\n"
         "g(1, 2, 3, 4)";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "w");
@@ -2054,11 +1783,9 @@ TEST(VarArg1)
     lua_getglobal(L, "x");
     CHECK( lua_tonumber(L, -1) == 5.0 );
 
-    lua_close(L);
-
 }
 
-TEST(VarArg2)
+TEST_FIXTURE(VarArg2, LuaFixture)
 {
 
     const char* code =
@@ -2067,7 +1794,6 @@ TEST(VarArg2)
         "end\n"
         "g(1, 2, 3, 4)";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "w");
@@ -2076,11 +1802,9 @@ TEST(VarArg2)
     lua_getglobal(L, "x");
     CHECK( lua_tonumber(L, -1) == 4.0 );
 
-    lua_close(L);
-
 }
 
-TEST(VarArg3)
+TEST_FIXTURE(VarArg3, LuaFixture)
 {
 
     const char* code =
@@ -2092,7 +1816,6 @@ TEST(VarArg3)
         "end\n"
         "g(1, 2)";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "x");
@@ -2104,11 +1827,9 @@ TEST(VarArg3)
     lua_getglobal(L, "z");
     CHECK( lua_isnil(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(VarArg4)
+TEST_FIXTURE(VarArg4, LuaFixture)
 {
 
     const char* code =
@@ -2120,7 +1841,6 @@ TEST(VarArg4)
         "end\n"
         "g(1, 2)";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "x");
@@ -2132,11 +1852,9 @@ TEST(VarArg4)
     lua_getglobal(L, "z");
     CHECK( lua_isnil(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(VarArg5)
+TEST_FIXTURE(VarArg5, LuaFixture)
 {
 
     const char* code =
@@ -2149,7 +1867,6 @@ TEST(VarArg5)
         "end\n"
         "f( g() )";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "x");
@@ -2158,11 +1875,9 @@ TEST(VarArg5)
     lua_getglobal(L, "y");
     CHECK( lua_tonumber(L, -1) == 2.0 );
 
-    lua_close(L);
-
 }
 
-TEST(DoBlock)
+TEST_FIXTURE(DoBlock, LuaFixture)
 {
 
     const char* code =
@@ -2175,7 +1890,6 @@ TEST(DoBlock)
         "a = _a\n"
         "b = _b";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
@@ -2184,11 +1898,9 @@ TEST(DoBlock)
     lua_getglobal(L, "b");
     CHECK( lua_isnil(L, -1)  );
 
-    lua_close(L);
-
 }
 
-TEST(LocalUpValue)
+TEST_FIXTURE(LocalUpValue, LuaFixture)
 {
 
     const char* code =
@@ -2200,17 +1912,14 @@ TEST(LocalUpValue)
         "local b = 3\n"
         "c = f()\n";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "c");
     CHECK( lua_tonumber(L, -1) == 2.0 );
 
-    lua_close(L);
-
 }
 
-TEST(ShadowLocalUpValue)
+TEST_FIXTURE(ShadowLocalUpValue, LuaFixture)
 {
 
     const char* code =
@@ -2221,48 +1930,39 @@ TEST(ShadowLocalUpValue)
         "local a = 6\n"
         "f()";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "v");
     CHECK( lua_tonumber(L, -1) == 5.0 );
 
-    lua_close(L);
-
 }
 
-TEST(EmptyStatement)
+TEST_FIXTURE(EmptyStatement, LuaFixture)
 {
 
     const char* code =
         "function g() end\n"
         "local a = f ; (g)()\n";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
-
-    lua_close(L);
 
 }
 
-TEST(CppCommentLine)
+TEST_FIXTURE(CppCommentLine, LuaFixture)
 {
 
     const char* code =
         "// this is a comment\n"
         "a = 1";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
     
     lua_getglobal(L, "a");
     CHECK( lua_tonumber(L, -1) == 1.0 );
 
-    lua_close(L);
-
 }
 
-TEST(CppCommentBlock)
+TEST_FIXTURE(CppCommentBlock, LuaFixture)
 {
 
     const char* code =
@@ -2270,17 +1970,14 @@ TEST(CppCommentBlock)
         "that goes for multiple lines */\n"
         "a = 1\n";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
     CHECK( lua_tonumber(L, -1) == 1.0 );
 
-    lua_close(L);
-
 }
 
-TEST(LuaCommentBlock)
+TEST_FIXTURE(LuaCommentBlock, LuaFixture)
 {
 
     const char* code =
@@ -2288,24 +1985,20 @@ TEST(LuaCommentBlock)
         "this is the second line ]]\n"
         "a = 1";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
     
     lua_getglobal(L, "a");
     CHECK( lua_tonumber(L, -1) == 1.0 );
 
-    lua_close(L);
-
 }
 
-TEST(NotEqual)
+TEST_FIXTURE(NotEqual, LuaFixture)
 {
 
     const char* code =
         "a = (5 ~= 6)\n"
         "b = (7 ~= 7)";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
@@ -2316,11 +2009,9 @@ TEST(NotEqual)
     CHECK( lua_isboolean(L, -1) );
     CHECK( lua_toboolean(L, -1) == 0 );
 
-    lua_close(L);
-
 }
 
-TEST(Number)
+TEST_FIXTURE(Number, LuaFixture)
 {
 
     const char* code =
@@ -2335,7 +2026,6 @@ TEST(Number)
         "g = 0xff\n"
         "h = 0x56";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
@@ -2364,11 +2054,9 @@ TEST(Number)
     lua_getglobal(L, "h");
     CHECK_CLOSE( lua_tonumber(L, -1), 0x56 );
 
-    lua_close(L);
-
 }
 
-TEST(ElseIf)
+TEST_FIXTURE(ElseIf, LuaFixture)
 {
 
     const char* code =
@@ -2377,33 +2065,27 @@ TEST(ElseIf)
         "  success = true\n"
         "end";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "success");
     CHECK( lua_toboolean(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(DivideOperator)
+TEST_FIXTURE(DivideOperator, LuaFixture)
 {
 
     const char* code =
         "a = 10 / 2";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
     CHECK( lua_tonumber(L, -1) == 5 );
 
-    lua_close(L);
-
 }
 
-TEST(SubtractOperator)
+TEST_FIXTURE(SubtractOperator, LuaFixture)
 {
 
     // Check that the subtraction symbol is properly parsed and
@@ -2411,88 +2093,72 @@ TEST(SubtractOperator)
     const char* code =
         "v = 6-4";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "v");
     CHECK( lua_tonumber(L, -1) == 2 );
 
-    lua_close(L);
-
 }
 
-TEST(UnaryMinusOperator)
+TEST_FIXTURE(UnaryMinusOperator, LuaFixture)
 {
 
     const char* code =
         "local x = 5\n" 
         "y = -x";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "y");
     CHECK( lua_tonumber(L, -1) == -5 );
 
-    lua_close(L);
-
 }
 
-TEST(UnaryMinusOperatorConstant)
+TEST_FIXTURE(UnaryMinusOperatorConstant, LuaFixture)
 {
 
     const char* code =
         "x = -5";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "x");
     CHECK( lua_tonumber(L, -1) == -5 );
 
-    lua_close(L);
-
 }
 
-TEST(ModuloOperator)
+TEST_FIXTURE(ModuloOperator, LuaFixture)
 {
 
     const char* code =
         "a = 10 % 3";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
     CHECK( lua_tonumber(L, -1) == 1 );
 
-    lua_close(L);
-
 }
 
-TEST(ExponentiationOperator)
+TEST_FIXTURE(ExponentiationOperator, LuaFixture)
 {
 
     const char* code =
         "a = 2 ^ 3";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
     CHECK( lua_tonumber(L, -1) == 8 );
 
-    lua_close(L);
-
 }
 
-TEST(EscapeCharacters)
+TEST_FIXTURE(EscapeCharacters, LuaFixture)
 {
 
     const char* code =
         "b = '\\01a\\002\\a\\b\\f\\n\\r\\t\\v\\\"\\\''";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "b");
@@ -2512,23 +2178,19 @@ TEST(EscapeCharacters)
     CHECK( buffer[10] == '\"' );
     CHECK( buffer[11] == '\'' );
 
-    lua_close(L);
-
 }
 
-TEST(InvalidEscapeCharacters)
+TEST_FIXTURE(InvalidEscapeCharacters, LuaFixture)
 {
 
     const char* code =
         "b = '\\xyz";
 
-    lua_State* L = luaL_newstate();
     CHECK( luaL_loadstring(L, code) != 0 );
-    lua_close(L);
 
 }
 
-TEST(NilConstant)
+TEST_FIXTURE(NilConstant, LuaFixture)
 {
 
     const char* code =
@@ -2537,7 +2199,6 @@ TEST(NilConstant)
         "  b = 5\n"
         "end\n";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "b");
@@ -2546,45 +2207,37 @@ TEST(NilConstant)
     lua_getglobal(L, "c");
     CHECK( lua_isnil(L, -1) );
 
-    lua_close(L);
-
 }
 
-TEST(ContinuedString)
+TEST_FIXTURE(ContinuedString, LuaFixture)
 {
 
     const char* code =
         "a = 'one\\\ntwo'";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
     CHECK( lua_isstring(L, -1) );
     CHECK_EQ( lua_tostring(L, -1), "one\ntwo" );
 
-    lua_close(L);
-
 }
 
-TEST(LongString)
+TEST_FIXTURE(LongString, LuaFixture)
 {
 
     const char* code =
         "a = [[one\ntwo]]";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
     CHECK( lua_isstring(L, -1) );
     CHECK_EQ( lua_tostring(L, -1), "one\ntwo" );
 
-    lua_close(L);
-
 }
 
-TEST(Closure)
+TEST_FIXTURE(Closure, LuaFixture)
 {
 
     const char* code =
@@ -2594,17 +2247,14 @@ TEST(Closure)
         "end\n"
         "f()";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "v");
     CHECK( lua_tonumber(L, -1) == 5 );
 
-    lua_close(L);
-
 }
 
-TEST(ClosureInClosure)
+TEST_FIXTURE(ClosureInClosure, LuaFixture)
 {
 
     const char* code =
@@ -2615,17 +2265,14 @@ TEST(ClosureInClosure)
         "end\n"
         "f()";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "v");
     CHECK( lua_tonumber(L, -1) == 5 );
 
-    lua_close(L);
-
 }
 
-TEST(ManyConstants)
+TEST_FIXTURE(ManyConstants, LuaFixture)
 {
 
     const char* code =
@@ -2674,13 +2321,11 @@ TEST(ManyConstants)
         "a[247]=247; a[248]=248; a[249]=249; a[250]=250; a[251]=251; a[252]=252\n"
         "a[253]=253; a[254]=254; a[255]=255; a[256]=256";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
-    lua_close(L);
 
 }
 
-TEST(LargeArray)
+TEST_FIXTURE(LargeArray, LuaFixture)
 {
 
     const char* code = 
@@ -2704,7 +2349,6 @@ TEST(LargeArray)
         "0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,0xf8,0xf9,0xfa,0xfb,0xfc,0xfd,0xfe,0xff\n"
         "}";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
     
     lua_getglobal(L, "t");
@@ -2716,12 +2360,10 @@ TEST(LargeArray)
         CHECK( lua_tonumber(L, -1) == i );
         lua_pop(L, 1);
     }
-    
-    lua_close(L);
 
 }
 
-TEST(LocalInit)
+TEST_FIXTURE(LocalInit, LuaFixture)
 {
     
     const char* code =
@@ -2732,17 +2374,14 @@ TEST(LocalInit)
         "  a = _a\n"
         "end";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
     CHECK( lua_isnil(L, -1) );
     
-    lua_close(L);
-
 }
 
-TEST(OperatorPrecedence)
+TEST_FIXTURE(OperatorPrecedence, LuaFixture)
 {
     
     const char* code =
@@ -2752,7 +2391,6 @@ TEST(OperatorPrecedence)
         "d = 1 - 4 / 2\n"
         "e = 2 * -3 ^ 4 * 5\n";
 
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "a");
@@ -2769,19 +2407,16 @@ TEST(OperatorPrecedence)
 
     lua_getglobal(L, "e");
     CHECK_CLOSE( lua_tonumber(L, -1),  -810);
-    
-    lua_close(L);
 
 }
 
-TEST(LocalTable)
+TEST_FIXTURE(LocalTable, LuaFixture)
 {
 
     const char* code =
         "local _t = { 'one', 'two', 'three' }\n"
         "t = _t";
     
-    lua_State* L = luaL_newstate();
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "t");
@@ -2799,16 +2434,12 @@ TEST(LocalTable)
     CHECK_EQ( lua_tostring(L, -1), "three" );
     lua_pop(L, 1);
 
-    lua_close(L);
-
 }
 
-TEST(CallPreserveStack)
+TEST_FIXTURE(CallPreserveStack, LuaFixture)
 {
 
     // This test checks that calling a function doesn't corrupt the stack downstream.
-
-    lua_State*  L = luaL_newstate();
 
     const char* code =     
         "function F()\n"
@@ -2825,7 +2456,5 @@ TEST(CallPreserveStack)
 
     lua_getglobal(L, "a");
     CHECK( lua_tonumber(L, -1) == 1.0 );
-
-    lua_close(L);
 
 }
