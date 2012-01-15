@@ -2,13 +2,16 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
 #ifndef ROCKETVM_VALUE_H
 #define ROCKETVM_VALUE_H
 
+extern "C"
+{
 #include "lua.h"
+}
 
 //
 // Forward declarations.
@@ -30,6 +33,10 @@ struct Gc_Object;
 #define TAG_USERDATA		(~7u)   // 0xfffffff8
 #define TAG_THREAD		    (~8u)   // 0xfffffff7
 #define TAG_NUMBER		    (~9u)   // 0xfffffff6
+
+#define LUA_TPROTOTYPE      9
+//#define LUA_TUPVAL	        10
+//#define LUA_TDEADKEY	    11
 
 #define NUM_TYPES           10        
 

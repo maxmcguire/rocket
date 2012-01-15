@@ -150,11 +150,11 @@ TEST_FIXTURE(RawEqual, LuaFixture)
 
     lua_pushvalue(L, LUA_GLOBALSINDEX);
     CHECK( lua_rawequal(L, lua_gettop(L), LUA_GLOBALSINDEX) == 1 );
-    lua_pop(L, 2);
+    lua_pop(L, 1);
 
     lua_pushvalue(L, LUA_REGISTRYINDEX);
     CHECK( lua_rawequal(L, LUA_REGISTRYINDEX, lua_gettop(L)) == 1 );
-    lua_pop(L, 2);
+    lua_pop(L, 1);
 
 }
 

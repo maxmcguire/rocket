@@ -2,12 +2,17 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */ 
+
 #ifndef ROCKETVM_VM_H
 #define ROCKETVM_VM_H
 
+extern "C"
+{
 #include "lua.h"
+}
+
 #include "State.h"
 
 int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Value* errorHandler);

@@ -2,10 +2,14 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
+extern "C"
+{
 #include "lua.h"
+}
+
 #include "UserData.h"
 
 #include <stdlib.h>

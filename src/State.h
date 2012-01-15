@@ -2,13 +2,17 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
 #ifndef ROCKETVM_STATE_H
 #define ROCKETVM_STATE_H
 
+extern "C"
+{
 #include "lua.h"
+}
+
 #include "String.h"
 #include "Value.h"
 
@@ -47,6 +51,7 @@ struct lua_State
     UpValue*        openUpValue;
     CallFrame*      callStackTop;
     lua_Alloc       alloc;
+    lua_CFunction   panic;
     lua_Hook        hook;
     int             hookMask;
     int             hookCount;

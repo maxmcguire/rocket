@@ -2,7 +2,7 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
 #include "State.h"
@@ -95,6 +95,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     lua_State* L = reinterpret_cast<lua_State*>( alloc(userdata, NULL, 0, size) );
 
     L->alloc        = alloc;
+    L->panic        = NULL;
     L->hook         = NULL;
     L->hookMask     = 0;
     L->hookCount    = 0;
@@ -300,8 +301,10 @@ void State_Error(lua_State* L)
     else
     {
         // Unprotected error.
-        const char* message = lua_tostring(L, -1);
-        fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n", message);
+        if (L->panic != NULL)
+        {
+            L->panic(L);
+        }
         exit(EXIT_FAILURE);
     }
 }

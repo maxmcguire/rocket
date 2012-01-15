@@ -12,7 +12,10 @@
 LuaFixture::LuaFixture()
 {
     L = luaL_newstate();
-    luaL_openlibs(L);
+    // Open the base library.
+    lua_pushcfunction(L, luaopen_base);
+    lua_pushstring(L, "");
+    lua_call(L, 1, 0);
 }
 
 LuaFixture::~LuaFixture()

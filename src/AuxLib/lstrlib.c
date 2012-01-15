@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.130 2005/12/29 15:32:11 roberto Exp $
+** $Id: lstrlib.c,v 1.132.1.4 2008/07/11 17:27:21 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,8 @@ static int str_len (lua_State *L) {
 
 static ptrdiff_t posrelat (ptrdiff_t pos, size_t len) {
   /* relative string position: negative means back from end */
-  return (pos>=0) ? pos : (ptrdiff_t)len+pos+1;
+  if (pos < 0) pos += (ptrdiff_t)len + 1;
+  return (pos >= 0) ? pos : 0;
 }
 
 
@@ -155,6 +156,7 @@ static int str_dump (lua_State *L) {
 }
 
 
+
 /*
 ** {======================================================
 ** PATTERN MATCHING
@@ -162,8 +164,8 @@ static int str_dump (lua_State *L) {
 */
 
 
-#define CAP_UNFINISHED  (-1)
-#define CAP_POSITION    (-2)
+#define CAP_UNFINISHED	(-1)
+#define CAP_POSITION	(-2)
 
 typedef struct MatchState {
   const char *src_init;  /* init of source string */
@@ -177,8 +179,8 @@ typedef struct MatchState {
 } MatchState;
 
 
-#define L_ESC           '%'
-#define SPECIALS        "^$*+?.([%-"
+#define L_ESC		'%'
+#define SPECIALS	"^$*+?.([%-"
 
 
 static int check_capture (MatchState *ms, int l) {
@@ -628,10 +630,6 @@ static void add_value (MatchState *ms, luaL_Buffer *b, const char *s,
       lua_gettable(L, 3);
       break;
     }
-    default: {
-      luaL_argerror(L, 3, "string/function/table expected"); 
-      return;
-    }
   }
   if (!lua_toboolean(L, -1)) {  /* nil or false? */
     lua_pop(L, 1);
@@ -647,11 +645,15 @@ static int str_gsub (lua_State *L) {
   size_t srcl;
   const char *src = luaL_checklstring(L, 1, &srcl);
   const char *p = luaL_checkstring(L, 2);
-  int max_s = luaL_optint(L, 4, static_cast<int>(srcl)+1);
+  int  tr = lua_type(L, 3);
+  int max_s = luaL_optint(L, 4, srcl+1);
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
   MatchState ms;
   luaL_Buffer b;
+  luaL_argcheck(L, tr == LUA_TNUMBER || tr == LUA_TSTRING ||
+                   tr == LUA_TFUNCTION || tr == LUA_TTABLE, 3,
+                      "string/function/table expected");
   luaL_buffinit(L, &b);
   ms.L = L;
   ms.src_init = src;
@@ -681,14 +683,14 @@ static int str_gsub (lua_State *L) {
 
 
 /* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
-#define MAX_ITEM        512
+#define MAX_ITEM	512
 /* valid flags in a format specification */
-#define FLAGS   "-+ #0"
+#define FLAGS	"-+ #0"
 /*
 ** maximum size of each format specification (such as '%-099.99d')
 ** (+10 accounts for %99.99x plus margin of error)
 */
-#define MAX_FORMAT      (sizeof(FLAGS) + sizeof(LUA_INTFRMLEN) + 10)
+#define MAX_FORMAT	(sizeof(FLAGS) + sizeof(LUA_INTFRMLEN) + 10)
 
 
 static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
@@ -700,6 +702,10 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
       case '"': case '\\': case '\n': {
         luaL_addchar(b, '\\');
         luaL_addchar(b, *s);
+        break;
+      }
+      case '\r': {
+        luaL_addlstring(b, "\\r", 2);
         break;
       }
       case '\0': {
@@ -718,7 +724,7 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
 
 static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   const char *p = strfrmt;
-  while (strchr(FLAGS, *p)) p++;  /* skip flags */
+  while (*p != '\0' && strchr(FLAGS, *p) != NULL) p++;  /* skip flags */
   if ((size_t)(p - strfrmt) >= sizeof(FLAGS))
     luaL_error(L, "invalid format (repeated flags)");
   if (isdigit(uchar(*p))) p++;  /* skip width */
@@ -804,7 +810,8 @@ static int str_format (lua_State *L) {
           }
         }
         default: {  /* also treat cases `pnLlh' */
-          return luaL_error(L, "invalid option to " LUA_QL("format"));
+          return luaL_error(L, "invalid option " LUA_QL("%%%c") " to "
+                               LUA_QL("format"), *(strfrmt - 1));
         }
       }
       luaL_addlstring(&b, buff, strlen(buff));
@@ -859,3 +866,4 @@ LUALIB_API int luaopen_string (lua_State *L) {
   createmetatable(L);
   return 1;
 }
+
