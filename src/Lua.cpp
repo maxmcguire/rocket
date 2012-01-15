@@ -11,7 +11,6 @@ extern "C"
 }
 
 #include "State.h"
-#include "BaseLib.h"
 #include "Function.h"
 #include "String.h"
 #include "Table.h"
@@ -42,7 +41,9 @@ static Value GetNil()
     return nil;
 }
 
-// Accepts negative and pseudo indices.
+/**
+ * Accepts negative and pseudo indices.
+ */
 static Value* GetValueForIndex(lua_State* L, int index)
 {
     static Value nil = GetNil();
@@ -67,8 +68,20 @@ static Value* GetValueForIndex(lua_State* L, int index)
     }
     else if (index == LUA_REGISTRYINDEX)
     {
-        // Register.
+        // Registry.
         result = &L->registry;
+    }
+    else if (index == LUA_ENVIRONINDEX)
+    {
+        CallFrame* frame = State_GetCallFrame(L);
+        if (frame->function == NULL)
+        {
+            Vm_Error(L, "no calling environment");
+        }
+        // Temporarily store the environment table in the state since we need
+        // to return a pointer to a Value.
+        result = &L->env;
+        SetValue(result, frame->function->closure->env);
     }
     else
     {
@@ -592,10 +605,26 @@ LUA_API void lua_insert(lua_State *L, int index)
 
 void lua_replace(lua_State *L, int index)
 {
-    Value* dst = GetValueForIndex(L, index);
-    --L->stackTop;
-    *dst = *L->stackTop;
-    // TODO: Handle special cases like Lua does?
+    if (index == LUA_ENVIRONINDEX)
+    {
+        // Special case for the environment index since we can only assign table
+        // values, and the value returned by GetValueForIndex is a copy.
+        CallFrame* frame = State_GetCallFrame(L);
+        if (frame->function == NULL)
+        {
+            Vm_Error(L, "no calling environment");
+        }
+        const Value* src = L->stackTop - 1;
+        luai_apicheck(L, Value_GetIsTable(src));
+        frame->function->closure->env = src->table;
+        --L->stackTop;
+    }
+    else
+    {
+        Value* dst = GetValueForIndex(L, index);
+        --L->stackTop;
+        *dst = *L->stackTop;
+    }
 }
 
 int lua_checkstack(lua_State *L, int size)

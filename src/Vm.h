@@ -45,4 +45,9 @@ void MoveResults(lua_State* L, int start, int numResults);
  */
 int Vm_GetCallStackSize(lua_State* L);
 
+/**
+ * Reports an error with a message.
+ */
+void Vm_Error(lua_State* L, const char* format, ...);
+
 #endif

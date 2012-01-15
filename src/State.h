@@ -60,6 +60,7 @@ struct lua_State
     ErrorHandler*   errorHandler;
     Value           globals;
     Value           registry;
+    Value           env;            // Temporary storage for the env table for a function.
     Gc              gc;
     size_t          totalBytes;
     Table*          metatable[NUM_TYPES];  // Metatables for basic types.

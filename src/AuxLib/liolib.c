@@ -822,8 +822,8 @@ LUALIB_API int luaopen_iocallbacks(lua_State *L, luaL_FileCallbacks* callbacks)
     createmeta(L);
     /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
     newfenv(L, io_fclose);
-    setenvcallbacks(L, callbacks);
     lua_replace(L, LUA_ENVIRONINDEX);
+    setenvcallbacks(L, callbacks);
     /* open library */
     luaL_register(L, LUA_IOLIBNAME, iolib);
     /* create (and set) default files */
