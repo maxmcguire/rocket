@@ -2,7 +2,7 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
 #ifndef ROCKETVM_TEST_H
@@ -23,15 +23,21 @@ public:
     Test*       next;
 };
 
-
-#define TEST(name)                                  \
-    class _Test_##name : public Test {              \
-    public:                                         \
-        _Test_##name() : Test(#name) { }            \
-        virtual void Run();                         \
-    } _Test_instance_##name;                        \
+#define _TEST_BODY(name)                                \
+    public:                                             \
+        _Test_##name() : Test(#name) { }                \
+        virtual void Run();                             \
+    } _Test_instance_##name;                            \
     static TestRegisterer _Test_register_##name(&_Test_instance_##name); \
     void _Test_##name::Run()
+
+#define TEST(name)                                      \
+    class _Test_##name : public Test {                  \
+    _TEST_BODY(name)
+
+#define TEST_FIXTURE(name, fixture)                     \
+    class _Test_##name : public Test, public fixture {  \
+    _TEST_BODY(name)
 
 /**
  * Registers a test. Normally this will not be explicitly called, but will
