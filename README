@@ -14,4 +14,4 @@ Differences from Lua 5.1:
 
   API:
   - Added lua_setgchook function
-  - IO library can be registered with callbacks for customize file system access
+  - IO library can be registered with callbacks for custom file system access
