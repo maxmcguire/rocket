@@ -1,3 +1,17 @@
 RocketVM
 
+Rocket is an alternative implementation of the Lua language.
+It is currently in development and is not fully complete.
+
 See COPYRIGHT for license information
+
+Differences from Lua 5.1:
+
+  Language:
+  - Support for C++ style single line and block comments
+  - break does not have to be the last statement in a block
+  - more strict handling of invalid escape sequences in a string
+
+  API:
+  - Added lua_setgchook function
+  - IO library can be registered with callbacks for customize file system access
