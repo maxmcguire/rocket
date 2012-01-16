@@ -31,7 +31,6 @@
 #define LUA_LIB
 #include "lua.h"
 #include "lauxlib.h"
-#include "lualib.h"
 
 #ifdef _MSC_VER
 /* MSVC is stuck in the last century and doesn't have C99's stdint.h. */
@@ -145,7 +144,7 @@ static const struct luaL_Reg bit_funcs[] = {
   { "ror",	bit_ror },
   { "bswap",	bit_bswap },
   { "tohex",	bit_tohex },
-  { 0, 0 }
+  { NULL, NULL }
 };
 
 /* Signed right-shifts are implementation-defined per C89/C99.

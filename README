@@ -10,7 +10,8 @@ Differences from Lua 5.1:
   Language:
   - Support for C++ style single line and block comments
   - break does not have to be the last statement in a block
-  - more strict handling of invalid escape sequences in a string
+  - More strict handling of invalid escape sequences in a string
+  - Includes bit library
 
   API:
   - Added lua_setgchook function
