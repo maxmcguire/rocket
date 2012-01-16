@@ -500,7 +500,7 @@ void Parser_ChainJump(Parser* parser, Expression* jump, const Expression* prevJu
     Parser_UpdateInstruction(parser, jump->index, prevJump->index);
 }
 
-void Parser_ConvertToTest(Parser* parser, Expression* value, int test)
+void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
 {
     if (value->type != EXPRESSION_JUMP)
     {
@@ -512,9 +512,15 @@ void Parser_ConvertToTest(Parser* parser, Expression* value, int test)
             value->type = EXPRESSION_REGISTER;
         }
 
-        Parser_MoveToRegister(parser, value, -1);
-        Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
-
+        Parser_MoveToRegister(parser, value);
+        if (reg == -1 || value->index == reg)
+        {
+            Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
+        }
+        else
+        {
+            Parser_EmitABC(parser, Opcode_TestSet, reg, value->index, test);
+        }
         Parser_OpenJump(parser, value);
 
     }
@@ -1021,7 +1027,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->maxStackSize = function->maxStackSize;
     prototype->numUpValues  = function->numUpValues;
 
-    PrintFunction(prototype);
+    //PrintFunction(prototype);
 
     return prototype;
 

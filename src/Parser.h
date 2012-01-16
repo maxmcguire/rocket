@@ -192,9 +192,10 @@ bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults);
 bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int regHint = -1);
 
 /**
- * Converts an expression into an open test if it isn't one.
+ * Converts an expression into an open test if it isn't one. If reg is not -1
+ * then the value being tested will also be stored in that register.
  */
-void Parser_ConvertToTest(Parser* parser, Expression* value, int test = 0);
+void Parser_ConvertToTest(Parser* parser, Expression* value, int test = 0, int reg = -1);
 
 /**
  * Updates an open test expression so that if the expression is false it will

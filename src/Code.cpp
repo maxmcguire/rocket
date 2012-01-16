@@ -823,26 +823,45 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
             Parser_Accept(parser, TokenType_Or) )
     {
 
-        // The expression "exp2 and exp2" is roughly generated as:
-        //
-        // test exp1    ; if true, skip next
-        // jmp  label
-        // test exp2    ; if true, skip next
-        // jmp  label
-        //    ....
-        // label:
-        
         int op   = Parser_GetToken(parser);
         int cond = (op == TokenType_Or) ? 1 : 0;
+
+        if (regHint == -1)
+        {
+
+            // The expression "exp2 and exp2" is roughly generated as:
+            //
+            // test exp1    ; if true, skip next
+            // jmp  label
+            // test exp2    ; if true, skip next
+            // jmp  label
+            //    ....
+            // label:
+            
+            Parser_ConvertToTest(parser, dst, cond, regHint);
+
+            Expression arg2;
+            Parser_Expression1(parser, &arg2, regHint);
+            Parser_ConvertToTest(parser, &arg2, cond, regHint);
+
+            Parser_ChainJump(parser, &arg2, dst);
+            *dst = arg2;
         
-        Parser_ConvertToTest(parser, dst, cond);
+        }
+        else
+        {
 
-        Expression arg2;
-        Parser_Expression1(parser, &arg2, regHint);
-        Parser_ConvertToTest(parser, &arg2, cond);
-        Parser_ChainJump(parser, &arg2, dst);
+            Parser_MoveToRegister(parser, dst);
+            Parser_ConvertToTest(parser, dst, cond, regHint);
 
-        *dst = arg2;
+            Expression arg2;
+            Parser_Expression1(parser, &arg2, regHint);
+            Parser_MoveToRegister(parser, &arg2, regHint);
+
+            Parser_CloseJump(parser, dst);
+            *dst = arg2;
+
+        }
 
     }
 
