@@ -79,7 +79,7 @@ struct Parser
 #define EXPRESSION_BOOLEAN      8
 #define EXPRESSION_NUMBER       9
 #define EXPRESSION_CALL         10
-#define EXPRESSION_TEST         11
+#define EXPRESSION_JUMP         11
 #define EXPRESSION_UPVALUE      12
 #define EXPRESSION_NOT          13
 #define EXPRESSION_VARARG       14
@@ -99,8 +99,8 @@ struct Parser
  * If type is EXPRESSION_BOOLEAN:
  *  - index is 1 or 0 depending on the value.
  *
- * If type is EXPRESSION_TEST:
- *  - index is the location of the jump instruction following a conditional test.
+ * If type is EXPRESSION_JUMP:
+ *  - index is the location of the jump instruction.
  *
  * If type is EXPRESSION_UPVALUE:
  *  - index is the index of the up value in the up values array.
@@ -194,19 +194,31 @@ bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int
 /**
  * Converts an expression into an open test if it isn't one.
  */
-void Parser_ConvertToTest(Parser* parser, Expression* value);
+void Parser_ConvertToTest(Parser* parser, Expression* value, int test = 0);
 
 /**
  * Updates an open test expression so that if the expression is false it will
  * jump to the current instruction location.
  */
-void Parser_CloseTest(Parser* parser, Expression* value);
+void Parser_CloseJump(Parser* parser, Expression* value);
 
 /**
  * Updates an open test expression so that if the expression is false it will
  * jump to the instruction specified by startPos.
  */
-void Parser_CloseTest(Parser* parser, Expression* value, int startPos);
+void Parser_CloseJump(Parser* parser, Expression* value, int startPos);
+
+/**
+ * Opens a new jump by emitting an jump instruction. The location of the jump
+ * is determined when the jump is closed by calling Parser_CloseTest.
+ */
+void Parser_OpenJump(Parser* parser, Expression* dst);
+
+/**
+ * Chains two jumps together, so that when jump is closed, it will also close
+ * prevJump to the same location.
+ */
+void Parser_ChainJump(Parser* parser, Expression* jump, const Expression* prevJump);
 
 /**
  * Returns the index of the register occupied by the value, or -1 if the

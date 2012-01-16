@@ -189,13 +189,10 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         assert(0);
     }
 
-    dst->type  = EXPRESSION_TEST;
-    dst->index = Parser_EmitABC(parser, opcode, value, 
-        Parser_EncodeRK(parser, arg1), 
+    Parser_EmitABC(parser, opcode, value,
+        Parser_EncodeRK(parser, arg1),
         Parser_EncodeRK(parser, arg2));
-
-    // Save a place for the jmp instruction.
-    Parser_EmitInstruction(parser, 0);
+    Parser_OpenJump(parser, dst);
 
 }
 
@@ -825,35 +822,27 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
     while ( Parser_Accept(parser, TokenType_And) ||
             Parser_Accept(parser, TokenType_Or) )
     {
+
+        // The expression "exp2 and exp2" is roughly generated as:
+        //
+        // test exp1    ; if true, skip next
+        // jmp  label
+        // test exp2    ; if true, skip next
+        // jmp  label
+        //    ....
+        // label:
         
-        int op = Parser_GetToken(parser);
+        int op   = Parser_GetToken(parser);
+        int cond = (op == TokenType_Or) ? 1 : 0;
+        
+        Parser_ConvertToTest(parser, dst, cond);
 
-        int cond = op == TokenType_Or ? 1 : 0;
-
-        if (regHint == -1)
-        {
-            regHint = Parser_AllocateRegister(parser);
-            Parser_MoveToRegister(parser, dst);
-            Parser_EmitABC(parser, Opcode_TestSet, regHint, dst->index, cond);
-        }
-        else
-        {
-            Parser_MoveToRegister(parser, dst, regHint);
-            Parser_EmitABC(parser, Opcode_Test, dst->index, 0, cond);
-        }
-
-        dst->type  = EXPRESSION_REGISTER;
-        dst->index = regHint;
-
-        int skipBlock;
-        Parser_BeginSkip(parser, &skipBlock);
-
-        // dst = arg2
         Expression arg2;
-        Parser_Expression1(parser, &arg2, dst->index);
-        Parser_MoveToRegister(parser, &arg2, dst->index);
+        Parser_Expression1(parser, &arg2, regHint);
+        Parser_ConvertToTest(parser, &arg2, cond);
+        Parser_ChainJump(parser, &arg2, dst);
 
-        Parser_EndSkip(parser, &skipBlock);
+        *dst = arg2;
 
     }
 
@@ -950,7 +939,7 @@ static void Parser_Conditional(Parser* parser)
     Parser_Expect(parser, TokenType_Then);
 
     // TODO: Peform "constant folding" for the test.
-    Parser_ConvertToTest(parser, &test);
+    Parser_ConvertToTest(parser, &test, 0);
     Parser_BeginBlock(parser, false);
 
     // Parse the "if" part of the conditional.
@@ -971,7 +960,7 @@ static void Parser_Conditional(Parser* parser)
         int elseJump;
         Parser_BeginBlock(parser, false);
         Parser_BeginSkip(parser, &elseJump);
-        Parser_CloseTest(parser, &test);
+        Parser_CloseJump(parser, &test);
 
         // Parse the "else" part of the conditional.
         while (!Parser_Accept(parser, TokenType_End))
@@ -985,11 +974,12 @@ static void Parser_Conditional(Parser* parser)
     }
     else if (type == TokenType_ElseIf)
     {
+        Parser_CloseJump(parser, &test);
         Parser_Conditional(parser);
     }
     else
     {
-        Parser_CloseTest(parser, &test);
+        Parser_CloseJump(parser, &test);
     }
 
 }
@@ -1342,7 +1332,7 @@ static bool Parser_TryWhile(Parser* parser)
     Parser_EndBlock(parser);
     Parser_EndLoop(parser, &loop);
 
-    Parser_CloseTest(parser, &test);
+    Parser_CloseJump(parser, &test);
 
     return true;
 
@@ -1364,7 +1354,7 @@ static bool Parser_TryRepeat(Parser* parser)
     Expression test;
     Parser_Expression0(parser, &test, -1);
     Parser_ConvertToTest(parser, &test);
-    Parser_CloseTest(parser, &test, loop);
+    Parser_CloseJump(parser, &test, loop);
 
     Parser_EndBlock(parser);
 

@@ -487,37 +487,55 @@ bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int
     return false;
 }
 
-void Parser_ConvertToTest(Parser* parser, Expression* value)
+void Parser_OpenJump(Parser* parser, Expression* dst)
 {
-    if (value->type != EXPRESSION_TEST)
+    dst->index = Parser_EmitInstruction(parser, -1);
+    dst->type  = EXPRESSION_JUMP;
+}
+
+void Parser_ChainJump(Parser* parser, Expression* jump, const Expression* prevJump)
+{
+    assert(jump->type == EXPRESSION_JUMP);
+    assert(prevJump->type == EXPRESSION_JUMP);
+    Parser_UpdateInstruction(parser, jump->index, prevJump->index);
+}
+
+void Parser_ConvertToTest(Parser* parser, Expression* value, int test)
+{
+    if (value->type != EXPRESSION_JUMP)
     {
 
-        int test = 0;
         if (value->type == EXPRESSION_NOT)
         {
             // "Fold" the not into the test by negating it.
-            test = 1;
+            test = 1 - test;
             value->type = EXPRESSION_REGISTER;
         }
 
         Parser_MoveToRegister(parser, value, -1);
-        value->index = Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
-        value->type  = EXPRESSION_TEST;
-        Parser_EmitInstruction(parser, 0);  // Placeholder for jump.
+        Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
+
+        Parser_OpenJump(parser, value);
 
     }
 }
 
-void Parser_CloseTest(Parser* parser, Expression* value)
+void Parser_CloseJump(Parser* parser, Expression* value)
 {
-    Parser_CloseTest(parser, value, Parser_GetInstructionCount(parser));
+    Parser_CloseJump(parser, value, Parser_GetInstructionCount(parser));
 }
 
-void Parser_CloseTest(Parser* parser, Expression* value, int startPos)
+void Parser_CloseJump(Parser* parser, Expression* value, int startPos)
 {
-    int testPos = value->index;
-    int jumpAmount = static_cast<int>(startPos - testPos - 2);
-    Parser_UpdateInstruction(parser, testPos + 1, Parser_EncodeAsBx(Opcode_Jmp, 0, jumpAmount));
+    int jumpPos = value->index;
+    do
+    {
+        int prevJumpPos = Parser_GetInstruction(parser, jumpPos);
+        int jumpAmount = static_cast<int>(startPos - jumpPos - 1);
+        Parser_UpdateInstruction(parser, jumpPos, Parser_EncodeAsBx(Opcode_Jmp, 0, jumpAmount));
+        jumpPos = prevJumpPos;
+    }
+    while (jumpPos != -1);
 }
 
 static void Parser_EmitUpValueBinding(Parser* parser, Function* closure)
@@ -666,10 +684,10 @@ void Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     {
         Parser_EmitAB(parser, Opcode_Move, reg, value->index);
     }
-    else if (value->type == EXPRESSION_TEST)
+    else if (value->type == EXPRESSION_JUMP)
     {
         Parser_EmitABC(parser, Opcode_LoadBool, reg, 1, 1);
-        Parser_CloseTest(parser, value);
+        Parser_CloseJump(parser, value);
         Parser_EmitABC(parser, Opcode_LoadBool, reg, 0, 0);
     }
     else if (value->type == EXPRESSION_UPVALUE)
@@ -1003,7 +1021,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->maxStackSize = function->maxStackSize;
     prototype->numUpValues  = function->numUpValues;
 
-    //PrintFunction(prototype);
+    PrintFunction(prototype);
 
     return prototype;
 
