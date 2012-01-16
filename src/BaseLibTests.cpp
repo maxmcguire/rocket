@@ -2,13 +2,13 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
 #include "Test.h"
 #include "LuaTest.h"
 
-TEST(IPairs)
+TEST_FIXTURE(IPairs, LuaFixture)
 {
 
     const char* code =
@@ -19,8 +19,6 @@ TEST(IPairs)
         "k2, v2 = g(s, k1)\n"
         "k3, v3 = g(s, k2)\n"
         "k4 = g(s, k3)";
-
-    lua_State* L = luaL_newstate();
 
     CHECK( DoString(L, code) );
 
@@ -41,7 +39,5 @@ TEST(IPairs)
 
     lua_getglobal(L, "k4");
     CHECK( lua_isnil(L, -1) );
-
-    lua_close(L);
 
 }

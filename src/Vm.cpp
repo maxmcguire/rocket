@@ -2,10 +2,14 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
+extern "C"
+{
 #include "lua.h"
+}
+
 #include "Opcode.h"
 #include "Vm.h"
 #include "State.h"
@@ -13,7 +17,6 @@
 #include "String.h"
 #include "Table.h"
 #include "Function.h"
-#include "BaseLib.h"
 
 #include <memory.h>
 #include <stdlib.h>
@@ -43,7 +46,7 @@ static int GetCurrentLine(CallFrame* frame)
     return prototype->sourceLine[instruction];
 }
 
-static void Error(lua_State* L, const char* format, ...)
+void Vm_Error(lua_State* L, const char* format, ...)
 {
 
     CallFrame* frame = State_GetCallFrame(L);
@@ -103,11 +106,11 @@ static void TypeError(lua_State* L, const Value* value, const char* op)
 
     if (GetObjectName(L, State_GetCallFrame(L), value, name, kind))
     {
-        Error(L, "attempt to %s %s '%s' (a %s value)", op, kind, name, type);
+        Vm_Error(L, "attempt to %s %s '%s' (a %s value)", op, kind, name, type);
     }
     else
     {
-        Error(L, "attempt to %s a %s value", op, type);
+        Vm_Error(L, "attempt to %s a %s value", op, type);
     }
 
 }

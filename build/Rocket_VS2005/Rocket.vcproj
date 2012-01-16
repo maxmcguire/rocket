@@ -47,7 +47,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\..\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ROCKET_EXPORTS;_CRT_SECURE_NO_WARNINGS"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;ROCKET_EXPORTS;_CRT_SECURE_NO_WARNINGS;LUA_CORE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -68,6 +68,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="2"
+				ModuleDefinitionFile="Rocket.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -145,6 +146,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
+				ModuleDefinitionFile="Rocket.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -178,6 +180,10 @@
 		</Configuration>
 	</Configurations>
 	<References>
+		<ProjectReference
+			ReferencedProjectIdentifier="{AE6D0ABC-A0F6-45BC-97BA-831346583165}"
+			RelativePathToProject=".\AuxLib.vcproj"
+		/>
 	</References>
 	<Files>
 		<Filter
@@ -186,23 +192,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\src\BaseLib.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\BitLib.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Code.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\src\Compiler.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\DebugLib.cpp"
 				>
 			</File>
 			<File
@@ -218,10 +212,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\IoLib.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Lexer.cpp"
 				>
 			</File>
@@ -230,27 +220,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\LuaLib.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\MathLib.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Opcode.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\OsLib.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\PackageLib.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Parser.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Rocket.def"
 				>
 			</File>
 			<File
@@ -262,15 +240,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\StringLib.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Table.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\TableLib.cpp"
 				>
 			</File>
 			<File
@@ -296,10 +266,6 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\..\src\BaseLib.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Code.h"
 				>
 			</File>
@@ -320,10 +286,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\lauxlib.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Lexer.h"
 				>
 			</File>
@@ -333,10 +295,6 @@
 			</File>
 			<File
 				RelativePath="..\..\include\luaconf.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\include\lualib.h"
 				>
 			</File>
 			<File

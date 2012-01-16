@@ -2,12 +2,15 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */
 
+extern "C"
+{
 #include "lua.h"
+}
+
 #include "State.h"
-#include "BaseLib.h"
 #include "Function.h"
 #include "String.h"
 #include "Table.h"
@@ -38,7 +41,9 @@ static Value GetNil()
     return nil;
 }
 
-// Accepts negative and pseudo indices.
+/**
+ * Accepts negative and pseudo indices.
+ */
 static Value* GetValueForIndex(lua_State* L, int index)
 {
     static Value nil = GetNil();
@@ -63,8 +68,20 @@ static Value* GetValueForIndex(lua_State* L, int index)
     }
     else if (index == LUA_REGISTRYINDEX)
     {
-        // Register.
+        // Registry.
         result = &L->registry;
+    }
+    else if (index == LUA_ENVIRONINDEX)
+    {
+        CallFrame* frame = State_GetCallFrame(L);
+        if (frame->function == NULL)
+        {
+            Vm_Error(L, "no calling environment");
+        }
+        // Temporarily store the environment table in the state since we need
+        // to return a pointer to a Value.
+        result = &L->env;
+        SetValue(result, frame->function->closure->env);
     }
     else
     {
@@ -85,7 +102,6 @@ static Value* GetValueForIndex(lua_State* L, int index)
 lua_State* lua_newstate(lua_Alloc alloc, void* userdata)
 {
     lua_State* L = State_Create(alloc, userdata);
-    OpenBaseLib(L);
     return L;
 }
 
@@ -275,11 +291,6 @@ LUA_API void lua_pushcclosure(lua_State *L, lua_CFunction f, int n)
     PushClosure(L, closure);
 }
 
-LUA_API void lua_pushcfunction(lua_State* L, lua_CFunction f)
-{
-    lua_pushcclosure(L, f, 0);
-}
-
 LUA_API void lua_pushboolean(lua_State* L, int b)
 {
     PushBoolean(L, b != 0);
@@ -296,11 +307,6 @@ LUA_API void lua_pushvalue(lua_State* L, int index)
     PushValue(L, value);
 }
 
-LUA_API void lua_pop(lua_State *L, int num)
-{
-    Pop(L, num);
-}
-
 LUA_API void lua_remove(lua_State *L, int index)
 {
     Value* p = GetValueForIndex(L, index);
@@ -310,12 +316,6 @@ LUA_API void lua_remove(lua_State *L, int index)
         *(p - 1) = *p;
     }
     --L->stackTop;
-}
-
-void lua_register(lua_State *L, const char *name, lua_CFunction f)
-{
-    lua_pushcfunction(L, f);
-    lua_setglobal(L, name);
 }
 
 void lua_setfield(lua_State* L, int index, const char* name)
@@ -344,16 +344,6 @@ void lua_getfield(lua_State *L, int index, const char* name)
     ++L->stackTop;
 }
 
-void lua_setglobal(lua_State* L, const char* name)
-{
-    lua_setfield(L, LUA_GLOBALSINDEX, name);
-}
-
-void lua_getglobal(lua_State* L, const char* name)
-{
-    lua_getfield(L, LUA_GLOBALSINDEX, name);
-}
-
 int lua_isnumber(lua_State* L, int index)
 {
     return lua_type(L, index) == LUA_TNUMBER;
@@ -373,46 +363,6 @@ int lua_iscfunction(lua_State* L, int index)
 int lua_isuserdata(lua_State* L, int index)
 {
     return lua_type(L, index) == LUA_TUSERDATA;
-}
-
-int lua_isfunction(lua_State* L, int n)
-{
-    return lua_type(L, n) == LUA_TFUNCTION;
-}
-
-int lua_istable(lua_State* L, int n)
-{
-    return lua_type(L, n) == LUA_TTABLE;
-}
-
-int lua_islightuserdata(lua_State* L, int n)
-{
-    return lua_type(L, n) == LUA_TLIGHTUSERDATA;
-}
-
-int lua_isnil(lua_State* L, int n)
-{
-    return lua_type(L, n) == LUA_TNIL;
-}
-
-int lua_isboolean(lua_State* L, int n)
-{
-    return lua_type(L, n) == LUA_TBOOLEAN;
-}
-
-int lua_isthread(lua_State* L, int n)
-{
-    return lua_type(L, n) == LUA_TTHREAD;
-}
-
-int lua_isnone(lua_State* L, int n)
-{
-    return lua_type(L, (n)) == LUA_TNONE;
-}
-
-int lua_isnoneornil(lua_State* L, int n)
-{
-    return lua_type(L, n) <= 0;
 }
 
 LUA_API lua_Number lua_tonumber(lua_State *L, int index)
@@ -457,11 +407,6 @@ LUA_API const char* lua_tolstring(lua_State *L, int index, size_t* length )
         return String_GetData(string);
     }
     return NULL;
-}
-
-LUA_API const char* lua_tostring(lua_State* L, int index)
-{
-    return lua_tolstring(L, index, NULL);
 }
 
 LUA_API lua_CFunction lua_tocfunction(lua_State* L, int index)
@@ -530,7 +475,7 @@ LUA_API void lua_rawget(lua_State* L, int index)
 {
 
     Value* table = GetValueForIndex( L, index );
-    LUA_API_CHECK( Value_GetIsTable(table) );
+    luai_apicheck(L, Value_GetIsTable(table) );
 
     const Value* key = GetValueForIndex(L, -1);
     const Value* value = Table_GetTable(L, table->table, key);
@@ -550,7 +495,7 @@ LUA_API void lua_rawgeti(lua_State *L, int index, int n)
 {
 
     Value* table = GetValueForIndex(L, index);
-    LUA_API_CHECK( Value_GetIsTable(table) );    
+    luai_apicheck(L, Value_GetIsTable(table) );    
 
     const Value* value = Table_GetTable(L, table->table, n);
     if (value == NULL)
@@ -571,7 +516,7 @@ LUA_API void lua_rawset(lua_State *L, int index)
     Value* value = GetValueForIndex(L, -1);
     Value* table = GetValueForIndex(L, index);
 
-    LUA_API_CHECK( Value_GetIsTable(table) );
+    luai_apicheck(L, Value_GetIsTable(table) );
     Table_SetTable( L, table->table, key, value );
     Pop(L, 2);
 
@@ -581,7 +526,7 @@ LUA_API void lua_rawseti(lua_State* L, int index, int n)
 {
 
     Value* table = GetValueForIndex(L, index);
-    LUA_API_CHECK( Value_GetIsTable(table) );    
+    luai_apicheck(L, Value_GetIsTable(table) );    
 
     Value* value = GetValueForIndex(L, -1);
     Table_SetTable(L, table->table, n, value);
@@ -630,14 +575,22 @@ LUA_API int lua_gettop(lua_State* L)
 
 LUA_API void lua_settop(lua_State *L, int index)
 {
-    Value* value = L->stackTop;
-    Value* top   = L->stackBase + index;
-    while (value < top)
+    if (index < 0)
     {
-        SetNil(value);
-        ++value;
+        L->stackTop += index + 1;
+        luai_apicheck(L, L->stackTop >= L->stackBase );
     }
-    L->stackTop = top;
+    else
+    {
+        Value* value = L->stackTop;
+        Value* top = L->stackBase + index;
+        while (value < top)
+        {
+            SetNil(value);
+            ++value;
+        }
+        L->stackTop = top;
+    }
 }
 
 LUA_API void lua_insert(lua_State *L, int index)
@@ -652,10 +605,26 @@ LUA_API void lua_insert(lua_State *L, int index)
 
 void lua_replace(lua_State *L, int index)
 {
-    Value* dst = GetValueForIndex(L, index);
-    --L->stackTop;
-    *dst = *L->stackTop;
-    // TODO: Handle special cases like Lua does?
+    if (index == LUA_ENVIRONINDEX)
+    {
+        // Special case for the environment index since we can only assign table
+        // values, and the value returned by GetValueForIndex is a copy.
+        CallFrame* frame = State_GetCallFrame(L);
+        if (frame->function == NULL)
+        {
+            Vm_Error(L, "no calling environment");
+        }
+        const Value* src = L->stackTop - 1;
+        luai_apicheck(L, Value_GetIsTable(src));
+        frame->function->closure->env = src->table;
+        --L->stackTop;
+    }
+    else
+    {
+        Value* dst = GetValueForIndex(L, index);
+        --L->stackTop;
+        *dst = *L->stackTop;
+    }
 }
 
 int lua_checkstack(lua_State *L, int size)
@@ -663,11 +632,6 @@ int lua_checkstack(lua_State *L, int size)
     // lua_checkstack just reserves space for us on the stack, and since we're
     // not checking for stack overflow, we don't need to do anything.
     return 1;
-}
-
-void lua_newtable(lua_State* L)
-{
-    lua_createtable(L, 0, 0);
 }
 
 void lua_createtable(lua_State *L, int narr, int nrec)
@@ -704,13 +668,13 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
     if (what[0] == '>')
     {
         const Value* value = L->stackTop - 1;
-        LUA_API_CHECK( Value_GetIsFunction(value) );
+        luai_apicheck(L, Value_GetIsFunction(value) );
         function = value->closure;
         ++what;
     }
     else
     {
-        LUA_API_CHECK( ar->activeFunction < Vm_GetCallStackSize(L) );
+        luai_apicheck(L, ar->activeFunction < Vm_GetCallStackSize(L) );
         frame = L->callStackBase + ar->activeFunction;
         if (frame->function != NULL)
         {
@@ -802,7 +766,7 @@ const char* lua_getupvalue(lua_State *L, int funcIndex, int n)
 {
 
     const Value* func = GetValueForIndex(L, funcIndex);
-    LUA_API_CHECK( Value_GetIsFunction(func) );
+    luai_apicheck(L, Value_GetIsFunction(func) );
 
     Closure* closure = func->closure;
 
@@ -833,7 +797,7 @@ int lua_next(lua_State* L, int index)
 {
 
     Value* table = GetValueForIndex(L, index);
-    LUA_API_CHECK( Value_GetIsTable(table) );
+    luai_apicheck(L, Value_GetIsTable(table) );
     
     Value* key = GetValueForIndex(L, -1);
 
@@ -857,14 +821,14 @@ void* lua_newuserdata(lua_State* L, size_t size)
 int lua_setmetatable(lua_State* L, int index)
 {
     Value* object = GetValueForIndex(L, index);
-    LUA_API_CHECK( !Value_GetIsNil(object) );
+    luai_apicheck(L, !Value_GetIsNil(object) );
     
     Value* metatable = GetValueForIndex(L, -1);
 
     Table* table = NULL;
     if (!Value_GetIsNil(metatable))
     {
-        LUA_API_CHECK( Value_GetIsTable(metatable) );
+        luai_apicheck(L, Value_GetIsTable(metatable) );
         table = metatable->table;
     }
 
@@ -894,7 +858,7 @@ int lua_setfenv(lua_State *L, int index)
 {
     Value* object = GetValueForIndex(L, index);
     Value* env = GetValueForIndex(L, -1);
-    LUA_API_CHECK( Value_GetIsTable(env) );
+    luai_apicheck(L, Value_GetIsTable(env) );
     int result = Value_SetEnv(L, object, env->table);
     Pop(L, 1);
     return result;
@@ -974,4 +938,87 @@ int lua_gethookmask(lua_State* L)
 int lua_gethookcount(lua_State* L)
 {
     return L->hookCount;
+}
+
+LUA_API lua_CFunction lua_atpanic(lua_State* L, lua_CFunction panic)
+{
+    lua_CFunction old;
+    old = L->panic;
+    L->panic = panic;
+    return old;
+}
+
+LUA_API int lua_pushthread(lua_State* L)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
+}
+
+LUA_API lua_State* lua_tothread(lua_State* L, int index)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
+}
+
+LUA_API lua_State* lua_newthread(lua_State* L)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
+}
+
+LUA_API int lua_yield(lua_State* L, int nresults)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
+}
+
+LUA_API int lua_resume(lua_State *L, int narg)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
+}
+
+LUA_API int lua_status(lua_State *L)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
+}
+
+LUA_API void lua_setlevel(lua_State* from, lua_State* to)
+{
+    // Not yet implemented.
+    assert(0);
+}
+
+LUA_API void lua_xmove(lua_State* from, lua_State* to, int n)
+{
+    // Not yet implemented.
+    assert(0);
+}
+
+LUA_API const char* lua_getlocal(lua_State* L, const lua_Debug* ar, int n)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
+}
+
+LUA_API const char* lua_setlocal (lua_State *L, const lua_Debug* ar, int n)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
+}
+
+LUA_API const char* lua_setupvalue(lua_State* L, int funcindex, int n)
+{
+    // Not yet implemented.
+    assert(0);
+    return 0;
 }

@@ -2,12 +2,17 @@
  * RocketVM
  * Copyright (c) 2011 Max McGuire
  *
- * See copyright notice in lua.h
+ * See copyright notice in COPYRIGHT
  */ 
+
 #ifndef ROCKETVM_VM_H
 #define ROCKETVM_VM_H
 
+extern "C"
+{
 #include "lua.h"
+}
+
 #include "State.h"
 
 int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Value* errorHandler);
@@ -39,5 +44,10 @@ void MoveResults(lua_State* L, int start, int numResults);
  * Returns the number of entries in the current call stack.
  */
 int Vm_GetCallStackSize(lua_State* L);
+
+/**
+ * Reports an error with a message.
+ */
+void Vm_Error(lua_State* L, const char* format, ...);
 
 #endif
