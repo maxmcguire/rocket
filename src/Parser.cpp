@@ -628,16 +628,7 @@ void Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     // Select the desination register.
     if (reg == -1)
     {
-        if (value->type == EXPRESSION_TABLE ||
-            value->type == EXPRESSION_NOT)
-        {
-            // Reuse the register the table is stored in.
-            reg = value->index;
-        }
-        else
-        {
-            reg = Parser_AllocateRegister(parser);
-        }
+        reg = Parser_AllocateRegister(parser);
     }
     
     // There are no special instructions to load numbers like there are nil and
