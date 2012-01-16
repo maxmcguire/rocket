@@ -119,6 +119,7 @@ EXPORTS
     luaopen_math
     luaopen_debug
     luaopen_package
+    luaopen_bit
     luaL_openlibs
     
     
