@@ -181,31 +181,31 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\src\BaseLibTests.cpp"
+				RelativePath="..\..\src\Test\BaseLibTests.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\LuaTest.cpp"
+				RelativePath="..\..\src\Test\LuaTest.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\Main.cpp"
+				RelativePath="..\..\src\Test\Main.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\StringLibTests.cpp"
+				RelativePath="..\..\src\Test\StringLibTests.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\TableTests.cpp"
+				RelativePath="..\..\src\Test\TableTests.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\Test.cpp"
+				RelativePath="..\..\src\Test\Test.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\UnitTests.cpp"
+				RelativePath="..\..\src\Test\UnitTests.cpp"
 				>
 			</File>
 		</Filter>
@@ -215,11 +215,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\..\src\LuaTest.h"
+				RelativePath="..\..\src\Test\LuaTest.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\Test.h"
+				RelativePath="..\..\src\Test\Test.h"
 				>
 			</File>
 		</Filter>
