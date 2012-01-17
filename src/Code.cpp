@@ -692,7 +692,13 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
     if (Parser_Accept(parser, TokenType_Not))
     {
         Parser_Expression0(parser, dst, regHint);
-        Parser_MoveToRegister(parser, dst, regHint);
+        // Don't generate an extra move if the expression we're negating
+        // is already stored in a register (but do move to the hint register
+        // if it's not).
+        if (!Parser_ConvertToRegister(parser, dst))
+        {
+            Parser_MoveToRegister(parser, dst, regHint);
+        }
         dst->type = EXPRESSION_NOT;
     }
     else if (Parser_Accept(parser, '#') || Parser_Accept(parser, '-'))
