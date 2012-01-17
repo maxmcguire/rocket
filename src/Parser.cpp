@@ -505,7 +505,11 @@ void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
     if (value->type != EXPRESSION_JUMP)
     {
 
-        if (value->type == EXPRESSION_NOT)
+        // TODO: Optimize the code generation in the case where we have a NOT on the RHS.
+        // This requires using test instead of testset since we don't want to assign with
+        // the un-negated value.
+        
+        if (value->type == EXPRESSION_NOT && reg == -1)
         {
             // "Fold" the not into the test by negating it.
             test = 1 - test;

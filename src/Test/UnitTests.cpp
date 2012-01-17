@@ -2433,3 +2433,78 @@ TEST_FIXTURE(FunctionUpValue, LuaFixture)
     CHECK( lua_tonumber(L, -1) == 1.0 );
 
 }
+
+TEST_FIXTURE(Not0, LuaFixture)
+{
+    const char* code = "a = not 0";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 0 );
+}
+
+TEST_FIXTURE(NotNumber, LuaFixture)
+{
+    const char* code = "a = not 1";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 0 );
+}
+
+TEST_FIXTURE(NotNil, LuaFixture)
+{
+    const char* code = "a = not nil";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 1);
+}
+
+TEST_FIXTURE(NotString, LuaFixture)
+{
+    const char* code = "a = not 'test'";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 0);
+}
+
+TEST_FIXTURE(NotFalse, LuaFixture)
+{
+    const char* code = "a = not false";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 1);
+}
+
+TEST_FIXTURE(NotTrue, LuaFixture)
+{
+    const char* code = "a = not true";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 0);
+}
+
+TEST_FIXTURE(NotAnd1, LuaFixture)
+{
+    const char* code =
+        "local t\n"
+        "a = not t and 'test'";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tostring(L, -1), "test" );
+}
+
+TEST_FIXTURE(NotOr1, LuaFixture)
+{
+    const char* code =
+        "local t\n"
+        "a = not t or 'test'";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 1 );
+}

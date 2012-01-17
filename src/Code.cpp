@@ -687,11 +687,27 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
 
 }
 
+static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
+{
+    Parser_Expression4(parser, dst, regHint);
+	while (Parser_Accept(parser, '^'))
+	{
+		int op = Parser_GetToken(parser);
+
+        Expression arg1 = *dst;
+        Parser_ResolveCall(parser, &arg1, 1);
+
+        Expression arg2;
+        Parser_Expression4(parser, &arg2, -1);
+        Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
+	}
+}
+
 static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
 {
     if (Parser_Accept(parser, TokenType_Not))
     {
-        Parser_Expression0(parser, dst, regHint);
+        Parser_ExpressionUnary(parser, dst, regHint);
         // Don't generate an extra move if the expression we're negating
         // is already stored in a register (but do move to the hint register
         // if it's not).
@@ -716,7 +732,7 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
             break;
         }
 
-        Parser_Expression0(parser, dst, regHint);
+        Parser_ExpressionUnary(parser, dst, regHint);
 
         // Perform constant folding.
         if (dst->type == EXPRESSION_NUMBER)
@@ -744,29 +760,13 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
     }
     else
     {
-        Parser_Expression4(parser, dst, regHint);
+        Parser_ExpressionPow(parser, dst, regHint);
     }
-}
-
-static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
-{
-    Parser_ExpressionUnary(parser, dst, regHint);
-	while (Parser_Accept(parser, '^'))
-	{
-		int op = Parser_GetToken(parser);
-
-        Expression arg1 = *dst;
-        Parser_ResolveCall(parser, &arg1, 1);
-
-        Expression arg2;
-        Parser_ExpressionUnary(parser, &arg2, -1);
-        Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
-	}
 }
 
 static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
 {
-    Parser_ExpressionPow(parser, dst, regHint);
+    Parser_ExpressionUnary(parser, dst, regHint);
 	while (Parser_Accept(parser, '*') ||
            Parser_Accept(parser, '/') ||
            Parser_Accept(parser, '%'))
@@ -777,7 +777,7 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_ExpressionPow(parser, &arg2, -1);
+        Parser_ExpressionUnary(parser, &arg2, -1);
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
@@ -832,7 +832,7 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         int op   = Parser_GetToken(parser);
         int cond = (op == TokenType_Or) ? 1 : 0;
 
-        if (regHint == -1)
+        if (!parser->rhs)
         {
 
             // The expression "exp2 and exp2" is roughly generated as:
@@ -857,7 +857,19 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         else
         {
 
-            Parser_MoveToRegister(parser, dst);
+            if (regHint == -1)
+            {
+                regHint = Parser_AllocateRegister(parser);
+            }
+
+            // exp1 = exp2 and exp3
+
+            //
+            // testset exp2  
+            // jmp label
+            // mov exp3
+            // label:
+
             Parser_ConvertToTest(parser, dst, cond, regHint);
 
             Expression arg2;
@@ -1291,6 +1303,7 @@ static bool Parser_TryLocal(Parser* parser)
 
     if (Parser_Accept(parser, '='))
     {
+        parser->rhs = true;
         Parser_AssignLocals(parser, reg, numVars);
     }
     else
@@ -1512,6 +1525,8 @@ static bool Parser_TryBreak(Parser* parser)
 static void Parser_Statement(Parser* parser)
 {
 
+    parser->rhs = false;
+
     if (Parser_TryEmpty(parser))
     {
         return;
@@ -1579,6 +1594,8 @@ static void Parser_Statement(Parser* parser)
         }
 
         Parser_Expect(parser, '=');
+
+        parser->rhs = true;
         Parser_AssignExpressionList(parser, dst, numVars);
 
     }

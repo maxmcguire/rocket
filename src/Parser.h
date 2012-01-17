@@ -67,6 +67,7 @@ struct Parser
     Function*       function;
     Block           block[LUAI_MAXCCALLS];
     int             numBlocks;
+    bool            rhs;            // True if we're parsing the right hand side of an assignment.
 };
 
 #define EXPRESSION_REGISTER     1
