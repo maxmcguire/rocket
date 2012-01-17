@@ -1766,6 +1766,22 @@ TEST_FIXTURE(ConcatOperator, LuaFixture)
 
 }
 
+TEST_FIXTURE(ConcatOperatorNumber, LuaFixture)
+{
+
+    const char* code =
+        "s = 4 .. 'h'";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "s");
+    const char* s = lua_tostring(L, -1);
+
+    CHECK( s != NULL );
+    CHECK( strcmp(s, "4h") == 0 );
+
+}
+
 TEST_FIXTURE(VarArg1, LuaFixture)
 {
 

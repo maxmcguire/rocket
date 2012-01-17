@@ -244,7 +244,7 @@ void Concat(lua_State* L, Value* dst, Value* start, Value* end)
     while (arg2 <= end)
     {
 
-        if ( (!Value_GetIsString(arg1) && Value_GetIsNumber(arg1)) || !ToString(L, arg2) )
+        if ( (!Value_GetIsString(arg1) && !Value_GetIsNumber(arg1)) || !ToString(L, arg2) )
         {
             // TODO: Call metamethod concat.
             assert(0);
