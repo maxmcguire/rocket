@@ -500,23 +500,26 @@ void Parser_ChainJump(Parser* parser, Expression* jump, const Expression* prevJu
     Parser_UpdateInstruction(parser, jump->index, prevJump->index);
 }
 
-void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
+int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
 {
     if (value->type != EXPRESSION_JUMP)
     {
 
-        // TODO: Optimize the code generation in the case where we have a NOT on the RHS.
-        // This requires using test instead of testset since we don't want to assign with
-        // the un-negated value.
-        
+        // This is disabled because not coerces the value to a boolean
+        // which we lose with this optimization (results in the wrong value
+        // for a = not nil or false).
+        /*
         if (value->type == EXPRESSION_NOT && reg == -1)
         {
             // "Fold" the not into the test by negating it.
             test = 1 - test;
             value->type = EXPRESSION_REGISTER;
         }
+        */
 
-        Parser_MoveToRegister(parser, value);
+        Parser_MoveToRegister(parser, value, reg);
+
+        // If the value we're testing is already in the destination register
         if (reg == -1 || value->index == reg)
         {
             Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
@@ -525,9 +528,12 @@ void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
         {
             Parser_EmitABC(parser, Opcode_TestSet, reg, value->index, test);
         }
+        reg = value->index;
         Parser_OpenJump(parser, value);
 
     }
+
+    return reg;
 }
 
 void Parser_CloseJump(Parser* parser, Expression* value)

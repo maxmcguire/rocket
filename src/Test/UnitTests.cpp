@@ -2508,3 +2508,28 @@ TEST_FIXTURE(NotOr1, LuaFixture)
     CHECK( lua_isboolean(L, -1) );
     CHECK( lua_toboolean(L, -1) == 1 );
 }
+
+TEST_FIXTURE(OrLhs, LuaFixture)
+{
+    const char* code =
+        "local a\n"
+        "t = { } ;\n"
+        "(a or t).x = 5";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "t");
+    lua_getfield(L, -1, "x");
+    CHECK( lua_tonumber(L, -1) == 5 );
+}
+
+/*
+TEST_FIXTURE(PrefixExp, LuaFixture)
+{
+    // Test that a table constructor followed by an opening parenthesis isn't
+    // treated as a function call.
+    const char* code =
+        "local a\n"
+        "t = { }\n"
+        "(a) = 5";
+    CHECK( DoString(L, code) );
+}
+*/

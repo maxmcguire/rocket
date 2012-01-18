@@ -15,9 +15,17 @@
 #include <malloc.h>
 #include <math.h>
 
+/**
+ * Flags that are used when parsing an expression.
+ */
+enum Flag
+{
+    Flag_Control    = 1 << 0,   // Expression is used in a control statement (if exp, while exp, etc.)
+};
+
 static void Parser_Block(Parser* parser, int endToken);
 static void Parser_Statement(Parser* parser);
-static void Parser_Expression0(Parser* parser, Expression* dst, int regHint);
+static void Parser_Expression0(Parser* parser, unsigned long flags, Expression* dst, int regHint);
 
 /**
  * Attempts to fold the expression opcode arg and store the result in dst.
@@ -232,7 +240,7 @@ static int Parser_Arguments(Parser* parser, bool single = false)
         int reg = Parser_AllocateRegister(parser);
 
         Expression arg;
-        Parser_Expression0(parser, &arg, reg);
+        Parser_Expression0(parser, 0, &arg, reg);
 
         if (!single && Parser_Accept(parser, ')'))
         {
@@ -372,14 +380,14 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
             // Handle the form: [x] = y
             
             Expression key;
-            Parser_Expression0(parser, &key, -1);
+            Parser_Expression0(parser, 0, &key, -1);
             Parser_MakeRKEncodable(parser, &key);
             Parser_Expect(parser, ']');
 
             Parser_Expect(parser, '=');
 
             Expression value;
-            Parser_Expression0(parser, &value, -1);
+            Parser_Expression0(parser, 0, &value, -1);
             Parser_MakeRKEncodable(parser, &value);
 
             Parser_EmitABC(parser, Opcode_SetTable, dst->index,
@@ -412,7 +420,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                     // Handle the form: x = y
 
                     Expression value;
-                    Parser_Expression0(parser, &value, -1);
+                    Parser_Expression0(parser, 0, &value, -1);
 
                     Parser_MakeRKEncodable(parser, &value);
                     Parser_MakeRKEncodable(parser, &key);
@@ -438,7 +446,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                 int reg = listReg + numFields;
 
                 Expression exp;
-                Parser_Expression0(parser, &exp, reg);
+                Parser_Expression0(parser, 0, &exp, reg);
 
                 // Check if this is the last expression in the list.
                 if (Parser_Accept(parser, '}'))
@@ -487,7 +495,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
 }
 
-static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
+static void Parser_Expression5(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
 
     if (Parser_TryTable(parser, dst, regHint))
@@ -525,7 +533,7 @@ static void Parser_Expression5(Parser* parser, Expression* dst, int regHint)
     }
     else if (Parser_Accept(parser, '('))
 	{
-		Parser_Expression0(parser, dst, regHint);
+		Parser_Expression0(parser, flags, dst, regHint);
 		Parser_Expect(parser, ')');
 	}
     else if (Parser_Accept(parser, TokenType_Dots))
@@ -572,10 +580,10 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
 
 }
 
-static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
+static void Parser_Expression4(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
     
-    Parser_Expression5(parser, dst, regHint);
+    Parser_Expression5(parser, flags, dst, regHint);
 
     bool done = false;
 
@@ -613,7 +621,7 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
                 dst->type = EXPRESSION_TABLE;
 
                 Expression key;
-                Parser_Expression0(parser, &key, -1);
+                Parser_Expression0(parser, 0, &key, -1);
 
                 // Table indexing must be done with a constant or a register.
                 Parser_MoveToRegisterOrConstant(parser, &key);
@@ -687,9 +695,9 @@ static void Parser_Expression4(Parser* parser, Expression* dst, int regHint)
 
 }
 
-static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
+static void Parser_ExpressionPow(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
-    Parser_Expression4(parser, dst, regHint);
+    Parser_Expression4(parser, flags, dst, regHint);
 	while (Parser_Accept(parser, '^'))
 	{
 		int op = Parser_GetToken(parser);
@@ -698,16 +706,16 @@ static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_Expression4(parser, &arg2, -1);
+        Parser_Expression4(parser, flags, &arg2, -1);
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
 
-static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
+static void Parser_ExpressionUnary(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
     if (Parser_Accept(parser, TokenType_Not))
     {
-        Parser_ExpressionUnary(parser, dst, regHint);
+        Parser_ExpressionUnary(parser, flags, dst, regHint);
         // Don't generate an extra move if the expression we're negating
         // is already stored in a register (but do move to the hint register
         // if it's not).
@@ -732,7 +740,7 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
             break;
         }
 
-        Parser_ExpressionUnary(parser, dst, regHint);
+        Parser_ExpressionUnary(parser, flags, dst, regHint);
 
         // Perform constant folding.
         if (dst->type == EXPRESSION_NUMBER)
@@ -760,13 +768,13 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
     }
     else
     {
-        Parser_ExpressionPow(parser, dst, regHint);
+        Parser_ExpressionPow(parser, flags, dst, regHint);
     }
 }
 
-static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
+static void Parser_Expression3(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
-    Parser_ExpressionUnary(parser, dst, regHint);
+    Parser_ExpressionUnary(parser, flags, dst, regHint);
 	while (Parser_Accept(parser, '*') ||
            Parser_Accept(parser, '/') ||
            Parser_Accept(parser, '%'))
@@ -777,14 +785,14 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_ExpressionUnary(parser, &arg2, -1);
+        Parser_ExpressionUnary(parser, flags, &arg2, -1);
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
 
-static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
+static void Parser_Expression2(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
-    Parser_Expression3(parser, dst, regHint);
+    Parser_Expression3(parser, flags, dst, regHint);
 	while (Parser_Accept(parser, '+') ||
            Parser_Accept(parser, '-'))
 	{
@@ -794,14 +802,14 @@ static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_Expression3(parser, &arg2, -1);
+        Parser_Expression3(parser, flags, &arg2, -1);
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
 
-static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
+static void Parser_Expression1(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
-    Parser_Expression2(parser, dst, regHint);
+    Parser_Expression2(parser, flags, dst, regHint);
     while ( Parser_Accept(parser, TokenType_Eq) ||
             Parser_Accept(parser, TokenType_Ne) ||
             Parser_Accept(parser, TokenType_Le) ||
@@ -815,15 +823,15 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_Expression2(parser, &arg2, -1);
+        Parser_Expression2(parser, flags, &arg2, -1);
         Parser_EmitComparison(parser, op, dst, regHint, &arg1, &arg2);
     }
 }
 
-static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
+static void Parser_ExpressionLogic(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
 
-    Parser_Expression1(parser, dst, regHint);
+    Parser_Expression1(parser, flags, dst, regHint);
 
     while ( Parser_Accept(parser, TokenType_And) ||
             Parser_Accept(parser, TokenType_Or) )
@@ -832,9 +840,11 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         int op   = Parser_GetToken(parser);
         int cond = (op == TokenType_Or) ? 1 : 0;
 
-        if (!parser->rhs)
+        if (flags & Flag_Control)
         {
-
+            
+            // If a register wasn't specified, we aren't storing the result,
+            // instead we're using it as part of a logical expression.
             // The expression "exp2 and exp2" is roughly generated as:
             //
             // test exp1    ; if true, skip next
@@ -847,7 +857,7 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
             Parser_ConvertToTest(parser, dst, cond, regHint);
 
             Expression arg2;
-            Parser_Expression1(parser, &arg2, regHint);
+            Parser_Expression1(parser, flags, &arg2, regHint);
             Parser_ConvertToTest(parser, &arg2, cond, regHint);
 
             Parser_ChainJump(parser, &arg2, dst);
@@ -857,23 +867,18 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         else
         {
 
-            if (regHint == -1)
-            {
-                regHint = Parser_AllocateRegister(parser);
-            }
-
+            // Since we specified a register, we're storing the result.
             // exp1 = exp2 and exp3
 
-            //
             // testset exp2  
             // jmp label
             // mov exp3
             // label:
 
-            Parser_ConvertToTest(parser, dst, cond, regHint);
+            regHint = Parser_ConvertToTest(parser, dst, cond, regHint);
 
             Expression arg2;
-            Parser_Expression1(parser, &arg2, regHint);
+            Parser_Expression1(parser, flags, &arg2, regHint);
             Parser_MoveToRegister(parser, &arg2, regHint);
 
             Parser_CloseJump(parser, dst);
@@ -885,10 +890,13 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
 
 }
 
-static void Parser_Expression0(Parser* parser, Expression* dst, int regHint)
+/**
+ * The flags is a combination of values from the Flags enum.
+ */
+static void Parser_Expression0(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
     
-    Parser_ExpressionLogic(parser, dst, regHint);
+    Parser_ExpressionLogic(parser, flags, dst, regHint);
 
     if (Parser_Accept(parser, TokenType_Concat))
     {
@@ -903,7 +911,7 @@ static void Parser_Expression0(Parser* parser, Expression* dst, int regHint)
             int reg = Parser_AllocateRegister(parser);
 
             Expression arg;
-            Parser_ExpressionLogic(parser, &arg, reg);
+            Parser_ExpressionLogic(parser, flags, &arg, reg);
 
             // Make sure the result is stored in our consecutive register and
             // free up any temporary registers we used.
@@ -971,7 +979,7 @@ static void Parser_Conditional(Parser* parser)
 
     // Parse the condition to test for the if statement.
     Expression test;
-    Parser_Expression0(parser, &test, -1);
+    Parser_Expression0(parser, Flag_Control, &test, -1);
 
     Parser_Expect(parser, TokenType_Then);
 
@@ -1060,10 +1068,10 @@ static bool Parser_TryReturn(Parser* parser)
 
             if (numResults == 0)
             {
-                // The first result is handleded specially so that if we're only
+                // The first result is handled specially so that if we're only
                 // returning a single argument and it's already in a register we
                 // don't need to move it to the top of the stack.
-                Parser_Expression0(parser, &arg, -1);
+                Parser_Expression0(parser, 0, &arg, -1);
             }
             else
             {
@@ -1078,7 +1086,7 @@ static bool Parser_TryReturn(Parser* parser)
                     reg = arg.index;
                 }
 
-                Parser_Expression0(parser, &arg, reg + numResults);
+                Parser_Expression0(parser, 0, &arg, reg + numResults);
                 Parser_MoveToRegister(parser, &arg, reg + numResults);
                 Parser_SetLastRegister(parser, reg + numResults);
             }
@@ -1198,7 +1206,7 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
         int regHint = Parser_GetRegisterHint(parser, &dst[numValues]);
         
         Expression value;
-        Parser_Expression0(parser, &value, regHint);
+        Parser_Expression0(parser, 0, &value, regHint);
 
         // Check if we've reached the end of the list.
         if (!Parser_Accept(parser, ','))
@@ -1251,7 +1259,7 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
         do
         {
             Expression value;
-            Parser_Expression0(parser, &value, -1);
+            Parser_Expression0(parser, 0, &value, -1);
             // Move to a register so that we get any side effects.
             Parser_MoveToRegister(parser, &value);
         }
@@ -1303,7 +1311,6 @@ static bool Parser_TryLocal(Parser* parser)
 
     if (Parser_Accept(parser, '='))
     {
-        parser->rhs = true;
         Parser_AssignLocals(parser, reg, numVars);
     }
     else
@@ -1359,7 +1366,7 @@ static bool Parser_TryWhile(Parser* parser)
     Parser_BeginLoop(parser, &loop);
 
     Expression test;
-    Parser_Expression0(parser, &test, -1);
+    Parser_Expression0(parser, Flag_Control, &test, -1);
 
     Parser_Expect(parser, TokenType_Do);
 
@@ -1390,7 +1397,7 @@ static bool Parser_TryRepeat(Parser* parser)
     Parser_Block(parser, TokenType_Until);
 
     Expression test;
-    Parser_Expression0(parser, &test, -1);
+    Parser_Expression0(parser, Flag_Control, &test, -1);
     Parser_ConvertToTest(parser, &test);
     Parser_CloseJump(parser, &test, loop);
 
@@ -1429,19 +1436,19 @@ static bool Parser_TryFor(Parser* parser)
 
         // Start value.
         Expression start;
-        Parser_Expression0(parser, &start, internalIndexReg);
+        Parser_Expression0(parser, 0, &start, internalIndexReg);
 
         Parser_Expect(parser, ',');
 
         // End value.
         Expression limit;
-        Parser_Expression0(parser, &limit, limitReg);
+        Parser_Expression0(parser, 0, &limit, limitReg);
 
         // Increment value.
         Expression increment;
         if (Parser_Accept(parser, ','))
         {
-            Parser_Expression0(parser, &increment, incrementReg);
+            Parser_Expression0(parser, 0, &increment, incrementReg);
         }
         else
         {
@@ -1525,8 +1532,6 @@ static bool Parser_TryBreak(Parser* parser)
 static void Parser_Statement(Parser* parser)
 {
 
-    parser->rhs = false;
-
     if (Parser_TryEmpty(parser))
     {
         return;
@@ -1571,7 +1576,7 @@ static void Parser_Statement(Parser* parser)
     // Handle expression statements.
 
     Expression dst[LUAI_MAXASSIGNS];
-    Parser_Expression0(parser, &dst[0], -1);
+    Parser_Expression0(parser, 0, &dst[0], -1);
     
     if (!Parser_ResolveCall(parser, &dst[0], 0))
     {
@@ -1579,7 +1584,7 @@ static void Parser_Statement(Parser* parser)
         int numVars = 1;
         while (numVars < LUAI_MAXASSIGNS && Parser_Accept(parser, ','))
         {
-            Parser_Expression0(parser, &dst[numVars], -1);
+            Parser_Expression0(parser, 0, &dst[numVars], -1);
             ++numVars;
         }
 
@@ -1594,8 +1599,6 @@ static void Parser_Statement(Parser* parser)
         }
 
         Parser_Expect(parser, '=');
-
-        parser->rhs = true;
         Parser_AssignExpressionList(parser, dst, numVars);
 
     }
