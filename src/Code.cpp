@@ -26,6 +26,7 @@ enum Flag
 static void Parser_Block(Parser* parser, int endToken);
 static void Parser_Statement(Parser* parser);
 static void Parser_Expression0(Parser* parser, unsigned long flags, Expression* dst, int regHint);
+static void Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst, int regHint);
 
 /**
  * Attempts to fold the expression opcode arg and store the result in dst.
@@ -240,7 +241,18 @@ static int Parser_Arguments(Parser* parser, bool single = false)
         int reg = Parser_AllocateRegister(parser);
 
         Expression arg;
-        Parser_Expression0(parser, 0, &arg, reg);
+
+        if (single)
+        {
+            // If we're only reading a single argument (i.e. not enclosed in
+            // parenthesis), then we must parse it as a terminal, otherwise an
+            // expression like f 'string' () is parsed incorrectly.
+            Parser_Terminal(parser, 0, &arg, reg);
+        }
+        else
+        {
+            Parser_Expression0(parser, 0, &arg, reg);
+        }
 
         if (!single && Parser_Accept(parser, ')'))
         {
@@ -495,7 +507,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
 }
 
-static void Parser_Expression5(Parser* parser, unsigned long flags, Expression* dst, int regHint)
+static void Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
 
     if (Parser_TryTable(parser, dst, regHint))
@@ -583,65 +595,59 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
 static void Parser_Expression4(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
     
-    Parser_Expression5(parser, flags, dst, regHint);
+    Parser_Terminal(parser, flags, dst, regHint);
 
     bool done = false;
 
-    while (!done)
+    while (Parser_Accept(parser, '.') ||
+           Parser_Accept(parser, '[') ||
+           Parser_Accept(parser, ':'))
     {
 
-        if (Parser_TryFunctionArguments(parser, dst, regHint))
+        int op = Parser_GetToken(parser);
+
+        if (op == '.')
         {
+
+            // Handle table indexing (object form).
+            
+            Parser_Expect(parser, TokenType_Name);
+
+            Parser_MoveToRegister(parser, dst, regHint);
+            dst->type = EXPRESSION_TABLE;
+
+            dst->keyType = EXPRESSION_CONSTANT;
+            dst->key     = Parser_AddConstant( parser, Parser_GetString(parser) );
+
         }
-        else if (Parser_Accept(parser, '.') || Parser_Accept(parser, '['))
+        else if (op == '[')
         {
+            
+            // Handle table indexing (general form).
 
-            int op = Parser_GetToken(parser);
+            Parser_MoveToRegister(parser, dst);
+            dst->type = EXPRESSION_TABLE;
 
-            if (op == '.')
+            Expression key;
+            Parser_Expression0(parser, 0, &key, -1);
+
+            // Table indexing must be done with a constant or a register.
+            Parser_MoveToRegisterOrConstant(parser, &key);
+            if (key.type == EXPRESSION_REGISTER)
             {
-
-                // Handle table indexing (object form).
-                
-                Parser_Expect(parser, TokenType_Name);
-
-                Parser_MoveToRegister(parser, dst, regHint);
-                dst->type = EXPRESSION_TABLE;
-
+                dst->keyType = EXPRESSION_REGISTER;
+                dst->key     = key.index;
+            }
+            else
+            {
                 dst->keyType = EXPRESSION_CONSTANT;
-                dst->key     = Parser_AddConstant( parser, Parser_GetString(parser) );
-
+                dst->key     = key.index;
             }
-            else if (op == '[')
-            {
-                
-                // Handle table indexing (general form).
-
-                Parser_MoveToRegister(parser, dst);
-                dst->type = EXPRESSION_TABLE;
-
-                Expression key;
-                Parser_Expression0(parser, 0, &key, -1);
-
-                // Table indexing must be done with a constant or a register.
-                Parser_MoveToRegisterOrConstant(parser, &key);
-                if (key.type == EXPRESSION_REGISTER)
-                {
-                    dst->keyType = EXPRESSION_REGISTER;
-                    dst->key     = key.index;
-                }
-                else
-                {
-                    dst->keyType = EXPRESSION_CONSTANT;
-                    dst->key     = key.index;
-                }
-                
-                Parser_Expect(parser, ']');
-
-            }
+            
+            Parser_Expect(parser, ']');
 
         }
-        else if (Parser_Accept(parser, ':'))
+        else if (op == ':')
         {
 
             // Handle Foo:Bar()
@@ -686,18 +692,22 @@ static void Parser_Expression4(Parser* parser, unsigned long flags, Expression* 
             }
 
         }
-        else
-        {
-            done = true;
-        }
 
     }
 
 }
 
-static void Parser_ExpressionPow(Parser* parser, unsigned long flags, Expression* dst, int regHint)
+static void Parser_FunctionCall(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
     Parser_Expression4(parser, flags, dst, regHint);
+    while (Parser_TryFunctionArguments(parser, dst, regHint))
+    {
+    }
+}
+
+static void Parser_ExpressionPow(Parser* parser, unsigned long flags, Expression* dst, int regHint)
+{
+    Parser_FunctionCall(parser, flags, dst, regHint);
 	while (Parser_Accept(parser, '^'))
 	{
 		int op = Parser_GetToken(parser);
@@ -706,7 +716,7 @@ static void Parser_ExpressionPow(Parser* parser, unsigned long flags, Expression
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_Expression4(parser, flags, &arg2, -1);
+        Parser_FunctionCall(parser, flags, &arg2, -1);
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }

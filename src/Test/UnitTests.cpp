@@ -1735,6 +1735,26 @@ TEST_FIXTURE(FunctionCallTableArgument, LuaFixture)
 
 }
 
+TEST_FIXTURE(FunctionCallCompund, LuaFixture)
+{
+
+    const char* code =
+        "function f(s)\n"
+        "   a = s\n"
+        "   return function(n) b = n end\n"
+        "end\n"
+        "f 'test' (5)";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tostring(L, -1), "test");
+
+    lua_getglobal(L, "b");
+    CHECK( lua_tonumber(L, -1) == 5 );
+
+}
+
 TEST_FIXTURE(LengthOperator, LuaFixture)
 {
 
@@ -2522,7 +2542,7 @@ TEST_FIXTURE(OrLhs, LuaFixture)
 }
 
 /*
-TEST_FIXTURE(PrefixExp, LuaFixture)
+TEST_FIXTURE(PrefixExp2, LuaFixture)
 {
     // Test that a table constructor followed by an opening parenthesis isn't
     // treated as a function call.
