@@ -16,3 +16,9 @@ Differences from Lua 5.1:
   API:
   - Added lua_setgchook function
   - IO library can be registered with callbacks for custom file system access
+  
+Building
+-------------------------------------------------------------------------------
+
+RocketVM uses premake4 (requires at least version 4.4) to generate build files.
+premake4 is available from http://industriousone.com/premake.
