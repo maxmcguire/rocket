@@ -607,12 +607,16 @@ TEST_FIXTURE(NextTest, LuaFixture)
     lua_pushnumber(L, 3);
     lua_setfield(L, table, "third");
 
+    int top = lua_gettop(L);
+
     lua_pushnil(L);
 
     int count[3] = { 0 };
 
     while (lua_next(L, table))
     {
+
+        CHECK( lua_gettop(L) - top == 2 );
 
         const char* key  = lua_tostring(L, -2);
         lua_Number value = lua_tonumber(L, -1);
@@ -641,6 +645,8 @@ TEST_FIXTURE(NextTest, LuaFixture)
         lua_pop(L, 1);
 
     }
+
+    CHECK( lua_gettop(L) - top == 0 );
 
     // Check each element was iterated exactly once.
     CHECK(count[0] == 1);

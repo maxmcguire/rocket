@@ -804,6 +804,7 @@ int lua_next(lua_State* L, int index)
     const Value* value = Table_Next(table->table, key);
     if (value == NULL)
     {
+        Pop(L, 1);
         return 0;
     }
     PushValue(L, value);
