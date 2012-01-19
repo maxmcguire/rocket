@@ -592,122 +592,124 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
 
 }
 
+static bool Parser_TryIndex(Parser* parser, unsigned long flags, Expression* dst, int regHint)
+{
+
+    if (!Parser_Accept(parser, '.') &&
+        !Parser_Accept(parser, '[') &&
+        !Parser_Accept(parser, ':'))
+    {
+        return false;
+    }
+
+
+    int op = Parser_GetToken(parser);
+
+    if (op == '.')
+    {
+
+        // Handle table indexing (object form).
+        
+        Parser_Expect(parser, TokenType_Name);
+
+        Parser_MoveToRegister(parser, dst, regHint);
+        dst->type = EXPRESSION_TABLE;
+
+        dst->keyType = EXPRESSION_CONSTANT;
+        dst->key     = Parser_AddConstant( parser, Parser_GetString(parser) );
+
+    }
+    else if (op == '[')
+    {
+        
+        // Handle table indexing (general form).
+
+        Parser_MoveToRegister(parser, dst);
+        dst->type = EXPRESSION_TABLE;
+
+        Expression key;
+        Parser_Expression0(parser, 0, &key, -1);
+
+        // Table indexing must be done with a constant or a register.
+        Parser_MoveToRegisterOrConstant(parser, &key);
+        if (key.type == EXPRESSION_REGISTER)
+        {
+            dst->keyType = EXPRESSION_REGISTER;
+            dst->key     = key.index;
+        }
+        else
+        {
+            dst->keyType = EXPRESSION_CONSTANT;
+            dst->key     = key.index;
+        }
+        
+        Parser_Expect(parser, ']');
+
+    }
+    else if (op == ':')
+    {
+
+        // Handle Foo:Bar()
+  
+        Parser_Expect(parser, TokenType_Name);
+        Parser_MoveToRegister(parser, dst, -1);
+
+        int reg = regHint;
+        if (reg == -1)
+        {
+            reg = Parser_AllocateRegister(parser);
+        }
+
+        Expression method;
+        method.index = Parser_AddConstant( parser, Parser_GetString(parser) );
+        method.type  = EXPRESSION_CONSTANT;
+        Parser_MakeRKEncodable(parser, &method);
+
+        Parser_EmitABC(parser, Opcode_Self, reg, dst->index, Parser_EncodeRK(parser, &method));
+
+        // This is a bit of a hack. Since TryFunctionArguments will put the
+        // expression onto the top of the stack, we just set it up to be a
+        // register since our Self opcode has already setup the stack.
+        Parser_SetLastRegister(parser, reg + 1);
+        dst->type  = EXPRESSION_REGISTER;
+        dst->index = reg + 1;
+
+        if (!Parser_TryFunctionArguments(parser, dst, -1))
+        {
+            Lexer_Error(parser->lexer, "function arguments expected");
+        }
+        
+        assert(dst->type == EXPRESSION_CALL);
+
+        // Since we have the extra self paramter, we need to adjust the register
+        // where the function is located.
+        dst->index = reg;
+        if (dst->numArgs != -1)
+        {
+            // If this isn't a vararg function we need to count the self parameter.
+            ++dst->numArgs;
+        }
+
+    }
+
+    return true;
+
+}
+
 static void Parser_Expression4(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
     
     Parser_Terminal(parser, flags, dst, regHint);
 
-    bool done = false;
-
-    while (Parser_Accept(parser, '.') ||
-           Parser_Accept(parser, '[') ||
-           Parser_Accept(parser, ':'))
-    {
-
-        int op = Parser_GetToken(parser);
-
-        if (op == '.')
-        {
-
-            // Handle table indexing (object form).
-            
-            Parser_Expect(parser, TokenType_Name);
-
-            Parser_MoveToRegister(parser, dst, regHint);
-            dst->type = EXPRESSION_TABLE;
-
-            dst->keyType = EXPRESSION_CONSTANT;
-            dst->key     = Parser_AddConstant( parser, Parser_GetString(parser) );
-
-        }
-        else if (op == '[')
-        {
-            
-            // Handle table indexing (general form).
-
-            Parser_MoveToRegister(parser, dst);
-            dst->type = EXPRESSION_TABLE;
-
-            Expression key;
-            Parser_Expression0(parser, 0, &key, -1);
-
-            // Table indexing must be done with a constant or a register.
-            Parser_MoveToRegisterOrConstant(parser, &key);
-            if (key.type == EXPRESSION_REGISTER)
-            {
-                dst->keyType = EXPRESSION_REGISTER;
-                dst->key     = key.index;
-            }
-            else
-            {
-                dst->keyType = EXPRESSION_CONSTANT;
-                dst->key     = key.index;
-            }
-            
-            Parser_Expect(parser, ']');
-
-        }
-        else if (op == ':')
-        {
-
-            // Handle Foo:Bar()
-      
-            Parser_Expect(parser, TokenType_Name);
-            Parser_MoveToRegister(parser, dst, -1);
-
-            int reg = regHint;
-            if (reg == -1)
-            {
-                reg = Parser_AllocateRegister(parser);
-            }
-
-            Expression method;
-            method.index = Parser_AddConstant( parser, Parser_GetString(parser) );
-            method.type  = EXPRESSION_CONSTANT;
-            Parser_MakeRKEncodable(parser, &method);
-
-            Parser_EmitABC(parser, Opcode_Self, reg, dst->index, Parser_EncodeRK(parser, &method));
-
-            // This is a bit of a hack. Since TryFunctionArguments will put the
-            // expression onto the top of the stack, we just set it up to be a
-            // register since our Self opcode has already setup the stack.
-            Parser_SetLastRegister(parser, reg + 1);
-            dst->type  = EXPRESSION_REGISTER;
-            dst->index = reg + 1;
-
-            if (!Parser_TryFunctionArguments(parser, dst, -1))
-            {
-                Lexer_Error(parser->lexer, "function arguments expected");
-            }
-            
-            assert(dst->type == EXPRESSION_CALL);
-
-            // Since we have the extra self paramter, we need to adjust the register
-            // where the function is located.
-            dst->index = reg;
-            if (dst->numArgs != -1)
-            {
-                // If this isn't a vararg function we need to count the self parameter.
-                ++dst->numArgs;
-            }
-
-        }
-
-    }
-
-}
-
-static void Parser_FunctionCall(Parser* parser, unsigned long flags, Expression* dst, int regHint)
-{
-    Parser_Expression4(parser, flags, dst, regHint);
-    while (Parser_TryFunctionArguments(parser, dst, regHint))
+    while (Parser_TryIndex(parser, flags, dst, regHint) || Parser_TryFunctionArguments(parser, dst, regHint))
     {
     }
+
 }
 
 static void Parser_ExpressionPow(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
-    Parser_FunctionCall(parser, flags, dst, regHint);
+    Parser_Expression4(parser, flags, dst, regHint);
 	while (Parser_Accept(parser, '^'))
 	{
 		int op = Parser_GetToken(parser);
@@ -716,7 +718,7 @@ static void Parser_ExpressionPow(Parser* parser, unsigned long flags, Expression
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_FunctionCall(parser, flags, &arg2, -1);
+        Parser_Expression4(parser, flags, &arg2, -1);
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
