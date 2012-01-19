@@ -214,6 +214,20 @@ Opcode_LoadBool::
     
 ;-------------------------------------------------------------------------------    
 Opcode_LoadNil::
+
+    UNPACK_AB
+
+    ; eax = &stackBase[a] 
+    lea         eax, DWORD PTR [ esi + ecx * sizeof_Value ]
+    
+    ; ecx = b - a
+    sub         edx, ecx
+    mov         ecx, edx
+
+LoadNil_Loop:
+    mov         DWORD PTR [ eax + ecx * sizeof_Value ], tag_Nil
+    loopnz      LoadNil_Loop
+
     DISPATCH
     
 ;-------------------------------------------------------------------------------    
@@ -413,7 +427,13 @@ Opcode_ForPrep::
 Opcode_TForLoop::
     DISPATCH
 
+;-------------------------------------------------------------------------------
 Opcode_SetList::
+
+    UNPACK_ABC
+
+    ; TODO    
+
     DISPATCH
 
 Opcode_Close::

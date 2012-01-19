@@ -1,3 +1,5 @@
+buildmasm = true
+
 solution "Rocket"
     configurations { "Debug", "Release" }
     location "build"
@@ -63,4 +65,4 @@ project "Test"
     configuration "Release"
         defines { "NDEBUG" }
         flags { "Optimize" }     
-        targetdir "bin/release"       
+        targetdir "bin/release"
