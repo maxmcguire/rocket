@@ -3,7 +3,7 @@ buildmasm = true
 solution "Rocket"
     configurations { "Debug", "Release" }
     location "build"
-    defines { "_CRT_SECURE_NO_WARNINGS" }
+    defines { "_CRT_SECURE_NO_WARNINGS", "_CRT_SECURE_NO_DEPRECATE" }
     vpaths { 
         ["Header Files"] = "**.h",
         ["Source Files"] = { "**.cpp", "**.c", "**.asm" },
