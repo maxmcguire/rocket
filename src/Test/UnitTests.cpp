@@ -778,12 +778,22 @@ TEST_FIXTURE(NewMetatable, LuaFixture)
 
 }
 
+TEST_FIXTURE(DefaultEnvTable, LuaFixture)
+{
+    // Check that the globals table is used as the default environment.
+    lua_newuserdata(L, 10);
+    lua_getfenv(L, -1);
+    CHECK( lua_istable(L, -1) );
+    lua_pushvalue(L, LUA_GLOBALSINDEX);
+    CHECK( lua_rawequal(L, -1, -2) );
+    lua_pop(L, 3);
+}
+
 TEST_FIXTURE(EnvTable, LuaFixture)
 {
 
     lua_newtable(L);
     int env = lua_gettop(L);
-
     int top = lua_gettop(L);
 
     // Can't set the environment table on a table.

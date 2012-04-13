@@ -99,6 +99,18 @@ static Value* GetValueForIndex(lua_State* L, int index)
     return result;
 }
 
+static Table* GetCurrentEnvironment(lua_State *L)
+{
+    Closure* closure = Vm_GetCurrentFunction(L);
+    if (closure != NULL)
+    {
+        return closure->env;
+    }
+    // Use the global table as the environment when we're not executing a
+    // function.
+    return L->globals.table;
+}
+
 lua_State* lua_newstate(lua_Alloc alloc, void* userdata)
 {
     lua_State* L = State_Create(alloc, userdata);
@@ -181,7 +193,9 @@ static int Parse(lua_State* L)
 
     assert(prototype != NULL);
 
-    Closure* closure = Closure_Create(L, prototype);
+    Table* env = GetCurrentEnvironment(L);
+
+    Closure* closure = Closure_Create(L, prototype, env);
     PushClosure(L, closure);
 
     return 1;
@@ -286,7 +300,8 @@ LUA_API const char* lua_pushvfstring(lua_State *L, const char *fmt, va_list argp
 
 LUA_API void lua_pushcclosure(lua_State *L, lua_CFunction f, int n)
 {
-    Closure* closure = Closure_Create(L, f, L->stackTop - n, n);
+    Table* env = GetCurrentEnvironment(L);
+    Closure* closure = Closure_Create(L, f, L->stackTop - n, n, env);
     Pop(L, n);
     PushClosure(L, closure);
 }
@@ -814,7 +829,8 @@ int lua_next(lua_State* L, int index)
 
 void* lua_newuserdata(lua_State* L, size_t size)
 {
-    UserData* userData = UserData_Create(L, size);
+    Table* env = GetCurrentEnvironment(L);
+    UserData* userData = UserData_Create(L, size, env);
     PushUserData(L, userData);
     return UserData_GetData(userData);
 }
@@ -859,8 +875,11 @@ int lua_setfenv(lua_State *L, int index)
 {
     Value* object = GetValueForIndex(L, index);
     Value* env = GetValueForIndex(L, -1);
+    
     luai_apicheck(L, Value_GetIsTable(env) );
+
     int result = Value_SetEnv(L, object, env->table);
+
     Pop(L, 1);
     return result;
 }

@@ -23,7 +23,7 @@ struct UserData : public Gc_Object
     Table*      env;    // Environment table.
 };
 
-UserData* UserData_Create(lua_State* L, size_t size);
+UserData* UserData_Create(lua_State* L, size_t size, Table* env);
 
 inline void* UserData_GetData(UserData* userData)
     { return (void*)(userData + 1); }

@@ -92,8 +92,9 @@ Prototype* Prototype_Create(lua_State* L, const char* data, size_t length, const
  */
 void Prototype_Destroy(lua_State* L, Prototype* prototype);
 
-extern "C" Closure* Closure_Create(lua_State* L, Prototype* prototype);
-Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues);
+extern "C" Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env);
+Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues, Table* env);
+
 void Closure_Destroy(lua_State* L, Closure* closure);
 
 // Creates a new open up value, or returns an existing one matching the

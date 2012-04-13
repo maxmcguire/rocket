@@ -46,6 +46,17 @@ static int GetCurrentLine(CallFrame* frame)
     return prototype->sourceLine[instruction];
 }
 
+Closure* Vm_GetCurrentFunction(lua_State* L)
+{
+    // The first element on the stack represents calling from C and has no
+    // closure.
+    if (L->callStackTop - 1 > L->callStackBase)
+    {
+        return (L->callStackTop - 1)->function->closure;
+    }
+    return NULL;    
+}
+
 void Vm_Error(lua_State* L, const char* format, ...)
 {
 
@@ -387,34 +398,32 @@ static lua_Number GetValueLength(lua_State* L, const Value* value)
     return 0.0;
 }
 
-
-
-static lua_Number Number_Add(lua_Number a, lua_Number b)
+static inline lua_Number Number_Add(lua_Number a, lua_Number b)
 {
     return luai_numadd(a, b);
 }
 
-static lua_Number Number_Sub(lua_Number a, lua_Number b)
+static inline lua_Number Number_Sub(lua_Number a, lua_Number b)
 {
     return luai_numsub(a, b);
 }
 
-static lua_Number Number_Mul(lua_Number a, lua_Number b)
+static inline lua_Number Number_Mul(lua_Number a, lua_Number b)
 {
     return luai_nummul(a, b);
 }
 
-static lua_Number Number_Div(lua_Number a, lua_Number b)
+static inline lua_Number Number_Div(lua_Number a, lua_Number b)
 {
     return luai_numdiv(a, b);
 }
 
-static lua_Number Number_Mod(lua_Number a, lua_Number b)
+static inline lua_Number Number_Mod(lua_Number a, lua_Number b)
 {
     return luai_nummod(a, b);
 }
 
-static lua_Number Number_Pow(lua_Number a, lua_Number b)
+static inline lua_Number Number_Pow(lua_Number a, lua_Number b)
 {
     return luai_numpow(a, b);
 }
@@ -778,7 +787,7 @@ static int Execute(lua_State* L, int numArgs)
                 int bx = GET_Bx(inst);
 
                 Prototype* p = prototype->prototype[bx];
-                Closure* c = Closure_Create(L, p);
+                Closure* c = Closure_Create(L, p, frame->function->closure->env);
 
                 for (int i = 0; i < p->numUpValues; ++i)
                 {

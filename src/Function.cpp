@@ -289,15 +289,17 @@ void Prototype_Destroy(lua_State* L, Prototype* prototype)
     Free(L, prototype, size);
 }
 
-Closure* Closure_Create(lua_State* L, Prototype* prototype)
+Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env)
 {
+
+    assert(env != NULL);
 
     size_t size = sizeof(Closure);
     size += prototype->numUpValues * sizeof(UpValue*);
 
     Closure* closure = static_cast<Closure*>(Gc_AllocateObject(L, LUA_TFUNCTION, size));
     
-    closure->env = NULL;
+    closure->env = env;
     closure->c = false;
     closure->lclosure.prototype = prototype;
 
@@ -309,15 +311,17 @@ Closure* Closure_Create(lua_State* L, Prototype* prototype)
 
 }
 
-Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues)
+Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues, Table* env)
 {
+
+    assert(env != NULL);
 
     size_t size = sizeof(Closure);
     size += numUpValues * sizeof(Value);
 
     Closure* closure = static_cast<Closure*>(Gc_AllocateObject(L, LUA_TFUNCTION, size));
 
-    closure->env = NULL;
+    closure->env = env;
     closure->c = true;
     closure->cclosure.function      = function;
 
