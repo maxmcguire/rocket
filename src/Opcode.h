@@ -59,7 +59,8 @@ enum Opcode
     Opcode_SetList      = 34,
     Opcode_Close        = 35,
     Opcode_Closure      = 36,
-    Opcode_VarArg       = 37
+    Opcode_VarArg       = 37,
+    Opcode_GetTableRef  = 38,
 };
 
 const char* Opcode_GetAsText(Opcode opcode);

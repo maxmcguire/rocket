@@ -132,9 +132,21 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
 
     // Store the tag method names so we don't need to create new strings
     // every time we want to access them.
-    const char* tagMethodName[] = { "__index", "__newindex", "__call" };
+    const char* tagMethodName[] =
+        {
+            "__index",
+            "__newindex",
+            "__call",
+            "__add",
+            "__sub",
+            "__mul",
+            "__div",
+            "__mod",
+            "__pow",
+        };
     for (int i = 0; i < TagMethod_NumMethods; ++i)
     {
+        assert( i < sizeof(tagMethodName) / sizeof(const char*) );
         L->tagMethodName[i] = String_Create(L, tagMethodName[i]);
     }
 

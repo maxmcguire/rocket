@@ -47,6 +47,12 @@ enum TagMethod
     TagMethod_Index     = 0,
     TagMethod_NewIndex  = 1,
     TagMethod_Call      = 2,
+    TagMethod_Add       = 3,
+    TagMethod_Sub       = 4,
+    TagMethod_Mul       = 5,
+    TagMethod_Div       = 6,
+    TagMethod_Mod       = 7,
+    TagMethod_Pow       = 8,
     TagMethod_NumMethods,
 };
 

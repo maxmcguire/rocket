@@ -466,6 +466,58 @@ TEST_FIXTURE(CallMetamethod, LuaFixture)
 
 }
 
+TEST_FIXTURE(AddMetamethod, LuaFixture)
+{
+
+    struct Locals
+    {
+        static int Op(lua_State* L)
+        {
+            Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
+            if (lua_gettop(L) == 2
+                && lua_touserdata(L, 1) == locals->userData
+                && lua_tonumber(L, 2) == 5.0)
+            {
+                locals->success = true;
+            }
+            lua_pushstring(L, "result");
+            return 1;
+        }
+        void*   userData;
+        bool    success;
+    };
+
+    Locals locals;
+    locals.success = false;
+    
+    // Test the __add metamethod.
+
+    locals.userData = lua_newuserdata(L, 10);
+    int object = lua_gettop(L);
+
+    lua_newtable(L);
+    int mt = lua_gettop(L);
+
+    lua_pushlightuserdata(L, &locals);
+    lua_pushcclosure(L, Locals::Op, 1);
+    lua_setfield(L, mt, "__add");
+
+    lua_setmetatable(L, object);
+
+    lua_pushvalue(L, object);
+    lua_setglobal(L, "ud");
+
+    const char* code = "result = ud + 5";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "result" );
+
+    CHECK( locals.success );
+
+}
+
 TEST_FIXTURE(RawGetITest, LuaFixture)
 {
 

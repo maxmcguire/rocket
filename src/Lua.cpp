@@ -332,7 +332,7 @@ void lua_gettable(lua_State *L, int index)
 {
     Value* key   = GetValueForIndex( L, -1 );
     Value* table = GetValueForIndex( L, index );
-    Vm_GetTable(L, table, key, L->stackTop - 1);
+    Vm_GetTable(L, table, key, L->stackTop - 1, false);
 }
 
 void lua_getfield(lua_State *L, int index, const char* name)
@@ -340,7 +340,7 @@ void lua_getfield(lua_State *L, int index, const char* name)
     Value key;
     SetValue( &key, String_Create(L, name, strlen(name)) );
     Value* table = GetValueForIndex( L, index );
-    Vm_GetTable(L, table, &key, L->stackTop);
+    Vm_GetTable(L, table, &key, L->stackTop, false);
     ++L->stackTop;
 }
 
@@ -367,11 +367,11 @@ int lua_isuserdata(lua_State* L, int index)
 
 LUA_API lua_Number lua_tonumber(lua_State *L, int index)
 {
-    // TODO: Need to handle cooercion from a string.
+    lua_Number result;
     const Value* value = GetValueForIndex(L, index);
-    if (Value_GetIsNumber(value))
+    if (Vm_GetNumber(value, &result))
     {
-        return value->number;
+        return result;
     }
     return 0.0;
 }
@@ -1006,7 +1006,6 @@ LUA_API void lua_xmove(lua_State* from, lua_State* to, int n)
 LUA_API const char* lua_getlocal(lua_State* L, const lua_Debug* ar, int n)
 {
     // Not yet implemented.
-    assert(0);
     return 0;
 }
 

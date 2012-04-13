@@ -131,6 +131,17 @@ static Value* GetTagMethod(lua_State* L, const Value* value, TagMethod method)
     return NULL;
 }
 
+/** Selects the tag method to used based on the two arguments to a binary operation. */
+static Value* GetBinaryTagMethod(lua_State* L, const Value* arg1, const Value* arg2, TagMethod method)
+{
+    Value* result = GetTagMethod(L, arg1, method);
+    if (result == NULL)
+    {
+        result = GetTagMethod(L, arg2, method);
+    }
+    return result;
+}
+
 static void CallTagMethod2Result(lua_State* L, const Value* method, const Value* arg1, const Value* arg2, Value* result)
 {
     PushValue(L, method);
@@ -148,6 +159,17 @@ static void CallTagMethod3(lua_State* L, const Value* method, const Value* arg1,
     PushValue(L, arg2);
     PushValue(L, arg3);
     Vm_Call(L, L->stackTop - 4, 3, 0);
+}
+
+static void CallTagMethod3Result(lua_State* L, const Value* method, const Value* arg1, const Value* arg2, const Value* arg3, Value* result)
+{
+    PushValue(L, method);
+    PushValue(L, arg1);
+    PushValue(L, arg2);
+    PushValue(L, arg3);
+    Vm_Call(L, L->stackTop - 4, 3, 1);
+    *result = *(L->stackTop - 1);
+    Pop(L, 1);
 }
 
 void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
@@ -200,7 +222,7 @@ void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
 
 }
 
-void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst)
+void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst, bool ref)
 {
     for (int i = 0; i < MAXTAGLOOP; ++i)
     {
@@ -227,7 +249,9 @@ void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst)
         }
         if (Value_GetIsFunction(method))
         {
-            CallTagMethod2Result(L, method, value, key, dst);
+            Value refValue;
+            SetValue(&refValue, ref);
+            CallTagMethod3Result(L, method, value, key, &refValue, dst);
             return;
         }
         else
@@ -241,7 +265,7 @@ void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst)
 
 void Vm_GetGlobal(lua_State* L, const Value* key, Value* dst)
 {
-    Vm_GetTable(L, &L->globals, key, dst);
+    Vm_GetTable(L, &L->globals, key, dst, false);
 }
 
 void Vm_SetGlobal(lua_State* L, Value* key, Value* value)
@@ -339,6 +363,17 @@ const char* GetString(const Value* value)
     return NULL;
 }
 
+bool Vm_GetNumber(const Value* value, lua_Number* result)
+{
+    if (Value_GetIsNumber(value))
+    {
+        *result = value->number;
+        return true;
+    }
+    // TODO: Need to handle cooercion from a string.
+    return false;
+}
+
 static lua_Number GetValueLength(lua_State* L, const Value* value)
 {
     if (Value_GetIsString(value))
@@ -353,9 +388,66 @@ static lua_Number GetValueLength(lua_State* L, const Value* value)
 }
 
 
+
+static lua_Number Number_Add(lua_Number a, lua_Number b)
+{
+    return luai_numadd(a, b);
+}
+
+static lua_Number Number_Sub(lua_Number a, lua_Number b)
+{
+    return luai_numsub(a, b);
+}
+
+static lua_Number Number_Mul(lua_Number a, lua_Number b)
+{
+    return luai_nummul(a, b);
+}
+
+static lua_Number Number_Div(lua_Number a, lua_Number b)
+{
+    return luai_numdiv(a, b);
+}
+
+static lua_Number Number_Mod(lua_Number a, lua_Number b)
+{
+    return luai_nummod(a, b);
+}
+
+static lua_Number Number_Pow(lua_Number a, lua_Number b)
+{
+    return luai_numpow(a, b);
+}
+
+/**
+ * Performs an arithmetic operation between two values calling a tag method if
+ * necessary.
+ */
+template <lua_Number (*Op)(lua_Number, lua_Number), TagMethod tag>
+static void Arithmetic(lua_State* L, Value* dst, const Value* arg1, const Value* arg2)
+{
+    lua_Number a, b;
+    if (Vm_GetNumber(arg1, &a) && Vm_GetNumber(arg2, &b))
+    {
+        SetValue(dst, Op(a, b));
+    }
+    else
+    {
+        Value* method = GetBinaryTagMethod(L, arg1, arg2, tag);
+        if (method == NULL)
+        {
+            ArithmeticError(L, arg1, arg2);
+        }
+        CallTagMethod2Result(L, method, arg1, arg2, dst);
+    }
+    
+}
+
 extern "C" int Vm_Execute(lua_State* L, LClosure* closure);
 
-// Executes the function on the top of the call stack.
+/**
+ * Executes the function on the top of the call stack.
+ */
 static int Execute(lua_State* L, int numArgs)
 {
 
@@ -368,20 +460,6 @@ static int Execute(lua_State* L, int numArgs)
     }
     */
 
-    // Form of arithmetic operators.
-    #define ARITHMETIC(dst, arg1, arg2, op)                                     \
-        if (Value_GetIsNumber((arg1)) && Value_GetIsNumber((arg2)))             \
-        {                                                                       \
-            lua_Number a = (arg1)->number;                                      \
-            lua_Number b = (arg2)->number;                                      \
-            (dst)->number = op(a, b);                                           \
-        }                                                                       \
-        else                                                                    \
-        {                                                                       \
-            frame->ip = ip;                                                     \
-            ArithmeticError(L, arg1, arg2);                                     \
-        }
-
     // Resolves a pseudoindex into a constant or a s5tack value.
     #define RESOLVE_RK(c)   \
         ((c) & 256) ? &constant[(c) & 255] : &stackBase[(c)]
@@ -390,6 +468,21 @@ static int Execute(lua_State* L, int numArgs)
     // wrapped in this macro which synchronizes the cached local variables.
     #define PROTECT(x) \
         frame->ip = ip; { x; }
+
+    // Form of arithmetic operators.
+    #define ARITHMETIC(dst, arg1, arg2, op, tag)                                \
+        if (Value_GetIsNumber((arg1)) && Value_GetIsNumber((arg2)))             \
+        {                                                                       \
+            lua_Number a = (arg1)->number;                                      \
+            lua_Number b = (arg2)->number;                                      \
+            (dst)->number = op(a, b);                                           \
+        }                                                                       \
+        else                                                                    \
+        {                                                                       \
+            PROTECT(                                                            \
+                (Arithmetic<op, tag>(L, dst, arg1, arg2));                      \
+            )                                                                   \
+        }
 
     CallFrame* frame = State_GetCallFrame(L);
 
@@ -453,7 +546,7 @@ static int Execute(lua_State* L, int numArgs)
                     int b = GET_B(inst);
                     const Value* key = RESOLVE_RK( GET_C(inst) );
                     stackBase[a + 1] = stackBase[b];
-                    Vm_GetTable(L, &stackBase[b], key, &stackBase[a]);
+                    Vm_GetTable(L, &stackBase[b], key, &stackBase[a], false);
                 )
             }
             break;
@@ -502,7 +595,17 @@ static int Execute(lua_State* L, int numArgs)
                     int b = GET_B(inst);
                     const Value* table = &stackBase[b];
                     const Value* key   = RESOLVE_RK( GET_C(inst) );
-                    Vm_GetTable(L, table, key, &L->stackBase[a]);
+                    Vm_GetTable(L, table, key, &L->stackBase[a], false);
+                )
+            }
+            break;
+        case Opcode_GetTableRef:
+            {
+                PROTECT(
+                    int b = GET_B(inst);
+                    const Value* table = &stackBase[b];
+                    const Value* key   = RESOLVE_RK( GET_C(inst) );
+                    Vm_GetTable(L, table, key, &L->stackBase[a], true);
                 )
             }
             break;
@@ -575,7 +678,7 @@ static int Execute(lua_State* L, int numArgs)
                 Value* dst         = &stackBase[a];
                 const Value* arg1  = RESOLVE_RK( GET_B(inst) );
                 const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, luai_numadd );
+                ARITHMETIC( dst, arg1, arg2, Number_Add, TagMethod_Add );
             }
             break;
         case Opcode_Sub:
@@ -583,7 +686,7 @@ static int Execute(lua_State* L, int numArgs)
                 Value* dst         = &stackBase[a];
                 const Value* arg1  = RESOLVE_RK( GET_B(inst) );
                 const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, luai_numsub );
+                ARITHMETIC( dst, arg1, arg2, Number_Sub, TagMethod_Sub );
             }
             break;
         case Opcode_Mul:
@@ -591,7 +694,7 @@ static int Execute(lua_State* L, int numArgs)
                 Value* dst         = &stackBase[a];
                 const Value* arg1  = RESOLVE_RK( GET_B(inst) );
                 const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, luai_nummul );
+                ARITHMETIC( dst, arg1, arg2, Number_Mul, TagMethod_Mul );
             }
             break;
         case Opcode_Div:
@@ -599,7 +702,7 @@ static int Execute(lua_State* L, int numArgs)
                 Value* dst         = &stackBase[a];
                 const Value* arg1  = RESOLVE_RK( GET_B(inst) );
                 const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, luai_numdiv );
+                ARITHMETIC( dst, arg1, arg2, Number_Div, TagMethod_Div );
             }
             break;
         case Opcode_Mod:
@@ -607,7 +710,7 @@ static int Execute(lua_State* L, int numArgs)
                 Value* dst         = &stackBase[a];
                 const Value* arg1  = RESOLVE_RK( GET_B(inst) );
                 const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, luai_nummod );
+                ARITHMETIC( dst, arg1, arg2, Number_Mod, TagMethod_Mod );
             }
             break;
         case Opcode_Pow:
@@ -615,7 +718,7 @@ static int Execute(lua_State* L, int numArgs)
                 Value* dst         = &stackBase[a];
                 const Value* arg1  = RESOLVE_RK( GET_B(inst) );
                 const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, luai_numpow );
+                ARITHMETIC( dst, arg1, arg2, Number_Pow, TagMethod_Pow );
             }
             break;
         case Opcode_Unm:
