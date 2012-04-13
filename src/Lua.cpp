@@ -692,7 +692,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
         {
         case 'n':
             ar->name            = NULL;
-            ar->namewhat        = NULL;
+            ar->namewhat        = "";
             break;
         case 'S':
             ar->source          = NULL;
