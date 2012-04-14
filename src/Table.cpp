@@ -267,12 +267,13 @@ static bool Table_Remove(Table* table, const Value* key)
         {
             *node = *nextNode;
             SetNil(&nextNode->key);
-            assert(nextNode->next == NULL);
+            nextNode->next = NULL;
         }
         else
         {
             SetNil(&node->key);
         }
+
     }
     else
     {
