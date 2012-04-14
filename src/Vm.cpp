@@ -824,8 +824,15 @@ static int Execute(lua_State* L, int numArgs)
         case Opcode_ForLoop:
             {
                 Value* iterator = &stackBase[a];
-                iterator->number += stackBase[a + 2].number;
-                if (iterator->number <= stackBase[a + 1].number)
+                
+                lua_Number step  = stackBase[a + 2].number;
+                lua_Number limit = stackBase[a + 1].number;
+                
+                iterator->number += step;
+
+                // We need to alter the end test based on whether or not the step
+                // is positive or negative.
+                if (luai_numlt(0, step) ? luai_numle(iterator->number, limit) : luai_numle(limit, iterator->number))
                 {
                     int sbx = GET_sBx(inst);
                     ip += sbx;

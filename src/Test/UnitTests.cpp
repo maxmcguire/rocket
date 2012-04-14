@@ -1659,6 +1659,27 @@ TEST_FIXTURE(ForLoop4, LuaFixture)
 
 }
 
+TEST_FIXTURE(ForLoop5, LuaFixture)
+{
+
+    const char* code = 
+        "index = 0\n"
+        "for i = 9,0,-1 do\n"
+        "  index = index + 1\n"
+        "end";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "index");
+    CHECK( lua_type(L, -1) == LUA_TNUMBER );
+    CHECK( lua_tointeger(L, -1) == 10 );
+
+    // The index for the loop shouldn't be in the global space.
+    lua_getglobal(L, "i");
+    CHECK( lua_isnil(L, -1) != 0 );
+
+}
+
 TEST_FIXTURE(RepeatLoop, LuaFixture)
 {
 
