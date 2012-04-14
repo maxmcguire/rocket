@@ -480,8 +480,8 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                     {
                         // We have a maximum number of fields to set with a single setlist
                         // opcode, so dispatch now.
-                        int block = (listSize + LFIELDS_PER_FLUSH - 1) / LFIELDS_PER_FLUSH;
-                        Parser_EmitABC(parser, Opcode_SetList,  dst->index, numFields, block);
+                        int block = (listSize - 1) / LFIELDS_PER_FLUSH;
+                        Parser_EmitABC(parser, Opcode_SetList,  dst->index, numFields, block + 1);
                         numFields = 0;
                     }
                 }
@@ -497,10 +497,10 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
     Instruction inst = Parser_EncodeABC(Opcode_NewTable, dst->index, listSize, hashSize);
     Parser_UpdateInstruction( parser, start, inst );
 
-    if (numFields > 0)
+    if (numFields > 0 || varArg)
     {
-        int block = (listSize + LFIELDS_PER_FLUSH - 1) / LFIELDS_PER_FLUSH;
-        Parser_EmitABC(parser, Opcode_SetList,  dst->index, varArg ? 0 : numFields, block);
+        int block = (listSize - 1) / LFIELDS_PER_FLUSH;
+        Parser_EmitABC(parser, Opcode_SetList,  dst->index, varArg ? 0 : numFields, block + 1);
     }
 
     return true;
