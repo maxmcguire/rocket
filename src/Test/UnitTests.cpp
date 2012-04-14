@@ -1252,7 +1252,7 @@ TEST_FIXTURE(TableConstructorVarArg, LuaFixture)
 
 }
 
-TEST_FIXTURE(TableConstructorFunction, LuaFixture)
+TEST_FIXTURE(TableConstructorFunction1, LuaFixture)
 {
 
     const char* code =
@@ -1285,6 +1285,24 @@ TEST_FIXTURE(TableConstructorFunction, LuaFixture)
     CHECK( lua_isstring(L, -1) );
     CHECK( strcmp(lua_tostring(L, -1), "three") == 0 );
     lua_pop(L, 1);
+
+}
+
+
+TEST_FIXTURE(TableConstructorFunction2, LuaFixture)
+{
+
+    const char* code =
+        "function f()\n"
+        "  return 'success'\n"
+        "end\n"
+        "t = { f('test') }";
+
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "t");
+    lua_rawgeti(L, -1, 1);
+    CHECK_EQ( lua_tostring(L, -1), "success" );
 
 }
 
