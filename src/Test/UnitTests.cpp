@@ -1374,6 +1374,19 @@ TEST_FIXTURE(ReturnEmpty, LuaFixture)
 
 }
 
+TEST_FIXTURE(ReturnTopLevel, LuaFixture)
+{
+
+    const char* code =
+        "return 'result'";
+
+    CHECK( luaL_loadstring(L, code) == 0);
+    CHECK( lua_pcall(L, 0, 1, 0) == 0);
+    CHECK_EQ( lua_tostring(L, -1), "result" );
+    lua_pop(L, 1);
+
+}
+
 TEST_FIXTURE(FunctionStringArgument, LuaFixture)
 {
 
