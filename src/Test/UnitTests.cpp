@@ -2366,7 +2366,7 @@ TEST_FIXTURE(ContinuedString, LuaFixture)
 
 }
 
-TEST_FIXTURE(LongString, LuaFixture)
+TEST_FIXTURE(LongString1, LuaFixture)
 {
 
     const char* code =
@@ -2377,6 +2377,48 @@ TEST_FIXTURE(LongString, LuaFixture)
     lua_getglobal(L, "a");
     CHECK( lua_isstring(L, -1) );
     CHECK_EQ( lua_tostring(L, -1), "one\ntwo" );
+
+}
+
+TEST_FIXTURE(LongString2, LuaFixture)
+{
+
+    const char* code =
+        "a = [=[one\ntwo]=]";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_isstring(L, -1) );
+    CHECK_EQ( lua_tostring(L, -1), "one\ntwo" );
+
+}
+
+TEST_FIXTURE(LongStringNested, LuaFixture)
+{
+
+    const char* code =
+        "a = [=[one\n[==[embed]==]two]=]";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_isstring(L, -1) );
+    CHECK_EQ( lua_tostring(L, -1), "one\n[==[embed]==]two" );
+
+}
+
+TEST_FIXTURE(LongStringInitialNewLine, LuaFixture)
+{
+
+    const char* code =
+        "a = [[\ntest]]";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_isstring(L, -1) );
+    CHECK_EQ( lua_tostring(L, -1), "test" );
 
 }
 

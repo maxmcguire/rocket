@@ -261,6 +261,17 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
 
 }
 
+static void Lexer_Store(Lexer* lexer, int c, char buffer[1024], size_t& length)
+{
+    if (length == 1024)
+    {
+        // TODO: remove this limitation.
+        Lexer_Error(lexer, "string is too long");
+    }
+    buffer[length] = c;
+    ++length;
+}
+
 /**
  * If store is false, the long block will be parsed, but it will not be captured
  * as a token.
@@ -273,11 +284,35 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
         return false;
     }
 
-    if (Input_PeekByte(lexer->input) != '[')
+    // Long blocks start with the sequence: [====[ where the number of =
+    // indicates the "level" of the block.
+
+    if (Input_PeekByte(lexer->input) != '[' &&
+        Input_PeekByte(lexer->input) != '=')
     {
         return false;
     }
-    Input_ReadByte(lexer->input);
+
+    int level = 0;
+    c = Input_ReadByte(lexer->input);
+
+    while (c != '[')
+    {
+        if (c != '=')
+        {
+            Lexer_Error(lexer, "expected '='");
+            return false;
+        }
+        ++level;
+        c = Input_ReadByte(lexer->input);
+    }
+
+    // Lua ignores an initial new line in a long string.
+    if (Input_PeekByte(lexer->input) == '\n')
+    {
+        ++lexer->lineNumber;
+        Input_ReadByte(lexer->input);
+    }
 
     char buffer[1024];
     size_t length = 0;
@@ -293,27 +328,51 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
         {
             Lexer_Error(lexer, "unfinished long string");
         }
-        else if (c == ']' && Input_PeekByte(lexer->input) == ']')
+        else if (c == ']')
         {
-            Input_ReadByte(lexer->input);
-            break;
+
+            if (store)
+            {
+                Lexer_Store(lexer, c, buffer, length);
+            }
+
+            int testLevel = 0;
+            c = Input_PeekByte(lexer->input);
+            while (c == '=')
+            {
+                Input_ReadByte(lexer->input);
+                if (store)
+                {
+                    Lexer_Store(lexer, c, buffer, length);
+                }
+                ++testLevel;
+                c = Input_PeekByte(lexer->input);
+            }
+
+            if (c == ']')
+            {
+                Input_ReadByte(lexer->input);
+                if (store)
+                {
+                    Lexer_Store(lexer, c, buffer, length);
+                }
+                if (testLevel == level)
+                {
+                    break;
+                }
+            }
+
         }
         else if (store)
         {
-            if (length == 1024)
-            {
-                // TODO: remove this limitation.
-                Lexer_Error(lexer, "string is too long");
-            }
-            buffer[length] = c;
-            ++length;
+            Lexer_Store(lexer, c, buffer, length);
         }
     }
 
     if (store)
     {
         lexer->token.type   = TokenType_String;
-        lexer->token.string = String_Create(lexer->L, buffer, length);
+        lexer->token.string = String_Create(lexer->L, buffer, length - (2 + level));
     }
 
     return true;
