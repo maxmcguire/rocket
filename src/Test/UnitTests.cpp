@@ -2702,3 +2702,45 @@ TEST_FIXTURE(PrefixExp2, LuaFixture)
     CHECK( DoString(L, code) );
 }
 */
+
+TEST_FIXTURE(Dump, LuaFixture)
+{
+
+    struct Buffer
+    {
+        char    data[1024];
+        size_t  length;
+    };
+
+    struct Locals
+    {
+        static int Writer(lua_State* L, const void* p, size_t sz, void* ud)
+        {
+            Buffer* buffer = static_cast<Buffer*>(ud);
+            buffer->length += sz;
+            if (buffer->length > sizeof(buffer->data))
+            {
+                return 1;
+            }
+            memcpy( buffer->data + buffer->length, p, sz );
+            return 0;
+        }
+    };
+
+    Buffer buffer;
+    buffer.length = 0;
+
+    luaL_loadstring(L, "a = 'test'");
+    int top = lua_gettop(L);
+    CHECK( lua_dump(L, &Locals::Writer, &buffer) == 0 );
+    CHECK( lua_gettop(L) == top );
+
+    lua_pop(L, 1);
+    CHECK( luaL_loadbuffer(L, buffer.data, buffer.length, "mem") == 0 );
+    CHECK( lua_pcall(L, 0, 0, 0) == 0 );
+
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tostring(L, -1), "test" );
+    lua_pop(L, 1);
+
+}
