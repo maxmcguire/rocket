@@ -228,7 +228,7 @@ static void Output_Prototype( Output* output, Prototype* prototype )
         {
             Output_WriteByte( output, LUA_TNIL );
         }
-        if (Value_GetIsString(constant))
+        else if (Value_GetIsString(constant))
         {
             Output_WriteByte( output, LUA_TSTRING );
             Output_WriteString( output, constant->string );
