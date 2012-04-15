@@ -255,9 +255,9 @@ void Parser_MakeRKEncodable(Parser* parser, Expression* value);
 
 /**
  * Moves the expression to the top of the register stack into a temporary
- * register.
+ * register. If regHint is the top of the stack, that position will be used.
  */
-void Parser_MoveToStackTop(Parser* parser, Expression* value);
+void Parser_MoveToStackTop(Parser* parser, Expression* value, int regHint = -1);
 
 /**
  * Returns true if the expression is a temporary register location (i.e. not

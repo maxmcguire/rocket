@@ -747,10 +747,17 @@ void Parser_MakeRKEncodable(Parser* parser, Expression* value)
     }
 }
 
-void Parser_MoveToStackTop(Parser* parser, Expression* value)
+void Parser_MoveToStackTop(Parser* parser, Expression* value, int regHint)
 {
     Function* function = parser->function;
-    Parser_MoveToRegister(parser, value);
+
+    int reg = -1;
+    if (regHint != -1 && regHint == function->numRegisters - 1)
+    {
+        reg = regHint;
+    }
+    Parser_MoveToRegister(parser, value, reg);
+
     if (value->index != function->numRegisters - 1 || value->index < function->numCommitedLocals)
     {
         int reg = Parser_AllocateRegister(parser);

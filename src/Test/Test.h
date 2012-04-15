@@ -57,6 +57,7 @@ void Test_RunTests(const char* pattern = 0);
 void Test_Check(int value, const char* description, const char* fileName, int line);
 void Test_Check(bool value, const char* description, const char* fileName, int line);
 
+bool Test_Equal(double x, double y);
 bool Test_Equal(const char* x, const char* y);
 bool Test_Close(double x, double y);
 

@@ -1875,6 +1875,29 @@ TEST_FIXTURE(FunctionCallCompund, LuaFixture)
 
 }
 
+TEST_FIXTURE(FunctionCallFromLocal, LuaFixture)
+{
+
+    // Check that calling a function doesn't corrupt the local variables.
+
+    const char* code = 
+        "local a, b, r = nil\n"
+        "r = function() return 10, 20 end\n"
+        "a, b = r()\n"
+        "A, B = a, b";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "A");
+    CHECK_EQ( lua_tonumber(L, -1), 10 );
+    lua_pop(L, 1);
+    
+    lua_getglobal(L, "B");
+    CHECK_EQ( lua_tonumber(L, -1), 20 );
+    lua_pop(L, 1);
+
+}
+
 TEST_FIXTURE(LengthOperator, LuaFixture)
 {
 

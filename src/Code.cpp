@@ -569,8 +569,7 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
     // Standard function call like (arg1, arg2, ...)
     if (Parser_Accept(parser, '('))
     {
-        Parser_MoveToRegister(parser, dst, regHint);
-        Parser_MoveToStackTop(parser, dst);
+        Parser_MoveToStackTop(parser, dst, regHint);
         dst->type    = EXPRESSION_CALL;
         dst->numArgs = Parser_Arguments(parser);
         return true;
@@ -581,8 +580,7 @@ static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int reg
         Parser_Accept(parser, '{'))
     {
         Parser_Unaccept(parser);
-        Parser_MoveToRegister(parser, dst, regHint);
-        Parser_MoveToStackTop(parser, dst);
+        Parser_MoveToStackTop(parser, dst, regHint);
         dst->type    = EXPRESSION_CALL;
         dst->numArgs = Parser_Arguments(parser, true);
         return true;
@@ -1235,7 +1233,8 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
                 assert(value.type == EXPRESSION_REGISTER);
                 for (int i = 0; i < numResults; ++i)
                 {
-                    Parser_EmitSet(parser, &dst[numValues + i], &value);
+                    Expression src = value;
+                    Parser_EmitSet(parser, &dst[numValues + i], &src);
                     ++value.index;
                 }
                 return;
