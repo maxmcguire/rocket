@@ -2717,12 +2717,13 @@ TEST_FIXTURE(Dump, LuaFixture)
         static int Writer(lua_State* L, const void* p, size_t sz, void* ud)
         {
             Buffer* buffer = static_cast<Buffer*>(ud);
+            char* dst = buffer->data + buffer->length;
             buffer->length += sz;
             if (buffer->length > sizeof(buffer->data))
             {
                 return 1;
             }
-            memcpy( buffer->data + buffer->length, p, sz );
+            memcpy( dst, p, sz );
             return 0;
         }
     };

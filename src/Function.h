@@ -27,6 +27,9 @@ struct Prototype : public Gc_Object
     int                 numPrototypes;
     Prototype**         prototype;
 
+    int                 lineDefined;
+    int                 lastLineDefined;
+
     // Optional debug information.
     String*             source;
     int*                sourceLine;

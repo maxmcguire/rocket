@@ -179,6 +179,9 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
         return NULL;
     }
 
+    prototype->lineDefined      = lineDefined;
+    prototype->lastLineDefined  = lastLineDefined;
+
     if (nameLength == 0 && parent != NULL)
     {
         prototype->source = parent->source;

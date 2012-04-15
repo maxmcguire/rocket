@@ -1028,6 +1028,9 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->maxStackSize = function->maxStackSize;
     prototype->numUpValues  = function->numUpValues;
 
+    prototype->lineDefined      = 0;
+    prototype->lastLineDefined  = 0;
+
     //PrintFunction(prototype);
 
     return prototype;

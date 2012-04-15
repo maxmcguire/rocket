@@ -34,6 +34,28 @@ struct ParseArgs
     const char*     name;
 };
 
+struct Output
+{
+    lua_State*      L;
+    lua_Writer      writer;
+    void*           userData;
+    int             status;
+};
+
+/** Header for a binary serialized chunk. */
+struct Header
+{
+    char            magic[4];
+    unsigned char   version;
+    unsigned char   format;
+    unsigned char   endianness;
+    unsigned char   intSize;
+    unsigned char   sizetSize;
+    unsigned char   instructionSize;
+    unsigned char   numberSize;
+    unsigned char   integralFlag;
+};
+
 static Value GetNil()
 {
     Value nil;
@@ -124,20 +146,6 @@ void lua_close(lua_State* L)
 
 static Prototype* LoadBinary(lua_State* L, Input* input, const char* name)
 {
- 
-    struct Header
-    {
-        char            magic[4];
-        unsigned char   version;
-        unsigned char   format;
-        unsigned char   endianness;
-        unsigned char   intSize;
-        unsigned char   sizetSize;
-        unsigned char   instructionSize;
-        unsigned char   numberSize;
-        unsigned char   integralFlag;
-    };
-    assert( sizeof(Header) == 12 );
 
     Header header;
     size_t length = Input_ReadBlock(input, &header, sizeof(header));
@@ -168,6 +176,126 @@ static Prototype* LoadBinary(lua_State* L, Input* input, const char* name)
     Free(L, data, length);
 
     return prototype;
+
+}
+
+static void Output_WriteBlock(Output* output, const void* data, size_t length)
+{
+    if (output->status == 0)
+    {
+        output->status = output->writer( output->L, data, length, output->userData );
+    }
+}
+
+template <class T>
+static void Output_Write(Output* output, T value)
+{
+    Output_WriteBlock( output, &value, sizeof(value) );
+}
+
+static void Output_WriteString(Output* output, const String* value)
+{
+    // Length includes a null terminator.
+    size_t length = value->length + 1;
+    Output_Write( output, length );
+    Output_WriteBlock( output, String_GetData(value), length );
+}
+
+static void Output_WriteByte(Output* output, unsigned char value)
+{
+    Output_WriteBlock( output, &value, sizeof(unsigned char) );
+}
+
+static void Output_Prototype( Output* output, Prototype* prototype )
+{
+
+    Output_WriteString( output, prototype->source );
+    Output_Write( output, prototype->lineDefined );
+    Output_Write( output, prototype->lastLineDefined );
+    Output_WriteByte( output, prototype->numUpValues );
+    Output_WriteByte( output, prototype->numParams );
+    Output_WriteByte( output, prototype->varArg );
+    Output_WriteByte( output, prototype->maxStackSize );
+
+    Output_Write( output, prototype->codeSize );
+    Output_WriteBlock( output, prototype->code, prototype->codeSize * sizeof(Instruction) );
+
+    Output_Write( output, prototype->numConstants );
+    for (int i = 0; i < prototype->numConstants; ++i)
+    {
+        const Value* constant = &prototype->constant[i];
+        if (Value_GetIsNil(constant))
+        {
+            Output_WriteByte( output, LUA_TNIL );
+        }
+        if (Value_GetIsString(constant))
+        {
+            Output_WriteByte( output, LUA_TSTRING );
+            Output_WriteString( output, constant->string );
+        }
+        else if (Value_GetIsNumber(constant))
+        {
+            Output_WriteByte( output, LUA_TNUMBER );
+            Output_Write( output, constant->number );
+        }
+        else if (Value_GetIsBoolean(constant))
+        {
+            Output_WriteByte( output, LUA_TBOOLEAN );
+            Output_WriteByte( output, constant->boolean );
+        }
+        else
+        {
+            // Unexpected constant type.
+            assert(0);
+        }
+    }
+
+    Output_Write( output, prototype->numPrototypes );
+    for (int i = 0; i < prototype->numPrototypes; ++i)
+    {
+        Output_Prototype( output, prototype->prototype[i] );
+    }
+
+    Output_Write( output, prototype->codeSize );
+    Output_WriteBlock( output, prototype->sourceLine, prototype->codeSize * sizeof(int) );
+
+    // List list of locals (optional debug data)
+    Output_Write( output, static_cast<int>(0) );
+
+    // List list of upvalues (optional debug data)
+    Output_Write( output, static_cast<int>(0) );
+
+}
+
+static int DumpBinary(lua_State* L, Prototype* prototype, lua_Writer writer, void* userData)
+{
+
+    Output output;
+    output.L        = L;
+    output.status   = 0;
+    output.userData = userData;
+    output.writer   = writer;
+
+    Header header;
+    header.magic[0]         = '\033';
+    header.magic[1]         = 'L';
+    header.magic[2]         = 'u';
+    header.magic[3]         = 'a';
+
+    header.version          = 0x51;
+    header.format           = 1;
+
+    header.endianness       = 1;
+    header.intSize          = sizeof(int);
+    header.sizetSize        = sizeof(size_t);
+    header.instructionSize  = sizeof(Instruction);
+    header.numberSize       = sizeof(lua_Number);
+    header.integralFlag     = 0;
+
+    Output_WriteBlock( &output, &header, sizeof(Header) );
+    Output_Prototype( &output, prototype );
+
+    return output.status;
 
 }
 
@@ -223,9 +351,14 @@ LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char
 
 }
 
-LUA_API int lua_dump(lua_State *L, lua_Writer writer, void *data)
+LUA_API int lua_dump(lua_State *L, lua_Writer writer, void* data)
 {
-    return 0;
+    const Value* value = GetValueForIndex(L, -1);
+    if (!Value_GetIsFunction(value) || value->closure->c)
+    {
+        return 1;
+    }
+    return DumpBinary( L, value->closure->lclosure.prototype, writer, data );
 }
 
 LUA_API int lua_error(lua_State* L)
