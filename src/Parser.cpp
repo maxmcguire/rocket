@@ -895,7 +895,7 @@ void PrintFunction(Prototype* prototype)
             Format_AB,      // Opcode_Move
             Format_ABx,     // Opcode_LoadK
             Format_ABC,     // Opcode_LoadBool
-            Format_ABx,     // Opcode_LoadNil
+            Format_AB,      // Opcode_LoadNil
             Format_AB,      // Opcode_GetUpVal
             Format_ABx,     // Opcode_GetGlobal
             Format_ABC,     // Opcode_GetTable
