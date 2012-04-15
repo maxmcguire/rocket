@@ -1061,7 +1061,8 @@ static bool Parser_TryReturn(Parser* parser)
 
         Expression arg;
 
-        while (!Parser_Accept(parser, TokenType_End) &&
+        while (!Parser_Accept(parser, TokenType_EndOfStream) &&
+               !Parser_Accept(parser, TokenType_End) &&
                !Parser_Accept(parser, TokenType_Else) &&
                !Parser_Accept(parser, TokenType_ElseIf))
         {
@@ -1069,7 +1070,8 @@ static bool Parser_TryReturn(Parser* parser)
             if (Parser_TryEmpty(parser))
             {
                 // Lua allows a single empty statement to follow a return statement. 
-                if (Parser_Accept(parser, TokenType_End) ||
+                if (Parser_Accept(parser, TokenType_EndOfStream) ||
+                    Parser_Accept(parser, TokenType_End) ||
                     Parser_Accept(parser, TokenType_Else) ||
                     Parser_Accept(parser, TokenType_ElseIf))
                 {
