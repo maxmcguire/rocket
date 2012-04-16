@@ -47,8 +47,6 @@ STATIC_ASSERT( sizeof(Tag) == 4, TagMustBe32Bits );
 
 #define NUM_TYPES           10        
 
-typedef unsigned long UInt32;
-
 enum TagMethod
 {
     TagMethod_Index     = 0,
