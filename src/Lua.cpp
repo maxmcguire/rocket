@@ -299,10 +299,10 @@ static int DumpBinary(lua_State* L, Prototype* prototype, lua_Writer writer, voi
 
 }
 
-static int Parse(lua_State* L)
+static void Parse(lua_State* L, void* userData)
 {
 
-    ParseArgs* args = static_cast<ParseArgs*>(lua_touserdata(L, 1));
+    ParseArgs* args = static_cast<ParseArgs*>(userData);
 
     Input input;
     Input_Initialize(L, &input, args->reader, args->userdata);
@@ -326,8 +326,6 @@ static int Parse(lua_State* L)
     Closure* closure = Closure_Create(L, prototype, env);
     PushClosure(L, closure);
 
-    return 1;
-
 }
 
 LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char* name)
@@ -338,11 +336,8 @@ LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char
     args.userdata   = userdata;
     args.name       = name;
 
-    // TODO: do this more directly rather than manipulating the Lua stack.
-    lua_pushcfunction(L, Parse);
-    lua_pushlightuserdata(L, &args);
-    
-    int result = lua_pcall(L, 1, 1, 0);
+    int result = Vm_ProtectedCall(L, Parse, &args);
+
     if (result == LUA_ERRRUN)
     {
         result = LUA_ERRSYNTAX;

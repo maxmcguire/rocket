@@ -24,6 +24,14 @@ extern "C"
 #include <string.h>
 #include <math.h>
 
+struct CallArgs
+{
+    Value*  value;
+    int     numArgs;
+    int     numResults;
+    Value*  errorFunc;
+};
+
 // Limit for table tag-method chains (to avoid loops)
 #define MAXTAGLOOP	100
 
@@ -983,7 +991,7 @@ static int Execute(lua_State* L, int numArgs)
 
 }
 
-int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Value* errorFunc)
+int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, void* userData)
 {
 
     ErrorHandler* oldErrorHandler = L->errorHandler;
@@ -1000,15 +1008,49 @@ int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Va
     if (result != 0)
     {
         // An error occured.
+        // Restore the pre-call state.
+        L->stackBase    = oldBase;
+        L->callStackTop = oldFrame;
+    }
+    else
+    {
+        function(L, userData);
+    }
+
+    // Restore any previously set error handler.
+    L->errorHandler = oldErrorHandler;
+    return result;
+
+}
+
+static void Call(lua_State* L, void* userData)
+{
+    CallArgs* args = static_cast<CallArgs*>(userData);
+    Vm_Call(L, args->value, args->numArgs, args->numResults);
+}
+
+int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Value* errorFunc)
+{
+
+    CallArgs callArgs;
+
+    callArgs.value      = value;
+    callArgs.numArgs    = numArgs;
+    callArgs.numResults = numResults;
+    callArgs.errorFunc  = errorFunc;
+
+    int result = Vm_ProtectedCall(L, Call, &callArgs);
+
+    if (result != 0)
+    {
+
+        // An error occured.
 
         // For certain types of errors, there will be an error message on the
         // top of the stack.
         Value* errorMessage = L->stackTop - 1;
 
-        // Restore the pre-call state.
-        L->stackBase    = oldBase;
-        L->callStackTop = oldFrame;
-        L->stackTop     = value;
+        L->stackTop = value;
 
         if (errorFunc != NULL)
         {
@@ -1044,13 +1086,7 @@ int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Va
         }
 
     }
-    else
-    {
-        Vm_Call(L, value, numArgs, numResults);
-    }
 
-    // Restore any previously set error handler.
-    L->errorHandler = oldErrorHandler;
     return result;
 
 }
