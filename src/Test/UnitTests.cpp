@@ -2792,8 +2792,11 @@ TEST_FIXTURE(TableFromUnpack, LuaFixture)
     CHECK_EQ( lua_tonumber(L, -1), 3 );
 }
 
-TEST_FIXTURE(VariableReturn, LuaFixture)
+TEST_FIXTURE(ReturnVarFunction, LuaFixture)
 {
+
+    // Check that a properly return a variable number of return values
+    // from a function.
 
     const char* code =
         "function g()\n"
@@ -2802,7 +2805,7 @@ TEST_FIXTURE(VariableReturn, LuaFixture)
         "function f()\n"
         "  return 1, g()\n"
         "end\n"
-        "a, b, c, d = f()";
+        "a, b, c, d = f()\n";
 
     CHECK( DoString(L, code) );
 
@@ -2816,6 +2819,30 @@ TEST_FIXTURE(VariableReturn, LuaFixture)
     CHECK_EQ( lua_tonumber(L, -1), 3 );
 
     lua_getglobal(L, "d");
+    CHECK_EQ( lua_tonumber(L, -1), 4 );
+
+}
+
+TEST_FIXTURE(ReturnStackCleanup, LuaFixture)
+{
+
+    // This function requires the stack to be cleaned up between each of the
+    // return values.
+
+    const char* code =
+        "function f()\n"
+        "  local x = 1\n"
+        "  local y = 2\n"
+        "  return x * 2 + y * 3, 4\n"
+        "end\n"
+        "a, b = f()";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tonumber(L, -1), 8 );
+
+    lua_getglobal(L, "b");
     CHECK_EQ( lua_tonumber(L, -1), 4 );
 
 }

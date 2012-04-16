@@ -1061,86 +1061,78 @@ static bool Parser_TryIf(Parser* parser)
     return false;
 }
 
+/**
+ * Parses a non-empty list of a expressions separated by commas. If there is
+ * more than one expression, the expressions are put into subsequent registers
+ * on the stack. The final expression in the list is stored in dst.
+ */
+static int Parser_ExpressionList(Parser* parser, Expression* dst, int reg)
+{
+    int numValues = 1;
+    Parser_Expression0(parser, 0, dst, reg);
+    while (Parser_Accept(parser, ','))
+    {
+        int index = reg + numValues - 1;
+        Parser_MoveToRegister(parser, dst, index);
+        Parser_SetLastRegister(parser, index);
+        Parser_Expression0(parser, 0, dst, index + 1);
+        ++numValues;
+    }
+    return numValues;
+}
+
+
 static bool Parser_TryReturn(Parser* parser)
 {
-    if (Parser_Accept(parser, TokenType_Return))
+
+    if (!Parser_Accept(parser, TokenType_Return))
     {
-        
-        int numResults = 0;
-        int reg        = -1;
+        return false;
+    }
+
+    int reg       = 0;
+    int numValues = 0;
+
+    if (!Parser_TryEmpty(parser)                      &&
+        !Parser_Accept(parser, TokenType_EndOfStream) &&
+        !Parser_Accept(parser, TokenType_End)         &&
+        !Parser_Accept(parser, TokenType_Else)        &&
+        !Parser_Accept(parser, TokenType_ElseIf))
+    {
+
+        // Return values will go onto the top of the available stack.
+        reg = Parser_AllocateRegister(parser);
 
         Expression arg;
+        numValues = Parser_ExpressionList(parser, &arg, reg);
 
-        while (!Parser_Accept(parser, TokenType_EndOfStream) &&
-               !Parser_Accept(parser, TokenType_End) &&
-               !Parser_Accept(parser, TokenType_Else) &&
-               !Parser_Accept(parser, TokenType_ElseIf))
+        // The final expression can result in a variable number of values.
+        if (Parser_ResolveCall(parser,   &arg, -1) ||
+            Parser_ResolveVarArg(parser, &arg, -1))
         {
-
-            if (Parser_TryEmpty(parser))
-            {
-                // Lua allows a single empty statement to follow a return statement. 
-                if (Parser_Accept(parser, TokenType_EndOfStream) ||
-                    Parser_Accept(parser, TokenType_End) ||
-                    Parser_Accept(parser, TokenType_Else) ||
-                    Parser_Accept(parser, TokenType_ElseIf))
-                {
-                    break;
-                }
-                Lexer_Error(parser->lexer, "unexpected token");
-            }
-
-            if (numResults == 0)
-            {
-                // The first result is handled specially so that if we're only
-                // returning a single argument and it's already in a register we
-                // don't need to move it to the top of the stack.
-                Parser_Expression0(parser, 0, &arg, -1);
-            }
-            else
-            {
-                Parser_Expect(parser, ',');
-
-                if (numResults == 1)
-                {
-                    // If the first argument wasn't in the final register on the
-                    // stack, we need to move it there now so we can have all of
-                    // the results in a row on the stack.
-                    Parser_MoveToStackTop(parser, &arg);
-                    reg = arg.index;
-                }
-
-                Parser_Expression0(parser, 0, &arg, reg + numResults);
-                Parser_MoveToRegister(parser, &arg, reg + numResults);
-                Parser_SetLastRegister(parser, reg + numResults);
-            }
-
-            ++numResults;
-
+            numValues = -1;
         }
 
-        // Put the end token back so that we can process is elsewhere.
-        Parser_Unaccept(parser);
-
-        if (reg == -1)
+        if (numValues != 1)
         {
-            if (numResults > 0)
-            {
-                Parser_MoveToRegister(parser, &arg);
-                reg = arg.index;
-            }
-            else
-            {
-                reg = 0;
-            }
+            // The first result is handled specially so that if we're only
+            // returning a single argument and it's already in a register we
+            // don't need to move it to the top of the stack.
+            Parser_MoveToStackTop(parser, &arg);
         }
-
-        Parser_EmitAB(parser, Opcode_Return, reg, numResults + 1);
-        Parser_FreeRegisters(parser);
-        return true;
+        else
+        {
+            Parser_MoveToRegister(parser, &arg);
+            reg = arg.index;
+        }
 
     }
-    return false;
+
+    Parser_EmitAB(parser, Opcode_Return, reg, numValues + 1);
+    Parser_FreeRegisters(parser);
+
+    return true;
+    
 }
 
 /**

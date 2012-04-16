@@ -464,7 +464,10 @@ bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults)
     {
         Parser_EmitABC(parser, Opcode_Call, value->index, value->numArgs + 1, numResults + 1);
         value->type = EXPRESSION_REGISTER;
-        Parser_SetLastRegister(parser, value->index + numResults - 1);
+        if (numResults != -1)
+        {
+            Parser_SetLastRegister(parser, value->index + numResults - 1);
+        }
         return true;
     }
     return false;
@@ -481,7 +484,10 @@ bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int
         Parser_EmitAB(parser, Opcode_VarArg, regHint, numResults + 1);
         value->type  = EXPRESSION_REGISTER;
         value->index = regHint;
-        Parser_SetLastRegister(parser, value->index + numResults - 1);
+        if (numResults != -1)
+        {
+            Parser_SetLastRegister(parser, value->index + numResults - 1);
+        }
         return true;
     }
     return false;
@@ -895,6 +901,8 @@ void PrintFunction(Prototype* prototype)
         Format_ABC,
         Format_ABx,
         Format_AsBx,
+        Format_AC,
+        Format_sBx,
     };
 
     static const Format format[] = 
@@ -921,11 +929,11 @@ void PrintFunction(Prototype* prototype)
             Format_AB,      // Opcode_Not
             Format_AB,      // Opcode_Len
             Format_ABC,     // Opcode_Concat
-            Format_AsBx,    // Opcode_Jmp
+            Format_sBx,     // Opcode_Jmp
             Format_ABC,     // Opcode_Eq
             Format_ABC,     // Opcode_Lt
             Format_ABC,     // Opcode_Le
-            Format_ABC,     // Opcode_Test
+            Format_AC,      // Opcode_Test
             Format_ABC,     // Opcode_TestSet
             Format_ABC,     // Opcode_Call
             Format_ABC,     // Opcode_TailCall
@@ -969,6 +977,12 @@ void PrintFunction(Prototype* prototype)
             break;
         case Format_AsBx:
             printf("%d %d", GET_A(inst), GET_sBx(inst));
+            break;
+        case Format_AC:
+            printf("%d %d", GET_A(inst), GET_C(inst));
+            break;
+        case Format_sBx:
+            printf("%d", GET_sBx(inst));
             break;
         }
 
