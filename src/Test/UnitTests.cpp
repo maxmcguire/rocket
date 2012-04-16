@@ -2777,3 +2777,17 @@ TEST_FIXTURE(Dump, LuaFixture)
     lua_pop(L, 1);
 
 }
+
+TEST_FIXTURE(TableFromUnpack, LuaFixture)
+{
+    const char* code =
+        "local x, a\n"
+        "a = { 1, 2, 3 }\n"
+        "x = { unpack(a) }"
+        "n = #x";
+
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "n");
+    CHECK_EQ( lua_tonumber(L, -1), 3 );
+}

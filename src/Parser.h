@@ -69,20 +69,23 @@ struct Parser
     int             numBlocks;
 };
 
-#define EXPRESSION_REGISTER     1
-#define EXPRESSION_CONSTANT     2
-#define EXPRESSION_GLOBAL       3
-#define EXPRESSION_TABLE        4
-#define EXPRESSION_LOCAL        5
-#define EXPRESSION_NIL          6
-#define EXPRESSION_FUNCTION     7
-#define EXPRESSION_BOOLEAN      8
-#define EXPRESSION_NUMBER       9
-#define EXPRESSION_CALL         10
-#define EXPRESSION_JUMP         11
-#define EXPRESSION_UPVALUE      12
-#define EXPRESSION_NOT          13
-#define EXPRESSION_VARARG       14
+enum ExpressionType
+{
+    EXPRESSION_REGISTER     = 1,
+    EXPRESSION_CONSTANT     = 2,
+    EXPRESSION_GLOBAL       = 3,
+    EXPRESSION_TABLE        = 4,
+    EXPRESSION_LOCAL        = 5,
+    EXPRESSION_NIL          = 6,
+    EXPRESSION_FUNCTION     = 7,
+    EXPRESSION_BOOLEAN      = 8,
+    EXPRESSION_NUMBER       = 9,
+    EXPRESSION_CALL         = 10,
+    EXPRESSION_JUMP         = 11,
+    EXPRESSION_UPVALUE      = 12,
+    EXPRESSION_NOT          = 13,
+    EXPRESSION_VARARG       = 14
+};
 
 /**
  * If type is EXPRESSION_TABLE:
@@ -114,11 +117,11 @@ struct Parser
  */
 struct Expression
 {
-    int             type;
+    ExpressionType  type;
     int             index;
     lua_Number      number;
     int             key;
-    int             keyType;
+    ExpressionType  keyType;
     int             numArgs;
 };
 

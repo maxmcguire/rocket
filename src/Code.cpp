@@ -359,7 +359,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
     // Table constructor.
 
     Parser_SelectDstRegister(parser, dst, regHint);
-    Parser_SetLastRegister(parser, dst->index);
+    Parser_MoveToStackTop(parser, dst);
 
     int start = Parser_GetInstructionCount(parser);
     Parser_EmitInstruction(parser, 0);
