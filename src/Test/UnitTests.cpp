@@ -2791,3 +2791,31 @@ TEST_FIXTURE(TableFromUnpack, LuaFixture)
     lua_getglobal(L, "n");
     CHECK_EQ( lua_tonumber(L, -1), 3 );
 }
+
+TEST_FIXTURE(VariableReturn, LuaFixture)
+{
+
+    const char* code =
+        "function g()\n"
+        "  return 2, 3, 4\n"
+        "end\n"
+        "function f()\n"
+        "  return 1, g()\n"
+        "end\n"
+        "a, b, c, d = f()";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tonumber(L, -1), 1 );
+
+    lua_getglobal(L, "b");
+    CHECK_EQ( lua_tonumber(L, -1), 2 );
+
+    lua_getglobal(L, "c");
+    CHECK_EQ( lua_tonumber(L, -1), 3 );
+
+    lua_getglobal(L, "d");
+    CHECK_EQ( lua_tonumber(L, -1), 4 );
+
+}
