@@ -2861,3 +2861,32 @@ TEST_FIXTURE(ReturnStackCleanup, LuaFixture)
     CHECK_EQ( lua_tonumber(L, -1), 4 );
 
 }
+
+TEST_FIXTURE(Assign2, LuaFixture)
+{
+
+    const char* code =
+        "function f() return 1,2,30,4 end\n"
+        "function ret2(a,b) return a,b end\n"
+        "local _a, _b, _c, _d\n"
+        "_a, _b, _c, _d = ret2(f()), ret2(f())\n"
+        "a = _a\n"
+        "b = _b\n"
+        "c = _c\n"
+        "d = _d\n";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tonumber(L, -1), 1 );
+
+    lua_getglobal(L, "b");
+    CHECK_EQ( lua_tonumber(L, -1), 1 );
+
+    lua_getglobal(L, "c");
+    CHECK_EQ( lua_tonumber(L, -1), 2 );
+
+    lua_getglobal(L, "d");
+    CHECK( lua_isnil(L, -1) );
+
+}

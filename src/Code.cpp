@@ -1216,6 +1216,8 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
     int  numValues = 0;
     bool done = false;
 
+    int numRegisters = Parser_GetNumRegisters(parser);
+
     while (!done && numValues < numVars)
     {
 
@@ -1246,17 +1248,7 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
         }
 
         Parser_EmitSet(parser, &dst[numValues], &value);
-
-        // Make sure we don't reuse the registers occupied by locals that
-        // we've assigned.
-        if (dst[numValues].type == EXPRESSION_LOCAL)
-        {
-            int reg = dst[numValues].index;
-            if (reg <= Parser_GetNumRegisters(parser))
-            {
-                Parser_SetLastRegister(parser, reg);
-            }
-        }
+        Parser_SetLastRegister(parser, numRegisters);
 
         ++numValues;
 
