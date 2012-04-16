@@ -2890,3 +2890,23 @@ TEST_FIXTURE(Assign2, LuaFixture)
     CHECK( lua_isnil(L, -1) );
 
 }
+
+TEST_FIXTURE( AdjustReturn, LuaFixture )
+{
+
+    // Placing an expression that generates multiple values in parentheses
+    // will adjust it to a single value.
+
+    const char* code =
+        "function f() return 1, 2 end\n"
+        "a, b = (f())";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tonumber(L, -1), 1 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_isnil(L, -1) );
+    
+}
