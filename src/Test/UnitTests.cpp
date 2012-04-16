@@ -2910,3 +2910,22 @@ TEST_FIXTURE( AdjustReturn, LuaFixture )
     CHECK( lua_isnil(L, -1) );
     
 }
+
+TEST_FIXTURE( LoadTermination, LuaFixture )
+{
+
+    // Check that a reader setting the size to 0 (but returning a non-nil
+    // value) will terminate loading.
+
+    struct Locals
+    {
+        static const char* Reader(lua_State* L, void* data, size_t* size)
+        {
+            *size = 0;
+            return "a = 'fail'";
+        }
+    };
+
+    CHECK( lua_load(L, Locals::Reader, NULL, "test") == 0 );
+
+}

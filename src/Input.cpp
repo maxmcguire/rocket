@@ -24,7 +24,7 @@ static bool Input_FillBuffer(Input* input)
 {
     input->size = 0;
     input->buffer = input->reader( input->L, input->userdata, &input->size );
-    return input->buffer != NULL;
+    return input->buffer != NULL && input->size > 0;
 }
 
 size_t Input_ReadBlock(Input* input, void* _buffer, size_t size)
