@@ -42,7 +42,7 @@ enum Tag
 STATIC_ASSERT( sizeof(Tag) == 4, TagMustBe32Bits );
 
 #define LUA_TPROTOTYPE      9
-//#define LUA_TUPVAL	    10
+#define LUA_TUPVALUE        10
 //#define LUA_TDEADKEY	    11
 
 #define NUM_TYPES           10        

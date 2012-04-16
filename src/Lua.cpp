@@ -324,6 +324,15 @@ static void Parse(lua_State* L, void* userData)
     Table* env = GetCurrentEnvironment(L);
 
     Closure* closure = Closure_Create(L, prototype, env);
+
+    // Initialize the up values. Typically a top level check won't have any up
+    // values, but if the chunk was created using string.dump or a similar method
+    // it may. These up values will cease to function once the chunk is loaded.
+    for (int i = 0; i < closure->lclosure.numUpValues; ++i)
+    {
+        closure->lclosure.upValue[i] = NewUpValue(L);
+    }
+
     PushClosure(L, closure);
 
 }

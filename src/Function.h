@@ -100,6 +100,11 @@ Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValu
 
 void Closure_Destroy(lua_State* L, Closure* closure);
 
+/**
+ * Creates a new closed up value with the value set to nil.
+ */
+UpValue* NewUpValue(lua_State* L);
+
 // Creates a new open up value, or returns an existing one matching the
 // address of the value.
 UpValue* NewUpValue(lua_State* L, Value* value);

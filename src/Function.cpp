@@ -350,6 +350,14 @@ void Closure_Destroy(lua_State* L, Closure* closure)
     Free(L, closure, size);
 }
 
+UpValue* NewUpValue(lua_State* L)
+{
+    UpValue* upValue = static_cast<UpValue*>( Gc_AllocateObject( L, LUA_TUPVALUE, sizeof(UpValue) ) );
+    upValue->value = &upValue->storage;
+    SetNil(upValue->value);
+    return upValue;
+}
+
 UpValue* NewUpValue(lua_State* L, Value* value)
 {
 
@@ -365,7 +373,7 @@ UpValue* NewUpValue(lua_State* L, Value* value)
     // Create a new up value if necessary.
     if (upValue == NULL)
     {
-        upValue = static_cast<UpValue*>( Allocate(L, sizeof(UpValue)) );
+        upValue = static_cast<UpValue*>( Gc_AllocateObject( L, LUA_TUPVALUE, sizeof(UpValue) ) );
         upValue->value = value;
         upValue->nextUpValue = L->openUpValue;
         upValue->prevUpValue = NULL;
