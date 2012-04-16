@@ -555,6 +555,9 @@ static bool Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst
     else if (Parser_Accept(parser, '('))
 	{
 		Parser_Expression0(parser, flags, dst, regHint);
+        // Placing a function call inside parentheses will adjust the number of
+        // return values to 1.
+        Parser_ResolveCall(parser, dst, 1);
 		Parser_Expect(parser, ')');
         return true;
 	}
