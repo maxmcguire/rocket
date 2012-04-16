@@ -77,7 +77,7 @@ char* Input_Read(Input* input, size_t* size)
         size_t bufferSize;
         const char* buffer = input->reader( input->L, input->userdata, &bufferSize );
 
-        if (buffer == NULL)
+        if (buffer == NULL || bufferSize == 0)
         {
             break;
         }
