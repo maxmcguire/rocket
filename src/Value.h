@@ -13,6 +13,8 @@ extern "C"
 #include "lua.h"
 }
 
+#include "Global.h"
+
 //
 // Forward declarations.
 //
@@ -23,19 +25,24 @@ struct Closure;
 struct UserData;
 struct Gc_Object;
 
-#define TAG_NIL		        (~0u)   // 0xffffffff
-#define TAG_NONE		    (~1u)   // 0xfffffffe
-#define TAG_BOOLEAN		    (~2u)   // 0xfffffffd
-#define TAG_LIGHTUSERDATA	(~3u)   // 0xfffffffc
-#define TAG_STRING		    (~4u)   // 0xfffffffb
-#define TAG_TABLE		    (~5u)   // 0xfffffffa
-#define TAG_FUNCTION		(~6u)   // 0xfffffff9
-#define TAG_USERDATA		(~7u)   // 0xfffffff8
-#define TAG_THREAD		    (~8u)   // 0xfffffff7
-#define TAG_NUMBER		    (~9u)   // 0xfffffff6
+/** Tag used to identify the type of a value. */
+enum Tag
+{
+    Tag_Nil             = ~0u,
+    Tag_None            = ~1u,
+    Tag_Boolean         = ~2u,
+    Tag_LightUserdata   = ~3u,
+    Tag_String          = ~4u,
+    Tag_Table           = ~5u,
+    Tag_Function        = ~6u,
+    Tag_Userdata        = ~7u,
+    Tag_Thread          = ~8u,
+    Tag_Number          = ~9u,
+};
+STATIC_ASSERT( sizeof(Tag) == 4, TagMustBe32Bits );
 
 #define LUA_TPROTOTYPE      9
-//#define LUA_TUPVAL	        10
+//#define LUA_TUPVAL	    10
 //#define LUA_TDEADKEY	    11
 
 #define NUM_TYPES           10        
@@ -61,7 +68,7 @@ union Value
     double              number;
     struct
     {
-        UInt32          tag;
+        Tag             tag;
         union
         {
             int         boolean;
@@ -81,19 +88,19 @@ inline bool Value_GetIsNumber(const Value* value)
     { return (value->tag & 0xfff80000) != 0xfff80000; }
 
 inline bool Value_GetIsTable(const Value* value)
-    { return value->tag == TAG_TABLE; }
+    { return value->tag == Tag_Table; }
 
 inline bool Value_GetIsNil(const Value* value)
-    { return value->tag == TAG_NIL; }
+    { return value->tag == Tag_Nil; }
 
 inline bool Value_GetIsString(const Value* value)
-    { return value->tag == TAG_STRING; }
+    { return value->tag == Tag_String; }
 
 inline bool Value_GetIsBoolean(const Value* value)
-    { return value->tag == TAG_BOOLEAN; }
+    { return value->tag == Tag_Boolean; }
 
 inline bool Value_GetIsFunction(const Value* value)
-    { return value->tag == TAG_FUNCTION; }
+    { return value->tag == Tag_Function; }
 
 inline bool Value_GetIsObject(const Value* value)
     { return Value_GetIsString(value) || Value_GetIsTable(value) || Value_GetIsFunction(value); }
@@ -104,14 +111,14 @@ inline int Value_GetType(const Value* value)
     if (Value_GetIsNumber(value)) return LUA_TNUMBER;
     switch (value->tag)
     {
-    case TAG_NIL:           return LUA_TNIL;
-    case TAG_BOOLEAN:       return LUA_TBOOLEAN;
-    case TAG_LIGHTUSERDATA: return LUA_TLIGHTUSERDATA;
-    case TAG_STRING:        return LUA_TSTRING;
-    case TAG_TABLE:         return LUA_TTABLE;
-    case TAG_FUNCTION:      return LUA_TFUNCTION;
-    case TAG_USERDATA:      return LUA_TUSERDATA;
-    case TAG_THREAD:        return LUA_TTHREAD;
+    case Tag_Nil:           return LUA_TNIL;
+    case Tag_Boolean:       return LUA_TBOOLEAN;
+    case Tag_LightUserdata: return LUA_TLIGHTUSERDATA;
+    case Tag_String:        return LUA_TSTRING;
+    case Tag_Table:         return LUA_TTABLE;
+    case Tag_Function:      return LUA_TFUNCTION;
+    case Tag_Userdata:      return LUA_TUSERDATA;
+    case Tag_Thread:        return LUA_TTHREAD;
     }
     return LUA_TNONE;
 }
@@ -126,23 +133,23 @@ inline void CopyValue(Value* dst, Value* src)
     { *dst = *src; }
 
 inline void SetNil(Value* value)
-    { value->tag = TAG_NIL; }
+    { value->tag = Tag_Nil; }
 inline void SetValue(Value* value, bool boolean)
-    { value->tag = TAG_BOOLEAN; value->boolean = boolean; }
+    { value->tag = Tag_Boolean; value->boolean = boolean; }
 inline void SetValue(Value* value, lua_Number number)
     { value->number = number; }
 inline void SetValue(Value* value, int number)
     { value->number = static_cast<lua_Number>(number); }
 inline void SetValue(Value* value, String* string)
-    { value->tag = TAG_STRING; value->string = string; }
+    { value->tag = Tag_String; value->string = string; }
 inline void SetValue(Value* value, Table* table)
-    { value->tag = TAG_TABLE; value->table = table; }
+    { value->tag = Tag_Table; value->table = table; }
 inline void SetValue(Value* value, Closure* closure)
-    { value->tag = TAG_FUNCTION; value->closure = closure; }
+    { value->tag = Tag_Function; value->closure = closure; }
 inline void SetValue(Value* value, void* userdata)
-    { value->tag = TAG_LIGHTUSERDATA; value->lightUserdata = userdata; }
+    { value->tag = Tag_LightUserdata; value->lightUserdata = userdata; }
 inline void SetValue(Value* value, UserData* userData)
-    { value->tag = TAG_USERDATA; value->userData = userData; }
+    { value->tag = Tag_Userdata; value->userData = userData; }
 
 /**
  * Tests if two values are equal using a raw test (no metamethods).

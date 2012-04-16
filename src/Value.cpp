@@ -17,14 +17,14 @@ void Value_SetMetatable(lua_State* L, Value* value, Table* table)
 {
     switch (value->tag)
     {
-    case TAG_TABLE:
+    case Tag_Table:
         value->table->metatable = table;
         if (table != NULL)
         {
             Gc_WriteBarrier(L, value->table, table);
         }
         break;
-    case TAG_USERDATA:
+    case Tag_Userdata:
         value->userData->metatable = table;
         if (table != NULL)
         {
@@ -47,9 +47,9 @@ Table* Value_GetMetatable(lua_State* L, const Value* value)
 {
     switch (value->tag)
     {
-    case TAG_TABLE:
+    case Tag_Table:
         return value->table->metatable;
-    case TAG_USERDATA:
+    case Tag_Userdata:
         return value->userData->metatable;
     }
     // Get the global metatable for the type.
@@ -62,15 +62,15 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table)
 {
     switch (value->tag)
     {
-    case TAG_FUNCTION:
+    case Tag_Function:
         value->closure->env = table;
         Gc_WriteBarrier(L, value->closure, table);
         return 1;
-    case TAG_THREAD:
+    case Tag_Thread:
         // TODO: implement.
         assert(0);
         return 1;
-    case TAG_USERDATA:
+    case Tag_Userdata:
         value->userData->env = table;
         Gc_WriteBarrier(L, value->userData, table);
         return 1;
@@ -82,13 +82,13 @@ Table* Value_GetEnv(const Value* value)
 {
     switch (value->tag)
     {
-    case TAG_FUNCTION:
+    case Tag_Function:
         return value->closure->env;
-    case TAG_THREAD:
+    case Tag_Thread:
         // TODO: implement.
         assert(0);
         return 0;
-    case TAG_USERDATA:
+    case Tag_Userdata:
         return value->userData->env;
     }
     return 0;

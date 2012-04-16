@@ -559,7 +559,7 @@ LUA_API const char* lua_tolstring(lua_State *L, int index, size_t* length )
 LUA_API lua_CFunction lua_tocfunction(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
-    if (value->tag == TAG_FUNCTION)
+    if (Value_GetIsFunction(value))
     {
         Closure* closure = value->closure;
         if (closure->c)
@@ -575,13 +575,13 @@ LUA_API const void* lua_topointer(lua_State* L, int index)
     const Value* value = GetValueForIndex(L, index);
     switch (value->tag)
     {
-    case TAG_TABLE:
-    case TAG_FUNCTION:
-    case TAG_THREAD:
+    case Tag_Table:
+    case Tag_Function:
+    case Tag_Thread:
         return value->object;
-    case TAG_LIGHTUSERDATA:
+    case Tag_LightUserdata:
         return value->lightUserdata;
-    case TAG_USERDATA:
+    case Tag_Userdata:
         return UserData_GetData(value->userData);
     }
     return NULL;
@@ -590,11 +590,11 @@ LUA_API const void* lua_topointer(lua_State* L, int index)
 LUA_API void* lua_touserdata(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
-    if (value->tag == TAG_LIGHTUSERDATA)
+    if (value->tag == Tag_LightUserdata)
     {
         return value->lightUserdata;
     }
-    else if (value->tag == TAG_USERDATA)
+    else if (value->tag == Tag_Userdata)
     {
         return UserData_GetData(value->userData);
     }
