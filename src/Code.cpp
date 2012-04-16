@@ -1112,13 +1112,13 @@ static bool Parser_TryReturn(Parser* parser)
         {
             numValues = -1;
         }
-
-        if (numValues != 1)
+        else if (numValues != 1)
         {
             // The first result is handled specially so that if we're only
             // returning a single argument and it's already in a register we
             // don't need to move it to the top of the stack.
-            Parser_MoveToStackTop(parser, &arg);
+            int index = reg + numValues - 1;
+            Parser_MoveToRegister(parser, &arg, index);
         }
         else
         {
