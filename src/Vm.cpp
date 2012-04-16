@@ -297,8 +297,11 @@ static inline void SetValue(lua_State* L, int index, const Value* value)
     }
 }
 
-// Moves the results for a return operation to the base of the stack.
-static void MoveResults(lua_State* L, Value* dst, Value* src, int numResults)
+/**
+ * Moves the results for a return operation to the base of the stack. Returns the
+ * actual number of results that were returned.
+ */
+static int MoveResults(lua_State* L, Value* dst, Value* src, int numResults)
 {
     // R(-1) = R(a), R(0) = R(start + 1), etc.
     if (numResults < 0)
@@ -311,6 +314,7 @@ static void MoveResults(lua_State* L, Value* dst, Value* src, int numResults)
         ++src;
         ++dst;
     }
+    return numResults;
 }
 
 // Returns 0 or 1 depending on whether or not the values are equal
@@ -493,7 +497,7 @@ static int Execute(lua_State* L, int numArgs)
             )                                                                   \
         }
 
-    CallFrame* frame = State_GetCallFrame(L);
+    CallFrame* frame = State_GetCallFrame(L );
 
     assert( !frame->function->closure->c );
     LClosure* closure = &frame->function->closure->lclosure;
@@ -662,19 +666,18 @@ static int Execute(lua_State* L, int numArgs)
                     }
                     Vm_Call(L, value, numArgs, -1);
                     int numResults = static_cast<int>(L->stackTop - value);
-                    MoveResults(L, frame->function, &stackBase[a], numResults);
+                    numResults = MoveResults(L, frame->function, &stackBase[a], numResults);
                     if (L->openUpValue != NULL)
                     {
                         CloseUpValues(L, stackBase);
                     }
-                    return numResults;
                 )
             }
             break;
         case Opcode_Return:
             {
                 int numResults = GET_B(inst) - 1;
-                MoveResults(L, frame->function, &stackBase[a], numResults);
+                numResults = MoveResults(L, frame->function, &stackBase[a], numResults);
                 if (L->openUpValue != NULL)
                 {
                     CloseUpValues(L, stackBase);
@@ -1109,10 +1112,7 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         frame->stackTop  = L->stackTop;
 
         result = closure->cclosure.function(L);
-        if (result >= 0)
-        {
-            MoveResults(L, value, L->stackTop - result, result);
-        }
+        result = MoveResults(L, value, L->stackTop - result, result);
 
     }
     else

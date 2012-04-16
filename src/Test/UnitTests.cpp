@@ -1184,6 +1184,21 @@ TEST_FIXTURE(LocalMultipleAssignment3, LuaFixture)
 
 }
 
+TEST_FIXTURE(AssignmentNoValue, LuaFixture)
+{
+
+    const char* code =
+        "function g() end\n"
+        "function f() return g() end\n"
+        "a = f()";
+
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "a");
+    CHECK( lua_isnil(L, -1) );
+
+}
+
 TEST_FIXTURE(TableConstructor, LuaFixture)
 {
     const char* code =
