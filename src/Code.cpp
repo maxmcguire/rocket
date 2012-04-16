@@ -26,7 +26,7 @@ enum Flag
 static void Parser_Block(Parser* parser, int endToken);
 static void Parser_Statement(Parser* parser);
 static void Parser_Expression0(Parser* parser, unsigned long flags, Expression* dst, int regHint);
-static void Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst, int regHint);
+static bool Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst, int regHint);
 
 /**
  * Attempts to fold the expression opcode arg and store the result in dst.
@@ -507,46 +507,56 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
 }
 
-static void Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst, int regHint)
+/**
+ * Returns true if the terminal that was parsed can be called as a function.
+ */
+static bool Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
 
     if (Parser_TryTable(parser, dst, regHint))
     {
-        return;
+        return false;
     }
 
     if (Parser_Accept(parser, TokenType_Name))
     {
         Parser_ResolveName(parser, dst, Parser_GetString(parser));
+        return true;
     }
     else if (Parser_Accept(parser, TokenType_String))
     {
         dst->type  = EXPRESSION_CONSTANT;
         dst->index = Parser_AddConstant( parser, Parser_GetString(parser) );
+        return false;
     }    
     else if (Parser_Accept(parser, TokenType_Number))
     {
         dst->type   = EXPRESSION_NUMBER;
         dst->number = Parser_GetNumber(parser);
+        return false;
     }
     else if (Parser_Accept(parser, TokenType_True) ||
              Parser_Accept(parser, TokenType_False))
     {
         dst->type  = EXPRESSION_BOOLEAN;
         dst->index = (Parser_GetToken(parser) == TokenType_True) ? 1 : 0;
+        return false;
     }
     else if (Parser_Accept(parser, TokenType_Nil))
     {
         dst->type = EXPRESSION_NIL;
+        return false;
     }
     else if (Parser_Accept(parser, TokenType_Function))
     {
         Parser_Function(parser, dst, false);
+        return true;
     }
     else if (Parser_Accept(parser, '('))
 	{
 		Parser_Expression0(parser, flags, dst, regHint);
 		Parser_Expect(parser, ')');
+        return true;
 	}
     else if (Parser_Accept(parser, TokenType_Dots))
     {
@@ -556,11 +566,13 @@ static void Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst
             Lexer_Error(parser->lexer, "cannot use '...' outside a vararg function");
         }
         dst->type = EXPRESSION_VARARG;
+        return false;
     }
     else
     {
         Lexer_Error(parser->lexer, "expected variable or constant");
     }
+    return false;
 }
 
 static bool Parser_TryFunctionArguments(Parser* parser, Expression* dst, int regHint)
@@ -697,10 +709,12 @@ static bool Parser_TryIndex(Parser* parser, unsigned long flags, Expression* dst
 static void Parser_Expression4(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
     
-    Parser_Terminal(parser, flags, dst, regHint);
+    bool callable = Parser_Terminal(parser, flags, dst, regHint);
 
-    while (Parser_TryIndex(parser, flags, dst, regHint) || Parser_TryFunctionArguments(parser, dst, regHint))
+    while (Parser_TryIndex(parser, flags, dst, regHint) ||
+           (callable && Parser_TryFunctionArguments(parser, dst, regHint)))
     {
+        callable = true;
     }
 
 }

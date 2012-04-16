@@ -2726,18 +2726,14 @@ TEST_FIXTURE(OrLhs, LuaFixture)
     CHECK( lua_tonumber(L, -1) == 5 );
 }
 
-/*
-TEST_FIXTURE(PrefixExp2, LuaFixture)
+TEST_FIXTURE(PrefixExp, LuaFixture)
 {
-    // Test that a table constructor followed by an opening parenthesis isn't
-    // treated as a function call.
+    // This should not be treated as a function call.
     const char* code =
-        "local a\n"
-        "t = { }\n"
-        "(a) = 5";
+        "local a = nil\n"
+        "(function () end)()";
     CHECK( DoString(L, code) );
 }
-*/
 
 TEST_FIXTURE(Dump, LuaFixture)
 {
