@@ -708,15 +708,13 @@ static bool Parser_TryIndex(Parser* parser, unsigned long flags, Expression* dst
 
 static void Parser_Expression4(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
-    
-    bool callable = Parser_Terminal(parser, flags, dst, regHint);
-
-    while (Parser_TryIndex(parser, flags, dst, regHint) ||
-           (callable && Parser_TryFunctionArguments(parser, dst, regHint)))
+    if (Parser_Terminal(parser, flags, dst, regHint))
     {
-        callable = true;
+        while (Parser_TryIndex(parser, flags, dst, regHint) ||
+               Parser_TryFunctionArguments(parser, dst, regHint))
+        {
+        }
     }
-
 }
 
 static void Parser_ExpressionPow(Parser* parser, unsigned long flags, Expression* dst, int regHint)
