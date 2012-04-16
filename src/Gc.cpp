@@ -380,6 +380,8 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
 void Gc_Collect(lua_State* L, Gc* gc)
 {
+    // GC currently disabled.
+    return;
     if (gc->state == Gc_State_Paused)
     {
         gc->state = Gc_State_Start;
