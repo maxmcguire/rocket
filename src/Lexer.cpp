@@ -52,36 +52,6 @@ static const char* tokenName[] =
         "end of stream",
     };
 
-void Buffer_Initialize(lua_State* L, Buffer* buffer)
-{
-    buffer->data = NULL;
-    buffer->length = 0;
-    buffer->maxLength = 0;
-}
-
-void Buffer_Destroy(lua_State* L, Buffer* buffer)
-{
-    Free(L, buffer->data, buffer->maxLength);
-    buffer->data = NULL;
-}
-
-void Buffer_Clear(lua_State* L, Buffer* buffer)
-{
-    buffer->length = 0;
-}
-
-void Buffer_Store(lua_State* L, Buffer* buffer, char c)
-{
-    if (buffer->length == buffer->maxLength)
-    {
-        size_t maxLength = buffer->maxLength + 64;
-        buffer->data = (char*)Reallocate(L, buffer->data, buffer->maxLength, maxLength);
-        buffer->maxLength = maxLength;
-    }
-    buffer->data[buffer->length] = c;
-    ++buffer->length;
-}
-
 void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input)
 {
     lexer->L                = L;
@@ -387,7 +357,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
 
             if (store)
             {
-                Buffer_Store(lexer->L, &lexer->buffer, c);
+                Buffer_Append(lexer->L, &lexer->buffer, c);
             }
 
             int testLevel = 0;
@@ -397,7 +367,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
                 Input_ReadByte(lexer->input);
                 if (store)
                 {
-                    Buffer_Store(lexer->L, &lexer->buffer, c);
+                    Buffer_Append(lexer->L, &lexer->buffer, c);
                 }
                 ++testLevel;
                 c = Input_PeekByte(lexer->input);
@@ -408,7 +378,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
                 Input_ReadByte(lexer->input);
                 if (store)
                 {
-                    Buffer_Store(lexer->L, &lexer->buffer, c);
+                    Buffer_Append(lexer->L, &lexer->buffer, c);
                 }
                 if (testLevel == level)
                 {
@@ -419,7 +389,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
         }
         else if (store)
         {
-            Buffer_Store(lexer->L, &lexer->buffer, c);
+            Buffer_Append(lexer->L, &lexer->buffer, c);
         }
     }
 
@@ -645,7 +615,7 @@ void Lexer_NextToken(Lexer* lexer)
                             }
                         }
                     }
-                    Buffer_Store(lexer->L, &lexer->buffer, c);
+                    Buffer_Append(lexer->L, &lexer->buffer, c);
                 }
                 lexer->token.type = TokenType_String;
                 lexer->token.string = String_Create(lexer->L, lexer->buffer.data, lexer->buffer.length);

@@ -9,6 +9,7 @@
 #define ROCKETVM_LEXER_H
 
 #include "Input.h"
+#include "Buffer.h"
 
 struct String;
 
@@ -62,13 +63,6 @@ struct Token
     lua_Number  number;
 };
 
-struct Buffer
-{
-    char*       data;
-    size_t      length;
-    size_t      maxLength;
-};
-
 const int Lexer_maxRestoreTokens = 4;
 
 struct Lexer
@@ -82,9 +76,6 @@ struct Lexer
     int         numRestoreTokens;
     Buffer      buffer;
 };
-
-void Buffer_Initialize(lua_State* L, Buffer* buffer);
-void Buffer_Destroy(lua_State* L, Buffer* buffer);
 
 const char* Token_GetString(TokenType token);
 
