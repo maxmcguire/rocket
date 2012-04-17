@@ -1044,6 +1044,71 @@ TEST_FIXTURE(GetInfo, LuaFixture)
 
 }
 
+TEST_FIXTURE(GetInfoF, LuaFixture)
+{
+
+    // Test the lua_getinfo function with the "f" parameter.
+
+    struct Locals
+    {
+        static int F(lua_State* L)
+        {
+            Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
+
+            lua_Debug ar;
+
+            // Top of the stack should be this function.
+            if (!lua_getstack(L, 0, &ar))
+            {
+                locals->success = false;
+                return 0;
+            }
+            lua_getinfo(L, "f", &ar);
+            if (lua_tocfunction(L, -1) != F)
+            {
+                locals->success = false;
+                return 0;
+            }
+            lua_pop(L, 1);
+
+            // Next on the stack should be our Lua function.
+            if (!lua_getstack(L, 1, &ar))
+            {
+                locals->success = false;
+                return 0;
+            }
+            lua_getinfo(L, "f", &ar);
+            lua_getglobal(L, "G");
+            if (!lua_rawequal(L, -1, -2))
+            {
+                locals->success = false;
+                return 0;
+            }
+            lua_pop(L, 1);
+
+            locals->success = true;
+            return 0;
+
+        }
+        bool success;
+    };
+
+    Locals locals;
+    locals.success = false;
+
+    lua_pushlightuserdata(L, &locals);
+    lua_pushcclosure(L, &Locals::F, 1);
+    lua_setglobal(L, "F");
+
+    const char* code =
+        "function G() F() end\n"
+        "G()";
+
+    CHECK( DoString(L, code) );
+    CHECK( locals.success );
+
+}
+
 TEST_FIXTURE(MultipleAssignment, LuaFixture)
 {
 

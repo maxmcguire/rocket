@@ -899,7 +899,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
             break;
         case 'f':
             // Pushes onto the stack the function that is running at the given level
-            assert(0);
+            PushValue(L, frame->function);
             break;
         case 'L':
             //  pushes onto the stack a table whose indices are the numbers of the lines that
