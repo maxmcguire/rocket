@@ -15,7 +15,7 @@ project "Rocket"
     kind "SharedLib"
     location "build"
     language "C++"
-    files { "src/*.h", "src/*.c", "src/*.cpp", "src/*.asm", "src/*.def" }
+    files { "src/*.h", "src/*.c", "src/*.cpp", "src/*.asm", "src/*.def", "include/*.h" }
     includedirs { "include" }
     links { "AuxLib" }
     defines { "ROCKET_EXPORTS", "LUA_CORE" }
