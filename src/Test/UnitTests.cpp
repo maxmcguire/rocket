@@ -817,6 +817,22 @@ TEST_FIXTURE(EnvTable, LuaFixture)
 
 }
 
+TEST_FIXTURE(SetFEnv, LuaFixture)
+{
+
+    const char* code = 
+        "A = 5\n"
+        "function F() return A end\n"
+        "setfenv(F, {A=12})\n"
+        "B = F()";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "B");
+    CHECK_EQ( lua_tonumber(L, -1), 12 );
+
+}
+
 TEST_FIXTURE(SetMetatableUserData, LuaFixture)
 {
 
