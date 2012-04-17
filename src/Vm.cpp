@@ -23,6 +23,7 @@ extern "C"
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 
 struct CallArgs
 {
@@ -393,7 +394,34 @@ bool Vm_GetNumber(const Value* value, lua_Number* result)
         *result = value->number;
         return true;
     }
-    // TODO: Need to handle cooercion from a string.
+    else if (Value_GetIsString(value))
+    {
+        const char* string = String_GetData(value->string);
+        
+        char* end;
+        *result = lua_str2number(string, &end);
+
+        if (end == string)
+        {
+            // The conversion failed.
+            return false;
+        }
+        if (*end == 'x' || *end == 'X')
+        {
+            // Try converting as a hexadecimal number.
+            *result = strtoul(string, &end, 16);
+        }
+        // Allow trailing spaces.
+        while (isspace(*end))
+        {
+            ++end;
+        }
+        if (*end == '\0')
+        {
+            // Converted the entire string.
+            return true;
+        }
+    }
     return false;
 }
 

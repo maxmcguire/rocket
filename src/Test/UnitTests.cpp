@@ -3040,3 +3040,32 @@ TEST_FIXTURE(ToNumber, LuaFixture)
     lua_pop(L, 1);
     CHECK( lua_gettop(L) == top );
 }
+
+TEST_FIXTURE(ToNumberFromString, LuaFixture)
+{
+
+    lua_pushstring(L, "10.3");
+    CHECK_EQ( lua_tonumber(L, -1), 10.3 );
+    lua_pop(L, 1);
+
+    lua_pushstring(L, "  10.3  ");
+    CHECK_EQ( lua_tonumber(L, -1), 10.3 );
+    lua_pop(L, 1);
+
+    lua_pushstring(L, "0x123");
+    CHECK_EQ( lua_tonumber(L, -1), 0x123 );
+    lua_pop(L, 1);
+
+    lua_pushstring(L, "  0x123  ");
+    CHECK_EQ( lua_tonumber(L, -1), 0x123 );
+    lua_pop(L, 1);
+
+    lua_pushstring(L, "123x");
+    CHECK_EQ( lua_tonumber(L, -1), 0 );
+    lua_pop(L, 1);
+
+    lua_pushstring(L, "abcd");
+    CHECK_EQ( lua_tonumber(L, -1), 0 );
+    lua_pop(L, 1);
+
+}
