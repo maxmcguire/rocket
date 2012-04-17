@@ -500,7 +500,9 @@ void lua_getfield(lua_State *L, int index, const char* name)
 
 int lua_isnumber(lua_State* L, int index)
 {
-    return lua_type(L, index) == LUA_TNUMBER;
+    lua_Number result;
+    const Value* value = GetValueForIndex(L, index);
+    return Vm_GetNumber(value, &result);
 }
 
 int lua_isstring(lua_State* L, int index)
