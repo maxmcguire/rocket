@@ -83,5 +83,38 @@ void String_Destroy(lua_State* L, String* string)
 
 int String_Compare(String* string1, String* string2)
 {
-    return strcmp( String_GetData(string1), String_GetData(string2) );
+    const char *l = String_GetData(string1);
+    size_t ll = string1->length;
+    
+    const char *r = String_GetData(string2);
+    size_t lr = string2->length;
+
+    while (true)
+    {
+        int temp = strcoll(l, r);
+        if (temp != 0)
+        {
+            return temp;
+        }
+        else
+        {
+            // Strings are equal up to an embedded '\0'
+            size_t len = strlen(l);
+            if (len == lr)  
+            {
+                return (len == ll) ? 0 : 1;
+            }
+            else if (len == ll)
+            {
+                // l is smaller than r (because r is not finished)
+                return -1;
+            }
+            // Both strings longer than len; go on comparing (after the '\0')
+            len++;
+            l += len;
+            ll -= len;
+            r += len;
+            lr -= len;
+        }
+    }
 }
