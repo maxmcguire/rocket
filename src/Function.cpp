@@ -98,6 +98,7 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
     // Up values are is stored after the prototypes.
     prototype->numUpValues   = numUpValues;
     prototype->upValue       = reinterpret_cast<String**>(prototype->prototype + numPrototypes);
+    memset(prototype->upValue, 0, sizeof(String*) * numUpValues);
 
     // Debug info is stored after the up values.
     prototype->sourceLine = reinterpret_cast<int*>(prototype->upValue + numUpValues);
@@ -257,7 +258,9 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
     for (int i = 0; i < upvalueListSize; ++i)
     {
         size_t length = *reinterpret_cast<const size_t*>(data);
-        data += sizeof(size_t) + length;
+        data += sizeof(size_t);
+        prototype->upValue[i] = String_Create(L, data, length - 1);
+        data += length;
     }
 
     prototype->varArg = (varArg & 2) != 0;

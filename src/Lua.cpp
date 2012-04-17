@@ -259,11 +259,14 @@ static void Output_Prototype( Output* output, Prototype* prototype )
     Output_Write( output, prototype->codeSize );
     Output_WriteBlock( output, prototype->sourceLine, prototype->codeSize * sizeof(int) );
 
-    // List list of locals (optional debug data)
+    // List of locals (optional debug data)
     Output_Write( output, static_cast<int>(0) );
 
-    // List list of upvalues (optional debug data)
-    Output_Write( output, static_cast<int>(0) );
+    Output_Write( output, prototype->numUpValues );
+    for (int i = 0; i < prototype->numUpValues; ++i)
+    {
+        Output_WriteString( output, prototype->upValue[i] );
+    }
 
 }
 
