@@ -2977,12 +2977,12 @@ TEST_FIXTURE( StringComparison, LuaFixture )
     const char* code =
         "t1 = 'alo' < 'alo1'\n"
         "t2 = '' < 'a'\n"
-        "t3 = 'alo\0alo' < 'alo\0b'\n"
-        "t4 = 'alo\0alo\0\0' > 'alo\0alo\0'\n"
-        "t5 = 'alo' < 'alo\0'\n"
-        "t6 = 'alo\0' > 'alo'\n"
-        "t7 = '\0' < '\1'\n"
-        "t8 = '\0\0' < '\0\1'";
+        "t3 = 'alo\\0alo' < 'alo\\0b'\n"
+        "t4 = 'alo\\0alo\\0\\0' > 'alo\\0alo\\0'\n"
+        "t5 = 'alo' < 'alo\\0'\n"
+        "t6 = 'alo\\0' > 'alo'\n"
+        "t7 = '\\0' < '\\1'\n"
+        "t8 = '\\0\\0' < '\\0\\1'";
 
     CHECK( DoString(L, code) );
 
