@@ -2968,3 +2968,44 @@ TEST_FIXTURE( SetUpValue, LuaFixture )
     lua_pop(L, 1);
 
 }
+
+TEST_FIXTURE( StringComparison, LuaFixture )
+{
+
+    const char* code =
+        "t1 = 'alo' < 'alo1'\n"
+        "t2 = '' < 'a'\n"
+        "t3 = 'alo\0alo' < 'alo\0b'\n"
+        "t4 = 'alo\0alo\0\0' > 'alo\0alo\0'\n"
+        "t5 = 'alo' < 'alo\0'\n"
+        "t6 = 'alo\0' > 'alo'\n"
+        "t7 = '\0' < '\1'\n"
+        "t8 = '\0\0' < '\0\1'";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "t1");
+    CHECK( lua_toboolean(L, -1) );
+
+    lua_getglobal(L, "t2");
+    CHECK( lua_toboolean(L, -1) );
+
+    lua_getglobal(L, "t3");
+    CHECK( lua_toboolean(L, -1) );
+
+    lua_getglobal(L, "t4");
+    CHECK( lua_toboolean(L, -1) );
+
+    lua_getglobal(L, "t5");
+    CHECK( lua_toboolean(L, -1) );
+
+    lua_getglobal(L, "t6");
+    CHECK( lua_toboolean(L, -1) );
+
+    lua_getglobal(L, "t7");
+    CHECK( lua_toboolean(L, -1) );
+
+    lua_getglobal(L, "t8");
+    CHECK( lua_toboolean(L, -1) );
+
+}
