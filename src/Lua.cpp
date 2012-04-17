@@ -214,7 +214,7 @@ static void Output_Prototype( Output* output, Prototype* prototype )
     Output_Write( output, prototype->lastLineDefined );
     Output_WriteByte( output, prototype->numUpValues );
     Output_WriteByte( output, prototype->numParams );
-    Output_WriteByte( output, prototype->varArg );
+    Output_WriteByte( output, prototype->varArg ? 2 : 0 );
     Output_WriteByte( output, prototype->maxStackSize );
 
     Output_Write( output, prototype->codeSize );
