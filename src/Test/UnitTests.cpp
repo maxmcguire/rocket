@@ -2602,7 +2602,8 @@ TEST_FIXTURE(OperatorPrecedence, LuaFixture)
         "b = 1 + 4 / 2\n"
         "c = 1 - 2 * 3\n"
         "d = 1 - 4 / 2\n"
-        "e = 2 * -3 ^ 4 * 5\n";
+        "e = 2 * -3 ^ 4 * 5\n"
+        "f = 'a' .. 'b' == 'ab'\n";
 
     CHECK( DoString(L, code) );
 
@@ -2620,6 +2621,9 @@ TEST_FIXTURE(OperatorPrecedence, LuaFixture)
 
     lua_getglobal(L, "e");
     CHECK_CLOSE( lua_tonumber(L, -1),  -810);
+
+    lua_getglobal(L, "f");
+    CHECK( lua_toboolean(L, -1) );
 
 }
 
