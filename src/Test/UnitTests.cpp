@@ -3045,30 +3045,37 @@ TEST_FIXTURE(ToNumberFromString, LuaFixture)
 {
 
     lua_pushstring(L, "10.3");
+    CHECK( lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 10.3 );
     lua_pop(L, 1);
 
     lua_pushstring(L, "10.3 456");
+    CHECK( !lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 0 );
     lua_pop(L, 1);
 
     lua_pushstring(L, "  10.3  ");
+    CHECK( lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 10.3 );
     lua_pop(L, 1);
 
     lua_pushstring(L, "0x123");
+    CHECK( lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 0x123 );
     lua_pop(L, 1);
 
     lua_pushstring(L, "  0x123  ");
+    CHECK( lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 0x123 );
     lua_pop(L, 1);
 
     lua_pushstring(L, "123x");
+    CHECK( !lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 0 );
     lua_pop(L, 1);
 
     lua_pushstring(L, "abcd");
+    CHECK( !lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 0 );
     lua_pop(L, 1);
 
