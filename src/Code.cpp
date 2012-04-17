@@ -832,9 +832,47 @@ static void Parser_Expression2(Parser* parser, unsigned long flags, Expression* 
 	}
 }
 
+static void Parser_ExpressionConcat(Parser* parser, unsigned long flags, Expression* dst, int regHint)
+{
+
+    Parser_Expression2(parser, flags, dst, regHint);
+
+    if (Parser_Accept(parser, TokenType_Concat))
+    {
+
+        Parser_MoveToStackTop(parser, dst);
+        int start = dst->index;
+        int numOperands = 0;
+
+        do
+        {
+		    
+            int reg = Parser_AllocateRegister(parser);
+
+            Expression arg;
+            Parser_Expression2(parser, flags, &arg, reg);
+
+            // Make sure the result is stored in our consecutive register and
+            // free up any temporary registers we used.
+            Parser_MoveToRegister(parser, &arg, reg);
+            Parser_SetLastRegister(parser, reg);
+             
+            ++numOperands;
+
+        }
+        while (Parser_Accept(parser, TokenType_Concat));
+
+        Parser_EmitABC(parser, Opcode_Concat, dst->index,
+            start, start + numOperands);
+
+    }
+
+
+}
+
 static void Parser_Expression1(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
-    Parser_Expression2(parser, flags, dst, regHint);
+    Parser_ExpressionConcat(parser, flags, dst, regHint);
     while ( Parser_Accept(parser, TokenType_Eq) ||
             Parser_Accept(parser, TokenType_Ne) ||
             Parser_Accept(parser, TokenType_Le) ||
@@ -848,7 +886,7 @@ static void Parser_Expression1(Parser* parser, unsigned long flags, Expression* 
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_Expression2(parser, flags, &arg2, -1);
+        Parser_ExpressionConcat(parser, flags, &arg2, -1);
         Parser_EmitComparison(parser, op, dst, regHint, &arg1, &arg2);
     }
 }
@@ -920,39 +958,10 @@ static void Parser_ExpressionLogic(Parser* parser, unsigned long flags, Expressi
  */
 static void Parser_Expression0(Parser* parser, unsigned long flags, Expression* dst, int regHint)
 {
-    
+    // Expression parsing is implemented as a recursive descent parser. The
+    // farther down the call chain an expression type is parsed, the higher
+    // precedence it has (i.e. binds more tightly).
     Parser_ExpressionLogic(parser, flags, dst, regHint);
-
-    if (Parser_Accept(parser, TokenType_Concat))
-    {
-
-        Parser_MoveToStackTop(parser, dst);
-        int start = dst->index;
-        int numOperands = 0;
-
-        do
-        {
-		    
-            int reg = Parser_AllocateRegister(parser);
-
-            Expression arg;
-            Parser_ExpressionLogic(parser, flags, &arg, reg);
-
-            // Make sure the result is stored in our consecutive register and
-            // free up any temporary registers we used.
-            Parser_MoveToRegister(parser, &arg, reg);
-            Parser_SetLastRegister(parser, reg);
-             
-            ++numOperands;
-
-        }
-        while (Parser_Accept(parser, TokenType_Concat));
-
-        Parser_EmitABC(parser, Opcode_Concat, dst->index,
-            start, start + numOperands);
-
-    }
-
 }
 
 /**
