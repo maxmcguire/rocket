@@ -373,17 +373,10 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
                 c = Input_PeekByte(lexer->input);
             }
 
-            if (c == ']')
+            if (c == ']' && testLevel == level)
             {
                 Input_ReadByte(lexer->input);
-                if (store)
-                {
-                    Buffer_Append(lexer->L, &lexer->buffer, c);
-                }
-                if (testLevel == level)
-                {
-                    break;
-                }
+                break;
             }
 
         }
@@ -396,7 +389,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
     if (store)
     {
         lexer->token.type   = TokenType_String;
-        lexer->token.string = String_Create(lexer->L, lexer->buffer.data, lexer->buffer.length - (2 + level));
+        lexer->token.string = String_Create(lexer->L, lexer->buffer.data, lexer->buffer.length - (1 + level));
     }
 
     return true;

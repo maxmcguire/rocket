@@ -2471,6 +2471,20 @@ TEST_FIXTURE(LongStringInitialNewLine, LuaFixture)
 
 }
 
+TEST_FIXTURE(LongStringIgnoreClose, LuaFixture)
+{
+
+    const char* code =
+        "a = [===[]=]===]";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_isstring(L, -1) );
+    CHECK_EQ( lua_tostring(L, -1), "]=" );
+
+}
+
 TEST_FIXTURE(Closure, LuaFixture)
 {
 
