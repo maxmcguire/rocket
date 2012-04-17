@@ -589,15 +589,17 @@ void Lexer_NextToken(Lexer* lexer)
                         else if (Lexer_IsDigit(c))
                         {
                             int value = 0;
-                            for (int i = 0; i < 3; ++i)
+                            int i = 0;
+                            while (true)
                             {
                                 value = (value * 10) + c - '0';
                                 c = Input_PeekByte(lexer->input);
-                                if (!Lexer_IsDigit(c))
+                                if (!Lexer_IsDigit(c) || i >= 2)
                                 {
                                     break;
                                 }
                                 Input_ReadByte(lexer->input);
+                                ++i;
                             }
                             c = value;
                         }

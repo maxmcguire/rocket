@@ -2347,7 +2347,7 @@ TEST_FIXTURE(EscapeCharacters, LuaFixture)
 {
 
     const char* code =
-        "b = '\\01a\\002\\a\\b\\f\\n\\r\\t\\v\\\"\\\''";
+        "b = '\\01a\\002\\a\\b\\f\\n\\r\\t\\v\\\"\\\'\\0001'";
 
     CHECK( DoString(L, code) );
 
@@ -2367,6 +2367,8 @@ TEST_FIXTURE(EscapeCharacters, LuaFixture)
     CHECK( buffer[9] == '\v' );
     CHECK( buffer[10] == '\"' );
     CHECK( buffer[11] == '\'' );
+    CHECK( buffer[12] == '\0' );
+    CHECK( buffer[13] == '1' );
 
 }
 
