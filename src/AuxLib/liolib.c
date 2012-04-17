@@ -374,10 +374,10 @@ static int io_tmpfile (lua_State *L)
 }
 
 
-static FILE *getiofile (lua_State *L, int findex) {
-  FILE *f;
+static File* getiofile (lua_State *L, int findex) {
+  File *f;
   lua_rawgeti(L, LUA_ENVIRONINDEX, findex);
-  f = *(FILE **)lua_touserdata(L, -1);
+  f = (File*)lua_touserdata(L, -1);
   if (f == NULL)
     luaL_error(L, "standard %s file is closed", fnames[findex - 1]);
   return f;
@@ -646,8 +646,7 @@ static int g_write (lua_State *L, File* file, int arg) {
 
 
 static int io_write (lua_State *L) {
-  /*return g_write(L, getiofile(L, IO_OUTPUT), 1);*/
-    return 0;
+    return g_write(L, getiofile(L, IO_OUTPUT), 1);
 }
 
 
