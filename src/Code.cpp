@@ -1651,6 +1651,9 @@ Prototype* Parse(lua_State* L, Input* input, const char* name)
     Parser parser;
     Parser_Initialize(&parser, L, &lexer, NULL);
 
+    // Top level block accepts a variable number of arguments.
+    parser.function->varArg = true;
+
     Parser_Block(&parser, TokenType_EndOfStream);
     Parser_EmitAB(&parser, Opcode_Return, 0, 1);
 

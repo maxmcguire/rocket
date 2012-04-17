@@ -2071,6 +2071,33 @@ TEST_FIXTURE(VarArg5, LuaFixture)
 
 }
 
+TEST_FIXTURE(VarArg6, LuaFixture)
+{
+
+    // Test that ... can be used at file scope.
+
+    const char* code =
+        "a, b = ...";
+
+    int result = luaL_loadstring(L, code);
+    if (result != 0)
+    {
+        fprintf(stderr, "%s\n", lua_tostring(L, -1));
+    }
+    CHECK( result == 0 );
+
+    lua_pushstring(L, "arg1");
+    lua_pushstring(L, "arg2");
+    CHECK( lua_pcall(L, 2, 0, 0) == 0 );
+
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tostring(L, -1), "arg1" );
+
+    lua_getglobal(L, "b");
+    CHECK_EQ( lua_tostring(L, -1), "arg2" );
+
+}
+
 TEST_FIXTURE(DoBlock, LuaFixture)
 {
 
