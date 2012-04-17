@@ -1202,6 +1202,13 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         else
         {
             L->stackBase = value + 1;
+            // If fewer arguments were supplied than the function expects, fill
+            // in with nil values.
+            for (int i = numArgs; i < prototype->numParams; ++i)
+            {
+                SetNil(&L->stackBase[i]);
+            }
+            numArgs = prototype->numParams;
         }
 
         L->stackTop = L->stackBase + prototype->maxStackSize;

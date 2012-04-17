@@ -2579,6 +2579,23 @@ TEST_FIXTURE(LocalInit, LuaFixture)
     
 }
 
+TEST_FIXTURE(LocalInit2, LuaFixture)
+{
+
+    const char* code = 
+        "function f()\n"
+        "  local x\n"
+        "  return x\n"
+        "end\n"
+        "a = f(4)";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_isnil(L, -1) );
+
+}
+
 TEST_FIXTURE(OperatorPrecedence, LuaFixture)
 {
     
