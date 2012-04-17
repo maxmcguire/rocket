@@ -1171,9 +1171,56 @@ LUA_API const char* lua_setlocal (lua_State *L, const lua_Debug* ar, int n)
     return 0;
 }
 
+/**
+ * Returns the name of the up value (for a Lua function) and upValue is set to
+ * point to the address of where the up values value is stored.
+ */
+static const char* GetUpValue(Value* value, int n, Value** upValue)
+{
+
+    if (!Value_GetIsFunction(value))
+    {
+        return NULL;
+    }
+
+    Closure* closure = value->closure;
+    
+    if (closure->c)
+    {
+        if (n >= 1 && n <= closure->cclosure.numUpValues)
+        {
+            *upValue = &closure->cclosure.upValue[n - 1];
+            // Up values to a C function are unnamed.
+            return "";
+        }
+    }
+    else
+    {
+        if (n >= 1 && n <= closure->lclosure.numUpValues)
+        {
+            *upValue = closure->lclosure.upValue[n - 1]->value;
+            return String_GetData( closure->lclosure.prototype->upValue[n - 1] );   
+        }
+    }
+
+    return NULL;
+  
+}
+
 LUA_API const char* lua_setupvalue(lua_State* L, int funcindex, int n)
 {
-    // Not yet implemented.
-    assert(0);
-    return 0;
+
+    Value* closure = GetValueForIndex(L, funcindex);
+
+    Value* upValue;
+    const char* name = GetUpValue(closure, n, &upValue);
+    
+    if (name != NULL)
+    {
+        assert(upValue != NULL);
+        CopyValue( upValue, L->stackTop - 1 );
+        Pop(L, 1);
+    }
+
+    return name;
 }

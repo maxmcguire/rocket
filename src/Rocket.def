@@ -76,7 +76,7 @@ EXPORTS
     lua_getlocal
     ; lua_setlocal
     lua_getupvalue
-    ; lua_setupvalue
+    lua_setupvalue
     lua_sethook
     lua_gethook
     lua_gethookmask

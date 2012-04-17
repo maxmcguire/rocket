@@ -2929,3 +2929,29 @@ TEST_FIXTURE( LoadTermination, LuaFixture )
     CHECK( lua_load(L, Locals::Reader, NULL, "test") == 0 );
 
 }
+
+TEST_FIXTURE( SetUpValue, LuaFixture )
+{
+
+    const char* code =
+        "local a = 1\n"
+        "function f() return a + 1 end";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "f");
+    int funcindex = lua_gettop(L);
+
+    int top = lua_gettop(L);
+    lua_pushnumber(L, 10);
+    const char* name = lua_setupvalue(L, funcindex, 1);
+    CHECK( lua_gettop(L) == top );
+
+    CHECK_EQ( name, "a" );
+
+    lua_pushvalue(L, funcindex);
+    lua_pcall(L, 0, 1, 0);
+    CHECK_EQ( lua_tonumber(L, -1), 11 );
+    lua_pop(L, 1);
+
+}
