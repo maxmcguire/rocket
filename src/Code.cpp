@@ -1658,6 +1658,7 @@ Prototype* Parse(lua_State* L, Input* input, const char* name)
     Prototype* prototype = Function_CreatePrototype(parser.L, parser.function, source);
 
     Parser_Destroy(&parser);
+    Lexer_Destroy(&lexer);
 
     return prototype;
 

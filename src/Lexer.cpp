@@ -52,6 +52,36 @@ static const char* tokenName[] =
         "end of stream",
     };
 
+void Buffer_Initialize(lua_State* L, Buffer* buffer)
+{
+    buffer->data = NULL;
+    buffer->length = 0;
+    buffer->maxLength = 0;
+}
+
+void Buffer_Destroy(lua_State* L, Buffer* buffer)
+{
+    Free(L, buffer->data, buffer->maxLength);
+    buffer->data = NULL;
+}
+
+void Buffer_Clear(lua_State* L, Buffer* buffer)
+{
+    buffer->length = 0;
+}
+
+void Buffer_Store(lua_State* L, Buffer* buffer, char c)
+{
+    if (buffer->length == buffer->maxLength)
+    {
+        size_t maxLength = buffer->maxLength + 64;
+        buffer->data = (char*)Reallocate(L, buffer->data, buffer->maxLength, maxLength);
+        buffer->maxLength = maxLength;
+    }
+    buffer->data[buffer->length] = c;
+    ++buffer->length;
+}
+
 void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input)
 {
     lexer->L                = L;
@@ -60,7 +90,13 @@ void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input)
     lexer->token.string     = NULL;
     lexer->haveToken        = false;
     lexer->numRestoreTokens = 0;
+    Buffer_Initialize(L, &lexer->buffer);
     Lexer_NextToken(lexer);
+}
+
+void Lexer_Destroy(Lexer* lexer)
+{
+    Buffer_Destroy(lexer->L, &lexer->buffer);
 }
 
 void Lexer_Error(Lexer* lexer, const char* fmt, ...)
@@ -291,17 +327,6 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
 
 }
 
-static void Lexer_Store(Lexer* lexer, int c, char buffer[1024], size_t& length)
-{
-    if (length == 1024)
-    {
-        // TODO: remove this limitation.
-        Lexer_Error(lexer, "string is too long");
-    }
-    buffer[length] = c;
-    ++length;
-}
-
 /**
  * If store is false, the long block will be parsed, but it will not be captured
  * as a token.
@@ -344,8 +369,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
         Input_ReadByte(lexer->input);
     }
 
-    char buffer[1024];
-    size_t length = 0;
+    Buffer_Clear(lexer->L, &lexer->buffer);
 
     while (1)
     {
@@ -363,7 +387,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
 
             if (store)
             {
-                Lexer_Store(lexer, c, buffer, length);
+                Buffer_Store(lexer->L, &lexer->buffer, c);
             }
 
             int testLevel = 0;
@@ -373,7 +397,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
                 Input_ReadByte(lexer->input);
                 if (store)
                 {
-                    Lexer_Store(lexer, c, buffer, length);
+                    Buffer_Store(lexer->L, &lexer->buffer, c);
                 }
                 ++testLevel;
                 c = Input_PeekByte(lexer->input);
@@ -384,7 +408,7 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
                 Input_ReadByte(lexer->input);
                 if (store)
                 {
-                    Lexer_Store(lexer, c, buffer, length);
+                    Buffer_Store(lexer->L, &lexer->buffer, c);
                 }
                 if (testLevel == level)
                 {
@@ -395,14 +419,14 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
         }
         else if (store)
         {
-            Lexer_Store(lexer, c, buffer, length);
+            Buffer_Store(lexer->L, &lexer->buffer, c);
         }
     }
 
     if (store)
     {
         lexer->token.type   = TokenType_String;
-        lexer->token.string = String_Create(lexer->L, buffer, length - (2 + level));
+        lexer->token.string = String_Create(lexer->L, lexer->buffer.data, lexer->buffer.length - (2 + level));
     }
 
     return true;
@@ -566,9 +590,8 @@ void Lexer_NextToken(Lexer* lexer)
             {
                 int end = c;
                 // Read the string literal.
-                char buffer[1024];
-                size_t length = 0;
-                while (length < 1024)
+                Buffer_Clear(lexer->L, &lexer->buffer);
+                while (true)
                 {
                     c = Input_ReadByte(lexer->input);
                     if (Lexer_IsNewLine(c))
@@ -622,11 +645,10 @@ void Lexer_NextToken(Lexer* lexer)
                             }
                         }
                     }
-                    buffer[length] = c;
-                    ++length;
+                    Buffer_Store(lexer->L, &lexer->buffer, c);
                 }
                 lexer->token.type = TokenType_String;
-                lexer->token.string = String_Create(lexer->L, buffer, length);
+                lexer->token.string = String_Create(lexer->L, lexer->buffer.data, lexer->buffer.length);
             }
             return;
         default:

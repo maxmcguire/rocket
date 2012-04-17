@@ -62,6 +62,13 @@ struct Token
     lua_Number  number;
 };
 
+struct Buffer
+{
+    char*       data;
+    size_t      length;
+    size_t      maxLength;
+};
+
 const int Lexer_maxRestoreTokens = 4;
 
 struct Lexer
@@ -73,11 +80,17 @@ struct Lexer
     bool        haveToken;
     Token       restoreToken[Lexer_maxRestoreTokens];
     int         numRestoreTokens;
+    Buffer      buffer;
 };
+
+void Buffer_Initialize(lua_State* L, Buffer* buffer);
+void Buffer_Destroy(lua_State* L, Buffer* buffer);
 
 const char* Token_GetString(TokenType token);
 
 void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input);
+void Lexer_Destroy(Lexer* lexer);
+
 void Lexer_NextToken(Lexer* lexer);
 
 void Lexer_Error(Lexer* lexer, const char* fmt, ...);
