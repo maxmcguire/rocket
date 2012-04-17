@@ -2412,6 +2412,20 @@ TEST_FIXTURE(UnaryMinusOperator, LuaFixture)
 
 }
 
+TEST_FIXTURE(UnaryMinusOperator2, LuaFixture)
+{
+
+    const char* code =
+        "local x = 5\n" 
+        "y = - -x";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "y");
+    CHECK( lua_tonumber(L, -1) == 5 );
+
+}
+
 TEST_FIXTURE(UnaryMinusOperatorConstant, LuaFixture)
 {
 

@@ -27,6 +27,7 @@ static void Parser_Block(Parser* parser, int endToken);
 static void Parser_Statement(Parser* parser);
 static void Parser_Expression0(Parser* parser, unsigned long flags, Expression* dst, int regHint);
 static bool Parser_Terminal(Parser* parser, unsigned long flags, Expression* dst, int regHint);
+static void Parser_ExpressionUnary(Parser* parser, unsigned long flags, Expression* dst, int regHint);
 
 /**
  * Attempts to fold the expression opcode arg and store the result in dst.
@@ -731,7 +732,7 @@ static void Parser_ExpressionPow(Parser* parser, unsigned long flags, Expression
         Parser_ResolveCall(parser, &arg1, 1);
 
         Expression arg2;
-        Parser_Expression4(parser, flags, &arg2, -1);
+        Parser_ExpressionUnary(parser, flags, &arg2, -1);
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
