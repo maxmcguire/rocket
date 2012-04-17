@@ -29,8 +29,8 @@ extern "C" void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 extern "C" void Vm_SetTable(lua_State* L, Value* table, Value* key, Value* value);
 extern "C" void Vm_GetTable(lua_State* L, const Value* table, const Value* key, Value* dst, bool ref);
 
-extern "C" void Vm_GetGlobal(lua_State* L, const Value* key, Value* dst);
-extern "C" void Vm_SetGlobal(lua_State* L, Value* key, Value* value);
+extern "C" void Vm_GetGlobal(lua_State* L, Closure* closure, const Value* key, Value* dst);
+extern "C" void Vm_SetGlobal(lua_State* L, Closure* closure, Value* key, Value* value);
 
 int Vm_ValuesEqual(const Value* arg1, const Value* arg2);
 int Vm_Less(const Value* arg1, const Value* arg2);

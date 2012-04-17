@@ -283,14 +283,18 @@ void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst,
     SetNil(dst);
 }
 
-void Vm_GetGlobal(lua_State* L, const Value* key, Value* dst)
+void Vm_GetGlobal(lua_State* L, Closure* closure, const Value* key, Value* dst)
 {
-    Vm_GetTable(L, &L->globals, key, dst, false);
+    Value table;
+    SetValue(&table, closure->env);
+    Vm_GetTable(L, &table, key, dst, false);
 }
 
-void Vm_SetGlobal(lua_State* L, Value* key, Value* value)
+void Vm_SetGlobal(lua_State* L, Closure* closure, Value* key, Value* value)
 {
-    Vm_SetTable(L, &L->globals, key, value);
+    Value table;
+    SetValue(&table, closure->env);
+    Vm_SetTable(L, &table, key, value);
 }
 
 // Overwrites the value of an element on the stack.
@@ -534,11 +538,12 @@ static int Execute(lua_State* L, int numArgs)
         }
 
     CallFrame* frame = State_GetCallFrame(L );
+    Closure* closure = frame->function->closure;
 
-    assert( !frame->function->closure->c );
-    LClosure* closure = &frame->function->closure->lclosure;
+    assert( !closure->c );
+    LClosure* lclosure = &closure->lclosure;
 
-    Prototype* prototype = closure->prototype;
+    Prototype* prototype = lclosure->prototype;
 
     const Instruction* ip  = prototype->code;
     const Instruction* end = ip + prototype->codeSize;
@@ -612,7 +617,7 @@ static int Execute(lua_State* L, int numArgs)
                     assert(bx >= 0 && bx < prototype->numConstants);
                     Value* key = &constant[bx];
                     Value* value = &stackBase[a];
-                    Vm_SetGlobal(L, key, value);
+                    Vm_SetGlobal(L, closure, key, value);
                 )
             }
             break;
@@ -622,19 +627,20 @@ static int Execute(lua_State* L, int numArgs)
                     int bx = GET_Bx(inst);
                     assert(bx >= 0 && bx < prototype->numConstants);
                     const Value* key = &constant[bx];
-                    Vm_GetGlobal(L, key, &L->stackBase[a]);
+                    Value* dst = &L->stackBase[a];
+                    Vm_GetGlobal(L, closure, key, dst);
                 )
             }
             break;
         case Opcode_SetUpVal:
             {
                 const Value* value = &stackBase[a];
-                SetUpValue(closure, GET_B(inst), value);                    
+                SetUpValue(lclosure, GET_B(inst), value);                    
             }
             break;
         case Opcode_GetUpVal:
             {
-                const Value* value = GetUpValue(closure, GET_B(inst));
+                const Value* value = GetUpValue(lclosure, GET_B(inst));
                 SetValue(L, a, value);                    
             }
             break;
@@ -840,7 +846,7 @@ static int Execute(lua_State* L, int numArgs)
                     else
                     {
                         assert( GET_OPCODE(inst) == Opcode_GetUpVal );
-                        c->lclosure.upValue[i] = closure->upValue[b];
+                        c->lclosure.upValue[i] = lclosure->upValue[b];
                     }
                 }
 
