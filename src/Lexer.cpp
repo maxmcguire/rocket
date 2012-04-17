@@ -616,17 +616,17 @@ void Lexer_NextToken(Lexer* lexer)
             return;
         default:
             {
-                char buffer[LUAI_MAXNAME];
-                size_t bufferLength = 1;
-                buffer[0] = c;
-                while (bufferLength < LUAI_MAXNAME)
+
+                Buffer_Clear(lexer->L, &lexer->buffer);
+                Buffer_Append(lexer->L, &lexer->buffer, c);
+                
+                while (true)
                 {
                     c = Input_PeekByte(lexer->input);
                     if (c < 128 && (isalpha(c) || c == '_' || isdigit(c)))
                     {
                         Input_ReadByte(lexer->input);
-                        buffer[bufferLength] = c;
-                        ++bufferLength;
+                        Buffer_Append(lexer->L, &lexer->buffer, c);
                     }
                     else
                     {
@@ -636,17 +636,18 @@ void Lexer_NextToken(Lexer* lexer)
 
                 // Check to see if this is one of the reserved words.
                 const int numReserved = TokenType_LastReserved - TokenType_First + 1;
+                size_t bufferLength = lexer->buffer.length;
                 for (int i = 0; i < numReserved; ++i)
                 {
                     size_t length = strlen(tokenName[i]);
-                    if (length == bufferLength && strncmp(buffer, tokenName[i], bufferLength) == 0)
+                    if (length == bufferLength && strncmp(lexer->buffer.data, tokenName[i], bufferLength) == 0)
                     {
                         lexer->token.type = TokenType_And + i;
                         return;
                     }
                 }
 
-                lexer->token.string = String_Create(lexer->L, buffer, bufferLength);
+                lexer->token.string = String_Create(lexer->L, lexer->buffer.data, bufferLength);
                 lexer->token.type = TokenType_Name;
 
             }

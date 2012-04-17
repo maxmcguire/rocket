@@ -322,11 +322,6 @@
 #define LUAI_MAXASSIGNS     64
 
 /*
-@@ LUAI_MAXNAME determines the maximum length of an identifier.
-*/
-#define LUAI_MAXNAME    256
-
-/*
 @@ LUA_COMPAT_GETN controls compatibility with old getn behavior.
 ** CHANGE it (define it) if you want exact compatibility with the
 ** behavior of setn/getn in Lua 5.0.
