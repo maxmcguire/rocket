@@ -1124,6 +1124,10 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
     Closure* closure = value->closure;
 
     // Push into the call stack.
+    if (L->callStackTop - L->callStackBase >= LUAI_MAXCCALLS)
+    {
+        Vm_Error(L, "call stack overflow");
+    }
     CallFrame* frame = L->callStackTop;
     ++L->callStackTop;
 
