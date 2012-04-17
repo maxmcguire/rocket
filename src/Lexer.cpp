@@ -162,6 +162,47 @@ static int Lexer_GetHexValue(int c)
     return 0;
 }
 
+static lua_Number Lexer_ReadDecimalDigits(Lexer* lexer, int& c)
+{
+
+    lua_Number number = 0.0;
+
+    while (Lexer_IsDigit(c))
+    {
+        lua_Number digit = static_cast<lua_Number>(c - '0');
+        number = number * 10.0 + digit;
+        if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+        {
+            return number;
+        }
+        c = Input_ReadByte(lexer->input);
+    }
+
+    if (c == '.')
+    {
+        if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+        {
+            return number;
+        }
+        c = Input_ReadByte(lexer->input);
+        lua_Number frac = 10.0;
+        while (Lexer_IsDigit(c))
+        {
+            lua_Number digit = static_cast<lua_Number>(c - '0');
+            number += digit / frac;
+            frac *= 10.0;
+            if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+            {
+                return number;
+            }
+            c = Input_ReadByte(lexer->input);
+        }
+    }
+
+    return number;
+
+}
+
 static bool Lexer_ReadNumber(Lexer* lexer, int c)
 {
 
@@ -218,38 +259,27 @@ static bool Lexer_ReadNumber(Lexer* lexer, int c)
     }
 
     lexer->token.type   = TokenType_Number;
-    lexer->token.number = 0.0;
+    lexer->token.number = Lexer_ReadDecimalDigits(lexer, c);
 
-    while (Lexer_IsDigit(c))
+    if (c == 'e' || c == 'E')
     {
-        lua_Number digit = static_cast<lua_Number>(c - '0');
-        lexer->token.number = lexer->token.number * 10.0 + digit;
-        if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
-        {
-            return true;
-        }
-        c = Input_ReadByte(lexer->input);
-    }
 
-    if (c == '.')
-    {
-        if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
-        {
-            return true;
-        }
+        bool negative = false;
+
         c = Input_ReadByte(lexer->input);
-        lua_Number frac = 10.0;
-        while (Lexer_IsDigit(c))
+        if (c == '-')
         {
-            lua_Number digit = static_cast<lua_Number>(c - '0');
-            lexer->token.number += digit / frac;
-            frac *= 10.0;
-            if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
-            {
-                return true;
-            }
+            negative = true;
             c = Input_ReadByte(lexer->input);
         }
+
+        lua_Number exponent = Lexer_ReadDecimalDigits(lexer, c);
+        if (negative)
+        {
+            exponent = -exponent;
+        }
+        lexer->token.number *= luai_numpow(10, exponent);
+        
     }
 
     if (!Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
