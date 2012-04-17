@@ -3021,21 +3021,25 @@ TEST_FIXTURE(ToNumber, LuaFixture)
     int top = lua_gettop(L);
 
     lua_pushnumber(L, 10.3 );
+    CHECK( lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 10.3 );
     lua_pop(L, 1);
     CHECK( lua_gettop(L) == top );
 
     lua_pushstring(L, "10.3");
+    CHECK( lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 10.3 );
     lua_pop(L, 1);
     CHECK( lua_gettop(L) == top );
 
     lua_pushboolean(L, 1);
+    CHECK( !lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 0 );
     lua_pop(L, 1);
     CHECK( lua_gettop(L) == top );
 
     lua_pushlightuserdata(L, (void*)0x12345678);
+    CHECK( !lua_isnumber(L, -1) );
     CHECK_EQ( lua_tonumber(L, -1), 0 );
     lua_pop(L, 1);
     CHECK( lua_gettop(L) == top );
