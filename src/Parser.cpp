@@ -879,29 +879,6 @@ static void PrintConstants(Prototype* prototype)
     }
 }
 
-static void PrintOpcode(int line, Opcode opcode)
-{
-
-    const char* op = Opcode_GetAsText(opcode);
-
-    char buffer[256];
-    sprintf(buffer, "[%02d] %s", line, op);
-
-    size_t indent = 20;
-    size_t length = strlen(buffer);
-    printf("%s", buffer);
-    if (length < indent)
-    {
-        indent -= length;
-        while (indent > 0)
-        {
-            printf(" ");
-            --indent;
-        }
-    }
-
-}
-
 void PrintFunction(Prototype* prototype)
 {
 
@@ -960,10 +937,21 @@ void PrintFunction(Prototype* prototype)
         };
 
     printf("; function\n");
-    printf("; %d upvalues, %d params, %d stacks\n",
+    printf("; %d upvalues, %d params, %d stack slots\n",
         prototype->numUpValues, prototype->numParams, prototype->maxStackSize);
 
     PrintConstants(prototype);
+
+    const int commentColumn = 30;
+    const int argsColumn    = 20;
+
+    int lineNumberDigits = 0;
+    int log = prototype->codeSize;
+    while (log > 0)
+    {
+        log /= 10;
+        ++lineNumberDigits;
+    }
 
     for (int i = 0; i < prototype->codeSize; ++i)
     {
@@ -971,30 +959,64 @@ void PrintFunction(Prototype* prototype)
         Instruction inst = prototype->code[i];
         
         Opcode opcode = GET_OPCODE(inst);
-        PrintOpcode(i + 1, opcode);
+        int line = i + 1;
+
+        const char* op = Opcode_GetAsText(opcode);
+        int length = printf("[%0*d] %s",  lineNumberDigits, line, op);
+
+        // Indent before printing the arguments.
+        if (length < argsColumn)
+        {
+            length += printf("%*s", argsColumn - length, "");
+        }
 
         switch (format[opcode])
         {
         case Format_A:
-            printf("%d", GET_A(inst));
+            length += printf("%d", GET_A(inst));
             break;
         case Format_AB:
-            printf("%d %d", GET_A(inst), GET_B(inst));
+            length += printf("%d %d", GET_A(inst), GET_B(inst));
             break;
         case Format_ABC:
-            printf("%d %d %d", GET_A(inst), GET_B(inst), GET_C(inst));
+            length += printf("%d %d %d", GET_A(inst), GET_B(inst), GET_C(inst));
             break;
         case Format_ABx:
-            printf("%d %d", GET_A(inst), GET_Bx(inst));
+            length += printf("%d %d", GET_A(inst), GET_Bx(inst));
             break;
         case Format_AsBx:
-            printf("%d %d", GET_A(inst), GET_sBx(inst));
+            length += printf("%d %d", GET_A(inst), GET_sBx(inst));
             break;
         case Format_AC:
-            printf("%d %d", GET_A(inst), GET_C(inst));
+            length += printf("%d %d", GET_A(inst), GET_C(inst));
             break;
         case Format_sBx:
-            printf("%d", GET_sBx(inst));
+            length += printf("%d", GET_sBx(inst));
+            break;
+        }
+
+        // Indent before printing the comment.
+        if (length < commentColumn)
+        {
+            length += printf("%*s", commentColumn - length, "");
+        }
+
+        switch (opcode)
+        {
+        case Opcode_Jmp:
+            printf("; goto [%0*d]", lineNumberDigits, line + GET_sBx(inst) + 1); 
+            break;
+        case Opcode_Lt:
+            if (GET_A(inst))
+            {
+                printf("; if not (r%d < r%d) then goto [%0*d]", GET_B(inst), GET_C(inst),
+                    lineNumberDigits, line + 2);
+            }
+            else
+            {
+                printf("; if r%d < r%d then goto [%0*d]", GET_B(inst), GET_C(inst),
+                    lineNumberDigits, line + 2);
+            }
             break;
         }
 

@@ -186,13 +186,19 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
     }
     else if (op == '>')
     {
-        opcode = Opcode_Le;
-        value = 1;
+        opcode = Opcode_Lt;
+        Expression* temp = arg1;
+        arg1 = arg2;
+        arg2 = temp;
+        value = 0;
     }
     else if (op == TokenType_Ge)
     {
-        opcode = Opcode_Lt;
-        value = 1;
+        opcode = Opcode_Le;
+        Expression* temp = arg1;
+        arg1 = arg2;
+        arg2 = temp;
+        value = 0;
     }
     else
     {
