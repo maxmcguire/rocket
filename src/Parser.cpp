@@ -523,18 +523,30 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
         }
         */
 
-        Parser_MoveToRegister(parser, value, reg);
-
-        // If the value we're testing is already in the destination register
-        if (reg == -1 || value->index == reg)
+        if (Parser_ConvertToRegister(parser, value) && reg != -1 && value->index != reg)
         {
-            Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
+            // The expression we are testing is already in a register, so we can
+            // use to the testset form which includes a copy from a register to
+            // our destination.
+            Parser_EmitABC(parser, Opcode_TestSet, reg, value->index, test);
         }
         else
         {
-            Parser_EmitABC(parser, Opcode_TestSet, reg, value->index, test);
+            Parser_MoveToRegister(parser, value, reg);
+            if (reg == -1 || value->index == reg)
+            {
+                // The value we're testing is already in the destination register
+                // (or we don't care about the destination register), so we can
+                // use the test form.
+                Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
+            }
+            else
+            {
+                Parser_EmitABC(parser, Opcode_TestSet, reg, value->index, test);
+            }
+            reg = value->index;
         }
-        reg = value->index;
+        
         Parser_OpenJump(parser, value);
 
     }
