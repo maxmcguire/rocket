@@ -67,7 +67,6 @@ struct Parser
     Function*       function;
     Block           block[LUAI_MAXCCALLS];
     int             numBlocks;
-    int             lastOpenJump;
 };
 
 enum ExpressionType
@@ -118,12 +117,14 @@ enum ExpressionType
  */
 struct Expression
 {
+    Expression() { exitJump = -1; }
     ExpressionType  type;
     int             index;
     lua_Number      number;
     int             key;
     ExpressionType  keyType;
     int             numArgs;
+    int             exitJump;
 };
 
 void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* parent);
@@ -222,10 +223,11 @@ void Parser_CloseJump(Parser* parser, const Expression* value, int startPos);
 void Parser_OpenJump(Parser* parser, Expression* dst);
 
 /**
- * Adds the jump to the list of open jumps which will be automatically closed
- * when we move a value to a register.
+ * Adds a jump instruction (at jumpPos) to the list which will be updated to
+ * jump to the current position immediately after the value is moved to a
+ * register.
  */
-void Parser_AddJumpToOpenList(Parser* parser, const Expression* jump);
+void Parser_AddExitJump(Parser* parser, Expression* value, int jumpPos);
 
 /**
  * Returns the index of the register occupied by the value, or -1 if the

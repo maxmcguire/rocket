@@ -54,7 +54,6 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
     function->maxFunctions      = 0;
         
     parser->function            = function;
-    parser->lastOpenJump        = -1;
 
 }
 
@@ -500,14 +499,13 @@ void Parser_OpenJump(Parser* parser, Expression* dst)
     dst->type  = EXPRESSION_JUMP;
 }
 
-void Parser_AddJumpToOpenList(Parser* parser, const Expression* jump)
+void Parser_AddExitJump(Parser* parser, Expression* jump, int jumpPos)
 {
-    assert(jump->type == EXPRESSION_JUMP);
-    if (parser->lastOpenJump != -1)
+    if (jump->exitJump != -1)
     {
-        Parser_UpdateInstruction(parser, jump->index, parser->lastOpenJump);           
+        Parser_UpdateInstruction(parser, jumpPos, jump->exitJump);           
     }
-    parser->lastOpenJump = jump->index;
+    jump->exitJump = jumpPos;
 }
 
 int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
@@ -743,18 +741,14 @@ static void Parser_FinalizeJump(Parser* parser, const Expression* value, int reg
     }
 }
 
-static void Parser_FinalizeOpenJumps(Parser* parser, int reg)
+static void Parser_FinalizeOpenJumps(Parser* parser, int jumpPos, int reg)
 {
-    if (parser->lastOpenJump != -1)
+    if (jumpPos != -1)
     {
-
         Expression jump;
-        jump.index = parser->lastOpenJump;
+        jump.index = jumpPos;
         jump.type  = EXPRESSION_JUMP;
         Parser_FinalizeJump(parser, &jump, reg);
-
-        parser->lastOpenJump = -1;
-    
     }
 }
 
@@ -854,7 +848,8 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     value->type     = EXPRESSION_REGISTER;
     value->index    = reg;
 
-    Parser_FinalizeOpenJumps(parser, reg);
+    Parser_FinalizeOpenJumps(parser, value->exitJump, reg);
+    value->exitJump = -1;
 
     return reg;
 
