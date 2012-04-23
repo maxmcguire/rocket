@@ -67,6 +67,7 @@ struct Parser
     Function*       function;
     Block           block[LUAI_MAXCCALLS];
     int             numBlocks;
+    int             lastOpenJump;
 };
 
 enum ExpressionType
@@ -197,7 +198,8 @@ bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int
 /**
  * Converts an expression into an open test if it isn't one. If reg is not -1
  * then the value being tested will also be stored in that register. Returns
- * the index of the register where the value was stored.
+ * the index of the register where the value was stored. The test value indicates
+ * the condition under which the jump is taken.
  */
 int Parser_ConvertToTest(Parser* parser, Expression* value, int test = 0, int reg = -1);
 
@@ -205,13 +207,13 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test = 0, int re
  * Updates an open test expression so that if the expression is false it will
  * jump to the current instruction location.
  */
-void Parser_CloseJump(Parser* parser, Expression* value);
+void Parser_CloseJump(Parser* parser, const Expression* value);
 
 /**
  * Updates an open test expression so that if the expression is false it will
  * jump to the instruction specified by startPos.
  */
-void Parser_CloseJump(Parser* parser, Expression* value, int startPos);
+void Parser_CloseJump(Parser* parser, const Expression* value, int startPos);
 
 /**
  * Opens a new jump by emitting an jump instruction. The location of the jump
@@ -220,10 +222,10 @@ void Parser_CloseJump(Parser* parser, Expression* value, int startPos);
 void Parser_OpenJump(Parser* parser, Expression* dst);
 
 /**
- * Chains two jumps together, so that when jump is closed, it will also close
- * prevJump to the same location.
+ * Adds the jump to the list of open jumps which will be automatically closed
+ * when we move a value to a register.
  */
-void Parser_ChainJump(Parser* parser, Expression* jump, const Expression* prevJump);
+void Parser_AddJumpToOpenList(Parser* parser, const Expression* jump);
 
 /**
  * Returns the index of the register occupied by the value, or -1 if the
@@ -240,9 +242,10 @@ bool Parser_ConvertToRegister(Parser* parser, Expression* value);
 
 /**
  * Ensures that the location specifies a register. If reg specifies an index
- * then it will be moved to that register.
+ * then it will be moved to that register. Returns the index of the register
+ * where the value was stored.
  */
-void Parser_MoveToRegister(Parser* parser, Expression* value, int reg = -1);
+int Parser_MoveToRegister(Parser* parser, Expression* value, int reg = -1);
 
 /**
  * Ensures that the location specifies a register or a constant slot.
