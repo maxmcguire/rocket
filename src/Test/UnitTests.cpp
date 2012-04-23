@@ -1423,6 +1423,20 @@ TEST_FIXTURE(TableConstructorTrailingComma, LuaFixture)
 
 }
 
+TEST_FIXTURE(EmptyReturn, LuaFixture)
+{
+
+    // Test parsing of an empty return from a block
+
+    const char* code =
+        "do\n"
+        "  return\n"
+        "end\n";
+
+    CHECK( DoString(L, code) );
+    
+}
+
 TEST_FIXTURE(Return, LuaFixture)
 {
 

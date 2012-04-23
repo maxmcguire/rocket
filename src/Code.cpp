@@ -1088,6 +1088,12 @@ static bool Parser_TryReturn(Parser* parser)
         }
 
     }
+    else
+    {
+        // If we had an empty block, put back the end token so we can process
+        // it at a higher level.
+        Parser_Unaccept(parser);
+    }
 
     Parser_EmitAB(parser, Opcode_Return, reg, numValues + 1);
     Parser_FreeRegisters(parser);
