@@ -889,8 +889,8 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
 
     Parser_Expression1(parser, dst, regHint);
 
-    while ( Parser_Accept(parser, TokenType_And) ||
-            Parser_Accept(parser, TokenType_Or) )
+    if ( Parser_Accept(parser, TokenType_And) ||
+         Parser_Accept(parser, TokenType_Or) )
     {
 
         int op   = Parser_GetToken(parser);
@@ -900,7 +900,7 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         int exitJump = dst->index;
         
         Expression arg2;
-        Parser_Expression1(parser, &arg2, regHint);
+        Parser_ExpressionLogic(parser, &arg2, regHint);
 
         *dst = arg2;
         Parser_AddExitJump(parser, dst, exitJump);
