@@ -193,7 +193,11 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
     Parser_EmitABC(parser, opcode, 1,
         Parser_EncodeRK(parser, arg1),
         Parser_EncodeRK(parser, arg2));
-    Parser_OpenJump(parser, dst);
+
+    Expression result;
+    Parser_OpenJump(parser, &result);
+
+    *dst = result;
 
 }
 
