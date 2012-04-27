@@ -208,13 +208,13 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test = 0, int re
  * Updates an open test expression so that if the expression is false it will
  * jump to the current instruction location.
  */
-void Parser_CloseJump(Parser* parser, const Expression* value);
+void Parser_CloseJump(Parser* parser, Expression* value);
 
 /**
  * Updates an open test expression so that if the expression is false it will
  * jump to the instruction specified by startPos.
  */
-void Parser_CloseJump(Parser* parser, const Expression* value, int startPos);
+void Parser_CloseJump(Parser* parser, Expression* value, int startPos);
 
 /**
  * Opens a new jump by emitting an jump instruction. The location of the jump

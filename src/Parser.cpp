@@ -580,13 +580,15 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
     return reg;
 }
 
-void Parser_CloseJump(Parser* parser, const Expression* value)
+void Parser_CloseJump(Parser* parser, Expression* value)
 {
-    Parser_CloseJump(parser, value, Parser_GetInstructionCount(parser));
+    Parser_AddExitJump(parser, value, value->index);
+    Parser_FinalizeExitJumps(parser, value, -1);
 }
 
-void Parser_CloseJump(Parser* parser, const Expression* value, int startPos)
+void Parser_CloseJump(Parser* parser, Expression* value, int startPos)
 {
+    /*
     int jumpPos = value->index;
     do
     {
@@ -615,6 +617,8 @@ void Parser_CloseJump(Parser* parser, const Expression* value, int startPos)
         jumpPos = prevJumpPos;
     }
     while (jumpPos != -1);
+    */
+    assert(0);
 }
 
 static void Parser_EmitUpValueBinding(Parser* parser, Function* closure)
@@ -714,46 +718,40 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg)
     }
     */
 
-    if (opcode == Opcode_Eq ||
-        opcode == Opcode_Le ||
-        opcode == Opcode_Lt)
+    if (reg != -1)
     {
-
-        int cond = GET_A(inst);
-
-        // Since we have a logic test, we'll need to output a boolean at the
-        // end of the test.
-        if (startPos == jumpPos + 1)
+        if (opcode == Opcode_Eq ||
+            opcode == Opcode_Le ||
+            opcode == Opcode_Lt)
         {
-            // The "true" case didn't actually output anything, so we need to
-            // output a boolean.
-            Parser_EmitABC(parser, Opcode_LoadBool, reg, 1 - cond, 1);
-        }
-        else
-        {
-            Parser_EmitAsBx(parser, Opcode_Jmp, 0, 1);
-        }
-        
-        // Jump to the loadbool instruction.
-        startPos = Parser_GetInstructionCount(parser);
-        Parser_EmitABC(parser, Opcode_LoadBool, reg, cond, 0);
 
-    }
-    else if (opcode == Opcode_Test)
-    {
-        // Update the instruction to a testset so that we have a value in
-        // the "true" case.
-        inst = Parser_EncodeABC(Opcode_TestSet, reg, GET_A(inst), GET_C(inst));
-        Parser_UpdateInstruction(parser, jumpPos - 1, inst);
-    }
-    else if (opcode == Opcode_TestSet)
-    {
-    }
-    else
-    {
-        // In general this shouldn't happen since a jump will only be in the
-        // chain if it has some sort of control instruction before it.
-        return;
+            int cond = GET_A(inst);
+
+            // Since we have a logic test, we'll need to output a boolean at the
+            // end of the test.
+            if (startPos == jumpPos + 1)
+            {
+                // The "true" case didn't actually output anything, so we need to
+                // output a boolean.
+                Parser_EmitABC(parser, Opcode_LoadBool, reg, 1 - cond, 1);
+            }
+            else
+            {
+                Parser_EmitAsBx(parser, Opcode_Jmp, 0, 1);
+            }
+            
+            // Jump to the loadbool instruction.
+            startPos = Parser_GetInstructionCount(parser);
+            Parser_EmitABC(parser, Opcode_LoadBool, reg, cond, 0);
+
+        }
+        else if (opcode == Opcode_Test)
+        {
+            // Update the instruction to a testset so that we have a value in
+            // the "true" case.
+            inst = Parser_EncodeABC(Opcode_TestSet, reg, GET_A(inst), GET_C(inst));
+            Parser_UpdateInstruction(parser, jumpPos - 1, inst);
+        }
     }
 
     // Update the jump instruction with the actual amount to jump.
