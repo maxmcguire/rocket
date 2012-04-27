@@ -519,6 +519,7 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
     else if (value->type != EXPRESSION_JUMP)
     {
 
+        /*
         if (Parser_ConvertToRegister(parser, value) && reg != -1 && value->index != reg)
         {
             // The expression we are testing is already in a register, so we can
@@ -542,7 +543,14 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
             }
             reg = value->index;
         }
-        
+        */
+
+        if (!Parser_ConvertToRegister(parser, value))
+        {
+            Parser_MoveToRegister(parser, value, reg);
+        }
+
+        Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
         Parser_OpenJump(parser, value);
 
     }
@@ -572,38 +580,6 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
     return reg;
 }
 
-/**
- * Returns true if the jmp instruction was preceeded by a test of some sort that
- * requires us to emit a true or false to a register.
- */
-static bool Parser_GetJumpNeedsValue(Parser* parser, const Expression* value, int& cond)
-{
-    int jumpPos = value->index;
-    do
-    {
-        // Check the instruction before the jump to see if it's an instruction
-        // that requires a value to be generated.
-        if (jumpPos > 0)
-        {
-            Instruction inst = Parser_GetInstruction(parser, jumpPos - 1);
-            Opcode opcode = GET_OPCODE(inst);
-            switch (opcode)
-            {
-            case Opcode_Lt:
-            case Opcode_Le:
-            case Opcode_Eq:
-            case Opcode_Ne:
-            case Opcode_NotTest:
-                cond = GET_A(inst);
-                return true;
-            }
-        }
-        jumpPos = Parser_GetInstruction(parser, jumpPos);
-    }
-    while (jumpPos != -1);
-    return false;
-}
-
 void Parser_CloseJump(Parser* parser, const Expression* value)
 {
     Parser_CloseJump(parser, value, Parser_GetInstructionCount(parser));
@@ -614,7 +590,6 @@ void Parser_CloseJump(Parser* parser, const Expression* value, int startPos)
     int jumpPos = value->index;
     do
     {
-
         if (jumpPos > 0)
         {
             Instruction inst = Parser_GetInstruction(parser, jumpPos - 1);
@@ -708,47 +683,99 @@ void Parser_ResolveName(Parser* parser, Expression* dst, String* name)
    }
 }
 
-static void Parser_FinalizeJump(Parser* parser, const Expression* value, int reg)
+static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg)
 {
-    assert(value->type == EXPRESSION_JUMP);
 
-    int cond = 0;
-
-    if (Parser_GetJumpNeedsValue(parser, value, cond))
+    if (jumpPos < 1)
     {
-        // Check if there instructions between the jump and the current instruction
-        // then we need to insert an additional jump.
-        int pc = Parser_GetInstructionCount(parser);
-        if (pc != value->index + 1)
+        return;
+    }
+
+    Instruction inst = Parser_GetInstruction(parser, jumpPos - 1);
+    Opcode opcode = GET_OPCODE(inst);
+
+    int prevJumpPos = Parser_GetInstruction(parser, jumpPos);
+    int startPos    = Parser_GetInstructionCount(parser);
+
+    /*
+    if (opcode == Opcode_Ne)
+    {
+        // Ne isn't an actualy VM instruction, so translate it to an
+        // inverted Eq.
+        inst = Parser_EncodeABC( Opcode_Eq, 1 - GET_A(inst), GET_B(inst), GET_C(inst) );
+        Parser_UpdateInstruction(parser, jumpPos - 1, inst);
+    }
+    else if (opcode == Opcode_NotTest)
+    {
+        // NotTest isn't an actualy VM instruction, so translate it to an
+        // inverted test.
+        inst = Parser_EncodeABC( Opcode_Test, GET_B(inst), 0, 1 - GET_A(inst) );
+        Parser_UpdateInstruction(parser, jumpPos - 1, inst);
+    }
+    */
+
+    if (opcode == Opcode_Eq ||
+        opcode == Opcode_Le ||
+        opcode == Opcode_Lt)
+    {
+
+        int cond = GET_A(inst);
+
+        // Since we have a logic test, we'll need to output a boolean at the
+        // end of the test.
+        if (startPos == jumpPos + 1)
         {
-            Expression skip;
-            Parser_OpenJump(parser, &skip);
+            // The "true" case didn't actually output anything, so we need to
+            // output a boolean.
             Parser_EmitABC(parser, Opcode_LoadBool, reg, 1 - cond, 1);
-            Parser_CloseJump(parser, value);
-            Parser_EmitABC(parser, Opcode_LoadBool, reg, cond, 0);
-            Parser_CloseJump(parser, &skip);
         }
         else
         {
-            Parser_EmitABC(parser, Opcode_LoadBool, reg, 1 - cond, 1);
-            Parser_CloseJump(parser, value);
-            Parser_EmitABC(parser, Opcode_LoadBool, reg, cond, 0);
+            Parser_EmitAsBx(parser, Opcode_Jmp, 0, 1);
         }
+        
+        // Jump to the loadbool instruction.
+        startPos = Parser_GetInstructionCount(parser);
+        Parser_EmitABC(parser, Opcode_LoadBool, reg, cond, 0);
+
+    }
+    else if (opcode == Opcode_Test)
+    {
+        // Update the instruction to a testset so that we have a value in
+        // the "true" case.
+        inst = Parser_EncodeABC(Opcode_TestSet, reg, GET_A(inst), GET_C(inst));
+        Parser_UpdateInstruction(parser, jumpPos - 1, inst);
+    }
+    else if (opcode == Opcode_TestSet)
+    {
     }
     else
     {
-        Parser_CloseJump(parser, value);
+        // In general this shouldn't happen since a jump will only be in the
+        // chain if it has some sort of control instruction before it.
+        return;
     }
+
+    // Update the jump instruction with the actual amount to jump.
+    int jumpAmount = static_cast<int>(startPos - jumpPos - 1);
+    Parser_UpdateInstruction(parser, jumpPos, Parser_EncodeAsBx(Opcode_Jmp, 0, jumpAmount));
+
+    Parser_UpdateJumpChain(parser, prevJumpPos, reg);
+   
 }
 
-static void Parser_FinalizeOpenJumps(Parser* parser, int jumpPos, int reg)
+static void Parser_FinalizeJump(Parser* parser, const Expression* value, int reg)
 {
-    if (jumpPos != -1)
+    assert(value->type == EXPRESSION_JUMP);
+    Parser_UpdateJumpChain(parser, value->index, reg);
+}
+
+void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg)
+{
+    if (value->exitJump != -1)
     {
-        Expression jump;
-        jump.index = jumpPos;
-        jump.type  = EXPRESSION_JUMP;
-        Parser_FinalizeJump(parser, &jump, reg);
+        Parser_UpdateJumpChain(parser, value->exitJump, reg);
+        value->exitJump = -1;
     }
 }
 
@@ -758,11 +785,18 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     Parser_ResolveCall(parser, value, 1);
     Parser_ConvertToRegister(parser, value);
 
+    // Always move into a new register if we have exit jumps.
+    if (value->exitJump != -1 && reg == -1)
+    {
+        reg = Parser_AllocateRegister(parser);
+    }
+
     if (value->type == EXPRESSION_REGISTER)
     {
         // The value is already in a register, so nothing to do.
         if (reg == -1 || value->index == reg)
         {
+            assert(value->exitJump == -1);
             return reg;
         }
     }
@@ -825,7 +859,8 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     }
     else if (value->type == EXPRESSION_JUMP)
     {
-        Parser_FinalizeJump(parser, value, reg);
+        // Fold the jump into the exit jump chain.
+        Parser_AddExitJump(parser, value, value->index);
     }
     else if (value->type == EXPRESSION_UPVALUE)
     {
@@ -848,8 +883,7 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     value->type     = EXPRESSION_REGISTER;
     value->index    = reg;
 
-    Parser_FinalizeOpenJumps(parser, value->exitJump, reg);
-    value->exitJump = -1;
+    Parser_FinalizeExitJumps(parser, value, reg);
 
     return reg;
 
@@ -860,7 +894,9 @@ void Parser_MoveToRegisterOrConstant(Parser* parser, Expression* value, int reg)
     // If the value is one of our literal types, move it to a constant slot.
     Parser_ConvertLiteralToConstant(parser, value);
     // Anything else we move to a register.
-    if (value->type != EXPRESSION_CONSTANT)
+    // If we have jumps, then we also need to move to a register so we properly
+    // output the value.
+    if (value->type != EXPRESSION_CONSTANT || value->exitJump != -1)
     {
         Parser_MoveToRegister(parser, value, reg);
     }
@@ -1247,7 +1283,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    //PrintFunction(prototype);
+    PrintFunction(prototype);
 
     return prototype;
 

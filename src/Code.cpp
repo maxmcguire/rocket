@@ -149,6 +149,8 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
 
     assert(dst != arg1);
     assert(dst != arg2);
+    assert(arg1->exitJump == -1);
+    assert(arg2->exitJump == -1);
 
     Parser_MakeRKEncodable(parser, arg1);
     Parser_MakeRKEncodable(parser, arg2);
@@ -881,6 +883,11 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
 
+        if (arg1.exitJump != -1)
+        {
+             Parser_MoveToRegister(parser, &arg1); 
+        }
+
         Expression arg2;
         Parser_ExpressionConcat(parser, &arg2, -1);
         Parser_EmitComparison(parser, op, dst, regHint, &arg1, &arg2);
@@ -889,7 +896,7 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
 }
 
 static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
-{
+{ 
 
     Parser_Expression1(parser, dst, regHint);
 

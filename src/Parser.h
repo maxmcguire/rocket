@@ -229,6 +229,8 @@ void Parser_OpenJump(Parser* parser, Expression* dst);
  */
 void Parser_AddExitJump(Parser* parser, Expression* value, int jumpPos);
 
+void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg);
+
 /**
  * Returns the index of the register occupied by the value, or -1 if the
  * expression is not in a register.
