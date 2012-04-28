@@ -711,18 +711,13 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     Parser_ResolveCall(parser, value, 1);
     Parser_ConvertToRegister(parser, value);
 
-    // Always move into a new register if we have exit jumps.
-    if (value->exitJump != -1 && reg == -1)
-    {
-        reg = Parser_AllocateRegister(parser);
-    }
-
     if (value->type == EXPRESSION_REGISTER)
     {
         // The value is already in a register, so nothing to do.
-        if (reg == -1 || value->index == reg)
+        // Note that if we have an exit jump, we'll need to move to a fresh
+        // register.
+        if ((reg == -1 || value->index == reg) && value->exitJump == -1)
         {
-            assert(value->exitJump == -1);
             return reg;
         }
     }
@@ -985,7 +980,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    //PrintFunction(prototype);
+    PrintFunction(prototype);
 
     return prototype;
 

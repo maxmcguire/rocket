@@ -293,6 +293,29 @@ void PrintFunction(Prototype* prototype)
                 printf("; r%d = %s", GET_A(inst), GET_B(inst) ? "true" : "false");
             }
             break;
+        case Opcode_Call:
+            {
+                int numArgs    = GET_B(inst) - 1;
+                int numResults = GET_C(inst) - 1;
+                printf("; ");
+                if (numArgs >= 0)
+                {
+                    printf("%d arguments", numArgs);
+                }
+                else
+                {
+                    printf("variable arguments");
+                }
+                if (numResults >= 0)
+                {
+                    printf(", %d results", numResults);
+                }
+                else
+                {
+                    printf(", variable results");
+                }
+            }
+            break;
         }
 
         printf("\n");
