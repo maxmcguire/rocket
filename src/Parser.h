@@ -206,15 +206,9 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg = 
 
 /**
  * Updates an open test expression so that if the expression is false it will
- * jump to the current instruction location.
- */
-void Parser_CloseJump(Parser* parser, Expression* value);
-
-/**
- * Updates an open test expression so that if the expression is false it will
  * jump to the instruction specified by startPos.
  */
-void Parser_CloseJump(Parser* parser, Expression* value, int startPos);
+void Parser_CloseJump(Parser* parser, Expression* value, int startPos = -1);
 
 /**
  * Opens a new jump by emitting an jump instruction. The location of the jump
@@ -228,8 +222,6 @@ void Parser_OpenJump(Parser* parser, Expression* dst);
  * register.
  */
 void Parser_AddExitJump(Parser* parser, Expression* value, int jumpPos);
-
-void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg);
 
 /**
  * Returns the index of the register occupied by the value, or -1 if the
