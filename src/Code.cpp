@@ -74,7 +74,8 @@ static void Parser_ResolveExitJump(Parser* parser, Expression* value)
 {
     if (value->exitJump != -1)
     {
-         Parser_MoveToRegister(parser, value); 
+        int reg = Parser_AllocateRegister(parser);
+        Parser_MoveToRegister(parser, value, reg); 
     }
 }
 
@@ -736,12 +737,13 @@ static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
 	{
 		int op = Parser_GetToken(parser);
 
-        Expression arg1 = *dst;
-        Parser_ResolveCall(parser, &arg1, 1);
-        Parser_ResolveExitJump(parser, &arg1);
+        Parser_ResolveCall(parser, dst, 1);
+        Parser_ResolveExitJump(parser, dst);
 
+        Expression arg1 = *dst;
         Expression arg2;
         Parser_ExpressionUnary(parser, &arg2, -1);
+        
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
@@ -816,12 +818,13 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
 	{
 		int op = Parser_GetToken(parser);
 
-        Expression arg1 = *dst;
-        Parser_ResolveCall(parser, &arg1, 1);
-        Parser_ResolveExitJump(parser, &arg1);
+        Parser_ResolveCall(parser, dst, 1);
+        Parser_ResolveExitJump(parser, dst);
 
+        Expression arg1 = *dst;
         Expression arg2;
         Parser_ExpressionUnary(parser, &arg2, -1);
+
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
@@ -834,12 +837,13 @@ static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
 	{
 		int op = Parser_GetToken(parser);
 
-        Expression arg1 = *dst;
-        Parser_ResolveCall(parser, &arg1, 1);
-        Parser_ResolveExitJump(parser, &arg1);
+        Parser_ResolveCall(parser, dst, 1);
+        Parser_ResolveExitJump(parser, dst);
 
+        Expression arg1 = *dst;
         Expression arg2;
         Parser_Expression3(parser, &arg2, -1);
+
         Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
 	}
 }
