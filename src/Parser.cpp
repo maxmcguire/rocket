@@ -512,7 +512,9 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
 {
     if (value->type == EXPRESSION_NOT)
     {
-        Parser_EmitABC(parser, Opcode_Test, value->index, 0, 1 - test);
+        // Note, we set the B value here to indicate that the value for this test
+        // must be coerced to a boolean. The parser will take this into account.
+        Parser_EmitABC(parser, Opcode_Test, value->index, 1, 1 - test);
         Parser_OpenJump(parser, value);
         reg = value->index;
     }
@@ -574,9 +576,17 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
 
     if (reg != -1)
     {
-        if (opcode == Opcode_Eq ||
-            opcode == Opcode_Le ||
-            opcode == Opcode_Lt)
+
+        bool emitBool = (opcode == Opcode_Eq || opcode == Opcode_Le || opcode == Opcode_Lt);
+
+        // If B is set for a test instruction, that means that it has a not folded
+        // into it, which requires the value to be coerced into a boolean.
+        if (opcode == Opcode_Test && GET_B(inst))
+        {
+            emitBool = true;
+        }
+
+        if (emitBool)
         {
 
             int cond = GET_A(inst);
@@ -585,9 +595,7 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
             // end of the test.
             if (startPos == jumpPos + 1)
             {
-                // The "true" case didn't actually output anything, so we need to
-                // output a boolean.
-                Parser_EmitABC(parser, Opcode_LoadBool, reg, 1 - cond, 1);
+                Parser_EmitABC(parser, Opcode_LoadBool, reg, 0, 1);
             }
             else
             {
@@ -596,7 +604,7 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
             
             // Jump to the loadbool instruction.
             startPos = Parser_GetInstructionCount(parser);
-            Parser_EmitABC(parser, Opcode_LoadBool, reg, cond, 0);
+            Parser_EmitABC(parser, Opcode_LoadBool, reg, 1, 0);
 
         }
         else if (opcode == Opcode_Test)
@@ -977,7 +985,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    PrintFunction(prototype);
+    //PrintFunction(prototype);
 
     return prototype;
 
