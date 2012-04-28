@@ -508,7 +508,7 @@ void Parser_AddExitJump(Parser* parser, Expression* jump, int jumpPos)
     jump->exitJump = jumpPos;
 }
 
-int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
+void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
 {
     if (value->type == EXPRESSION_NOT)
     {
@@ -516,7 +516,6 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
         // must be coerced to a boolean. The parser will take this into account.
         Parser_EmitABC(parser, Opcode_Test, value->index, 1, 1 - test);
         Parser_OpenJump(parser, value);
-        reg = value->index;
     }
     else if (value->type != EXPRESSION_JUMP)
     {
@@ -552,8 +551,6 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
 
         }
     }
-
-    return reg;
 }
 
 static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int startPos)
@@ -979,7 +976,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    PrintFunction(prototype);
+    //PrintFunction(prototype);
 
     return prototype;
 

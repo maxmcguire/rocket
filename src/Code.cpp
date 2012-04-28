@@ -909,7 +909,7 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         int op   = Parser_GetToken(parser);
         int cond = (op == TokenType_Or) ? 1 : 0;
 
-        regHint = Parser_ConvertToTest(parser, dst, cond, regHint);
+        Parser_ConvertToTest(parser, dst, cond, regHint);
         int exitJump = dst->index;
         
         Expression arg2;

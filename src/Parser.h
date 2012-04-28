@@ -198,11 +198,10 @@ bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int
 
 /**
  * Converts an expression into an open test if it isn't one. If reg is not -1
- * then the value being tested will also be stored in that register. Returns
- * the index of the register where the value was stored. The test value indicates
- * the condition under which the jump is taken.
+ * then the value being tested will also be stored in that register. The test
+ * value indicates the condition under which the jump is taken.
  */
-int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg = -1);
+void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg = -1);
 
 /**
  * Updates an open test expression so that if the expression is false it will
