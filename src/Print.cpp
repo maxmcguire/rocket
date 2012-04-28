@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
 static const char* FormatConstant(const Value* value, char buffer[64])
 {
@@ -26,11 +27,11 @@ static const char* FormatConstant(const Value* value, char buffer[64])
     }
     else if (Value_GetIsBoolean(value))
     {
-        sprintf(buffer, "%s", value->boolean ? "true" : "false" );
+        strcpy(buffer, value->boolean ? "true" : "false");
     }
     else if (Value_GetIsNil(value))
     {
-        sprintf(buffer, "nil");
+        strcpy(buffer, "nil");
     }
     else
     {
@@ -59,12 +60,26 @@ static const char* FormatRK(const Prototype* prototype, char buffer[64], int ind
 
 static void PrintConstants(Prototype* prototype)
 {
+    const int commentColumn = 30;
+
     for (int i = 0; i < prototype->numConstants; ++i)
     {
+
         const Value* value = &prototype->constant[i];
+        
         char buffer[64];
         const char* data = FormatConstant(value, buffer);
-        printf(".const %s ; %d\n", data, i);
+        
+        int length = printf(".const %s", data);
+
+        // Indent before printing the comment.
+        if (length < commentColumn)
+        {
+            length += printf("%*s", commentColumn - length, "");
+        }
+
+        printf("; %d\n", i);
+
     }
 }
 
