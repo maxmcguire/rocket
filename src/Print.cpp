@@ -18,7 +18,7 @@ static const char* FormatConstant(const Value* value, char buffer[64])
 {
     if (Value_GetIsNumber(value))
     {
-        sprintf(buffer, "%f", value->number);
+        lua_number2str(buffer, value->number);
     }
     else if (Value_GetIsString(value))
     {
