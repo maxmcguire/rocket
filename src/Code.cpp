@@ -70,6 +70,14 @@ static bool Parser_FoldConstants(Opcode opcode, lua_Number& dst, lua_Number arg1
     return true;
 }
 
+static void Parser_ResolveExitJump(Parser* parser, Expression* value)
+{
+    if (value->exitJump != -1)
+    {
+         Parser_MoveToRegister(parser, value); 
+    }
+}
+
 /**
  * regHint specifies the index of the register the result should be stored in if
  * the result will be in a register (or -1 if the caller does not require the
@@ -80,6 +88,7 @@ static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, int r
 
     assert(dst != arg1);
     assert(dst != arg2);
+    assert(arg1->exitJump == -1);
 
     Opcode opcode;
     switch (op)
@@ -729,6 +738,7 @@ static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
 
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
+        Parser_ResolveExitJump(parser, &arg1);
 
         Expression arg2;
         Parser_ExpressionUnary(parser, &arg2, -1);
@@ -808,6 +818,7 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
 
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
+        Parser_ResolveExitJump(parser, &arg1);
 
         Expression arg2;
         Parser_ExpressionUnary(parser, &arg2, -1);
@@ -825,6 +836,7 @@ static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
 
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
+        Parser_ResolveExitJump(parser, &arg1);
 
         Expression arg2;
         Parser_Expression3(parser, &arg2, -1);
@@ -884,11 +896,7 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
 
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
-
-        if (arg1.exitJump != -1)
-        {
-             Parser_MoveToRegister(parser, &arg1); 
-        }
+        Parser_ResolveExitJump(parser, &arg1);
 
         Expression arg2;
         Parser_ExpressionConcat(parser, &arg2, -1);
