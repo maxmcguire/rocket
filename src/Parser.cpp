@@ -714,10 +714,9 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     if (value->type == EXPRESSION_REGISTER)
     {
         // The value is already in a register, so nothing to do.
-        // Note that if we have an exit jump, we'll need to move to a fresh
-        // register.
-        if ((reg == -1 || value->index == reg) && value->exitJump == -1)
+        if (reg == -1 || value->index == reg)
         {
+            Parser_FinalizeExitJumps(parser, value, reg);
             return reg;
         }
     }
