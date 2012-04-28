@@ -158,6 +158,7 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
     Opcode opcode;
 
     bool swapArgs = false;
+    int  cond = 1;
 
     switch (op)
     {
@@ -165,7 +166,8 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         opcode = Opcode_Eq;
         break;
     case TokenType_Ne:
-        opcode = Opcode_Ne;
+        opcode = Opcode_Eq;
+        cond = 0;
         break;
     case '<':
         opcode = Opcode_Lt;
@@ -192,7 +194,7 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         arg2 = temp;
     }
 
-    Parser_EmitABC(parser, opcode, 1,
+    Parser_EmitABC(parser, opcode, cond,
         Parser_EncodeRK(parser, arg1),
         Parser_EncodeRK(parser, arg2));
 

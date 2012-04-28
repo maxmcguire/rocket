@@ -512,7 +512,7 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
 {
     if (value->type == EXPRESSION_NOT)
     {
-        Parser_EmitABC(parser, Opcode_NotTest, test, value->index, 0);
+        Parser_EmitABC(parser, Opcode_Test, value->index, 0, 1 - test);
         Parser_OpenJump(parser, value);
         reg = value->index;
     }
@@ -535,13 +535,14 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
             Instruction inst = Parser_GetInstruction(parser, pos);
             Opcode op = GET_OPCODE(inst);
 
-            if (op == Opcode_Lt ||
-                op == Opcode_Le ||
-                op == Opcode_Eq ||
-                op == Opcode_Ne ||
-                op == Opcode_NotTest)
+            if (op == Opcode_Lt || op == Opcode_Le || op == Opcode_Eq)
             {
-                inst = Parser_EncodeABC( op, test, GET_B(inst), GET_C(inst) );
+                inst = Parser_EncodeABC( op, GET_A(inst) ^ test, GET_B(inst), GET_C(inst) );
+                Parser_UpdateInstruction(parser, pos, inst);
+            }
+            else if (op == Opcode_Test || op == Opcode_TestSet)
+            {
+                inst = Parser_EncodeABC( op, GET_A(inst), GET_B(inst), GET_C(inst) ^ test );
                 Parser_UpdateInstruction(parser, pos, inst);
             }
 
@@ -672,22 +673,6 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg)
     int prevJumpPos = Parser_GetInstruction(parser, jumpPos);
     int startPos    = Parser_GetInstructionCount(parser);
 
-    /*
-    if (opcode == Opcode_Ne)
-    {
-        // Ne isn't an actualy VM instruction, so translate it to an
-        // inverted Eq.
-        inst = Parser_EncodeABC( Opcode_Eq, 1 - GET_A(inst), GET_B(inst), GET_C(inst) );
-        Parser_UpdateInstruction(parser, jumpPos - 1, inst);
-    }
-    else if (opcode == Opcode_NotTest)
-    {
-        // NotTest isn't an actualy VM instruction, so translate it to an
-        // inverted test.
-        inst = Parser_EncodeABC( Opcode_Test, GET_B(inst), 0, 1 - GET_A(inst) );
-        Parser_UpdateInstruction(parser, jumpPos - 1, inst);
-    }
-    */
 
     if (reg != -1)
     {
@@ -970,35 +955,57 @@ void Parser_Destroy(Parser* parser)
     Function_Destroy(parser->L, parser->function);
 }
 
+static const char* FormatConstant(const Value* value, char buffer[64])
+{
+    if (Value_GetIsNumber(value))
+    {
+        sprintf(buffer, "%f", value->number);
+    }
+    else if (Value_GetIsString(value))
+    {
+        return String_GetData(value->string);
+    }
+    else if (Value_GetIsBoolean(value))
+    {
+        sprintf(buffer, "%s", value->boolean ? "true" : "false" );
+    }
+    else if (Value_GetIsNil(value))
+    {
+        sprintf(buffer, "nil");
+    }
+    else
+    {
+        // Some other type of constant was stored that can't be saved into
+        // the file. If this happens, it means we've introduced some new type
+        // of constant but haven't handled it here.
+        assert(0);
+        return "Unknown";
+    }
+    return buffer;
+}
+
 static void PrintConstants(Prototype* prototype)
 {
-
     for (int i = 0; i < prototype->numConstants; ++i)
     {
         const Value* value = &prototype->constant[i];
-        if (Value_GetIsNumber(value))
-        {
-            printf(".const %f ; %d\n", value->number, i);
-        }
-        else if (Value_GetIsString(value))
-        {
-            printf(".const '%s' ; %d\n", String_GetData(value->string), i );
-        }
-        else if (Value_GetIsBoolean(value))
-        {
-            printf(".const %s ; %d\n", value->boolean ? "true" : "false", i );
-        }
-        else if (Value_GetIsNil(value))
-        {
-            printf(".const nil; %d\n", i);
-        }
-        else
-        {
-            // Some other type of constant was stored that can't be saved into
-            // the file. If this happens, it means we've introduced some new type
-            // of constant but haven't handled it here.
-            assert(0);
-        }
+        char buffer[64];
+        const char* data = FormatConstant(value, buffer);
+        printf(".const %s ; %d\n", data, i);
+    }
+}
+
+static const char* FormatRK(const Prototype* prototype, char buffer[64], int index)
+{
+    if (index & 256)
+    {
+        const Value* value = &prototype->constant[index & 255];
+        return FormatConstant(value, buffer);
+    }
+    else
+    {
+        sprintf(buffer, "r%d", index);
+        return buffer;
     }
 }
 
@@ -1124,6 +1131,12 @@ void PrintFunction(Prototype* prototype)
             length += printf("%*s", commentColumn - length, "");
         }
 
+        char buffer1[64];
+        char buffer2[64];
+
+        const char* arg1 = NULL;
+        const char* arg2 = NULL;
+
         switch (opcode)
         {
         case Opcode_Jmp:
@@ -1150,26 +1163,44 @@ void PrintFunction(Prototype* prototype)
             }
             break;
         case Opcode_Eq:
+            arg1 = FormatRK( prototype, buffer1, GET_B(inst) );
+            arg2 = FormatRK( prototype, buffer2, GET_C(inst) );
             if (GET_A(inst))
             {
-                printf("; if r%d ~= r%d then goto [%0*d]", GET_B(inst), GET_C(inst),
+                printf("; if %s ~= %s then goto [%0*d]", arg1, arg2,
                     lineNumberDigits, line + 2);
             }
             else
             {
-                printf("; if r%d == r%d then goto [%0*d]", GET_B(inst), GET_C(inst),
+                printf("; if %s == %s then goto [%0*d]", arg1, arg2,
                     lineNumberDigits, line + 2);
             }
             break;
         case Opcode_Lt:
+            arg1 = FormatRK( prototype, buffer1, GET_B(inst) );
+            arg2 = FormatRK( prototype, buffer2, GET_C(inst) );
             if (GET_A(inst))
             {
-                printf("; if not (r%d < r%d) then goto [%0*d]", GET_B(inst), GET_C(inst),
+                printf("; if not (%s < %s) then goto [%0*d]", arg1, arg2,
                     lineNumberDigits, line + 2);
             }
             else
             {
-                printf("; if r%d < r%d then goto [%0*d]", GET_B(inst), GET_C(inst),
+                printf("; if %s < %s then goto [%0*d]", arg1, arg2,
+                    lineNumberDigits, line + 2);
+            }
+            break;
+        case Opcode_Le:
+            arg1 = FormatRK( prototype, buffer1, GET_B(inst) );
+            arg2 = FormatRK( prototype, buffer2, GET_C(inst) );
+            if (GET_A(inst))
+            {
+                printf("; if not (%s <= %s) then goto [%0*d]", arg1, arg2,
+                    lineNumberDigits, line + 2);
+            }
+            else
+            {
+                printf("; if %s <= %s then goto [%0*d]", arg1, arg2,
                     lineNumberDigits, line + 2);
             }
             break;

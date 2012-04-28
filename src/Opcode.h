@@ -61,11 +61,6 @@ enum Opcode
     Opcode_Closure      = 36,
     Opcode_VarArg       = 37,
     Opcode_GetTableRef  = 38,
-    // Opcodes below are only used during the parsing phase and are not actually
-    // understood by the VM. These opcodes are translated into actual VM opcodes
-    // when the final code is generated.
-    Opcode_Ne           = 62,
-    Opcode_NotTest      = 63,
 };
 
 const char* Opcode_GetAsText(Opcode opcode);
