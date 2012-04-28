@@ -604,7 +604,7 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
             Parser_EmitABC(parser, Opcode_LoadBool, reg, 1, 0);
 
         }
-        else if (opcode == Opcode_Test)
+        else if (opcode == Opcode_Test && reg != GET_A(inst))
         {
             // Update the instruction to a testset so that we have a value in
             // the "true" case.
@@ -821,6 +821,7 @@ void Parser_MoveToRegisterOrConstant(Parser* parser, Expression* value, int reg)
 
 void Parser_MakeRKEncodable(Parser* parser, Expression* value)
 {
+    assert(value->exitJump == -1);
     Parser_MoveToRegisterOrConstant(parser, value);
     if (value->index >= 256)
     {
