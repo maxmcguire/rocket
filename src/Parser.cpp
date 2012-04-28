@@ -537,12 +537,14 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
 
             if (op == Opcode_Lt || op == Opcode_Le || op == Opcode_Eq)
             {
-                inst = Parser_EncodeABC( op, GET_A(inst) ^ test, GET_B(inst), GET_C(inst) );
+                int cond = GET_A(inst);
+                inst = Parser_EncodeABC( op, 1 - (cond ^ test), GET_B(inst), GET_C(inst) );
                 Parser_UpdateInstruction(parser, pos, inst);
             }
             else if (op == Opcode_Test || op == Opcode_TestSet)
             {
-                inst = Parser_EncodeABC( op, GET_A(inst), GET_B(inst), GET_C(inst) ^ test );
+                int cond = GET_C(inst);
+                inst = Parser_EncodeABC( op, GET_A(inst), GET_B(inst), 1 - (cond ^ test) );
                 Parser_UpdateInstruction(parser, pos, inst);
             }
 
@@ -560,36 +562,6 @@ void Parser_CloseJump(Parser* parser, Expression* value)
 
 void Parser_CloseJump(Parser* parser, Expression* value, int startPos)
 {
-    /*
-    int jumpPos = value->index;
-    do
-    {
-        if (jumpPos > 0)
-        {
-            Instruction inst = Parser_GetInstruction(parser, jumpPos - 1);
-            if (GET_OPCODE(inst) == Opcode_Ne)
-            {
-                // Ne isn't an actualy VM instruction, so translate it to an
-                // inverted Eq.
-                inst = Parser_EncodeABC( Opcode_Eq, 1 - GET_A(inst), GET_B(inst), GET_C(inst) );
-                Parser_UpdateInstruction(parser, jumpPos - 1, inst);
-            }
-            else if (GET_OPCODE(inst) == Opcode_NotTest)
-            {
-                // NotTest isn't an actualy VM instruction, so translate it to an
-                // inverted test.
-                inst = Parser_EncodeABC( Opcode_Test, GET_B(inst), 0, 1 - GET_A(inst) );
-                Parser_UpdateInstruction(parser, jumpPos - 1, inst);
-            }
-        }
-
-        int prevJumpPos = Parser_GetInstruction(parser, jumpPos);
-        int jumpAmount = static_cast<int>(startPos - jumpPos - 1);
-        Parser_UpdateInstruction(parser, jumpPos, Parser_EncodeAsBx(Opcode_Jmp, 0, jumpAmount));
-        jumpPos = prevJumpPos;
-    }
-    while (jumpPos != -1);
-    */
     assert(0);
 }
 
