@@ -588,10 +588,7 @@ static int Execute(lua_State* L, int numArgs)
         case Opcode_LoadBool:
             {
                 SetValue( &stackBase[a], GET_B(inst) != 0 );
-                if (GET_C(inst))
-                {
-                    ++ip;
-                }
+                ip += GET_C(inst);
             }
             break;
         case Opcode_Self:
