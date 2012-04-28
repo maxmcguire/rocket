@@ -518,41 +518,12 @@ int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
     }
     else if (value->type != EXPRESSION_JUMP)
     {
-
-        /*
-        if (Parser_ConvertToRegister(parser, value) && reg != -1 && value->index != reg)
-        {
-            // The expression we are testing is already in a register, so we can
-            // use to the testset form which includes a copy from a register to
-            // our destination.
-            Parser_EmitABC(parser, Opcode_TestSet, reg, value->index, test);
-        }
-        else
-        {
-            Parser_MoveToRegister(parser, value, reg);
-            if (reg == -1 || value->index == reg)
-            {
-                // The value we're testing is already in the destination register
-                // (or we don't care about the destination register), so we can
-                // use the test form.
-                Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
-            }
-            else
-            {
-                Parser_EmitABC(parser, Opcode_TestSet, reg, value->index, test);
-            }
-            reg = value->index;
-        }
-        */
-
         if (!Parser_ConvertToRegister(parser, value))
         {
             Parser_MoveToRegister(parser, value, reg);
         }
-
         Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
         Parser_OpenJump(parser, value);
-
     }
     else
     {
@@ -1181,12 +1152,12 @@ void PrintFunction(Prototype* prototype)
         case Opcode_Eq:
             if (GET_A(inst))
             {
-                printf("; if r%d == r%d then goto [%0*d]", GET_B(inst), GET_C(inst),
+                printf("; if r%d ~= r%d then goto [%0*d]", GET_B(inst), GET_C(inst),
                     lineNumberDigits, line + 2);
             }
             else
             {
-                printf("; if r%d ~= r%d then goto [%0*d]", GET_B(inst), GET_C(inst),
+                printf("; if r%d == r%d then goto [%0*d]", GET_B(inst), GET_C(inst),
                     lineNumberDigits, line + 2);
             }
             break;

@@ -1361,7 +1361,7 @@ static bool Parser_TryWhile(Parser* parser)
 
     Parser_Expect(parser, TokenType_Do);
 
-    Parser_ConvertToTest(parser, &test);
+    Parser_ConvertToTest(parser, &test, 0);
 
     Parser_BeginBlock(parser, true);
     Parser_Block(parser, TokenType_End);
@@ -1389,7 +1389,7 @@ static bool Parser_TryRepeat(Parser* parser)
 
     Expression test;
     Parser_Expression0(parser, &test, -1);
-    Parser_ConvertToTest(parser, &test);
+    Parser_ConvertToTest(parser, &test, 0);
     Parser_CloseJump(parser, &test, loop);
 
     Parser_EndBlock(parser);

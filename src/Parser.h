@@ -202,7 +202,7 @@ bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int
  * the index of the register where the value was stored. The test value indicates
  * the condition under which the jump is taken.
  */
-int Parser_ConvertToTest(Parser* parser, Expression* value, int test = 0, int reg = -1);
+int Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg = -1);
 
 /**
  * Updates an open test expression so that if the expression is false it will
