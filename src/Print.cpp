@@ -60,7 +60,7 @@ static const char* FormatRK(const Prototype* prototype, char buffer[64], int ind
 
 static void PrintConstants(Prototype* prototype)
 {
-    const int commentColumn = 30;
+    const int commentColumn = 18;
 
     for (int i = 0; i < prototype->numConstants; ++i)
     {
@@ -277,6 +277,10 @@ void PrintFunction(Prototype* prototype)
                 printf("; if %s <= %s then goto [%0*d]", arg1, arg2,
                     lineNumberDigits, line + 2);
             }
+            break;
+        case Opcode_LoadK:
+            arg1 = FormatRK( prototype, buffer1, GET_Bx(inst) | 256 );
+            printf("; r%d = %s", GET_A(inst), arg1);
             break;
         case Opcode_LoadBool:
             if (GET_C(inst))
