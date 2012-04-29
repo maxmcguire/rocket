@@ -3167,7 +3167,8 @@ TEST_FIXTURE( AdjustReturnLogic, LuaFixture )
 
     const char* code =
         "function f () return 1,2,3 end\n"
-        "a, b = true and f()";
+        "a, b = true  and f()\n"
+        "c, d = false or  f()";
 
     CHECK( DoString(L, code) );
     
@@ -3175,6 +3176,12 @@ TEST_FIXTURE( AdjustReturnLogic, LuaFixture )
     CHECK_EQ( lua_tonumber(L, -1), 1.0 );
 
     lua_getglobal(L, "b");
+    CHECK( lua_isnil(L, -1) );
+
+    lua_getglobal(L, "c");
+    CHECK_EQ( lua_tonumber(L, -1), 1.0 );
+
+    lua_getglobal(L, "d");
     CHECK( lua_isnil(L, -1) );
 
 }

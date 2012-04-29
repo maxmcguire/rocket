@@ -930,6 +930,10 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         *dst = arg2;
         Parser_AddExitJump(parser, dst, exitJump);
 
+        // If the second argument in a logic expression is a function call, we
+        // adjust the number of return values to 1.
+        Parser_ResolveCall(parser, dst, 1);
+
     }
 
 }
