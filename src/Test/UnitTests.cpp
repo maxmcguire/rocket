@@ -3159,6 +3159,26 @@ TEST_FIXTURE( AdjustReturn, LuaFixture )
     
 }
 
+TEST_FIXTURE( AdjustReturnLogic, LuaFixture )
+{
+
+    // When calling a function as part of a logic expression, the number of
+    // return values should be adjusted to 1.
+
+    const char* code =
+        "function f () return 1,2,3 end\n"
+        "a, b = true and f()";
+
+    CHECK( DoString(L, code) );
+    
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tonumber(L, -1), 1.0 );
+
+    lua_getglobal(L, "b");
+    CHECK( lua_isnil(L, -1) );
+
+}
+
 TEST_FIXTURE( LoadTermination, LuaFixture )
 {
 
