@@ -1379,8 +1379,8 @@ static bool Parser_TryWhile(Parser* parser)
 
     Parser_BeginBlock(parser, true);
     Parser_Block(parser, TokenType_End);
-    Parser_EndBlock(parser);
     Parser_EndLoop(parser, &loop);
+    Parser_EndBlock(parser);
 
     Parser_CloseJump(parser, &test);
 

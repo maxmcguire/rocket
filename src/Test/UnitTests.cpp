@@ -1678,10 +1678,12 @@ TEST_FIXTURE(WhileLoop, LuaFixture)
 {
 
     const char* code = 
+        "result = 'failure'\n"
         "index = 0\n"
         "while index < 10 do\n"
         "  index = index + 1\n"
-        "end";
+        "end\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
@@ -1689,16 +1691,22 @@ TEST_FIXTURE(WhileLoop, LuaFixture)
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 10 );
 
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
+
 }
 
 TEST_FIXTURE(ForLoop1, LuaFixture)
 {
 
     const char* code = 
+        "result = 'failure'\n"
         "index = 0\n"
         "for i = 1,10 do\n"
         "  index = index + 1\n"
-        "end";
+        "end\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
@@ -1710,16 +1718,22 @@ TEST_FIXTURE(ForLoop1, LuaFixture)
     lua_getglobal(L, "i");
     CHECK( lua_isnil(L, -1) != 0 );
 
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
+
 }
 
 TEST_FIXTURE(ForLoop2, LuaFixture)
 {
 
     const char* code = 
+        "result = 'failure'\n"
         "index = 0\n"
         "for i = 1,10,2 do\n"
         "  index = index + 1\n"
-        "end";
+        "end\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
@@ -1731,19 +1745,25 @@ TEST_FIXTURE(ForLoop2, LuaFixture)
     lua_getglobal(L, "i");
     CHECK( lua_isnil(L, -1) != 0 );
 
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
+
 }
 
 TEST_FIXTURE(ForLoop3, LuaFixture)
 {
 
     const char* code = 
+        "result = 'failure'\n"
         "values = { first=1, second=2 }\n"
         "results = { }\n"
         "index = 0\n"
         "for k,v in pairs(values) do\n"
         "  index = index + 1\n"
         "  results[v] = k\n"
-        "end";
+        "end\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
@@ -1769,12 +1789,17 @@ TEST_FIXTURE(ForLoop3, LuaFixture)
     CHECK( strcmp( lua_tostring(L, -1), "second" ) == 0 );
     lua_pop(L, 1);
 
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
+
 }
 
 TEST_FIXTURE(ForLoop4, LuaFixture)
 {
 
     const char* code =
+        "result = 'failure'\n"
         "_t = { 'one', 'two', 'three' }\n"
         "t = { }\n"
         "num = 1\n"
@@ -1782,7 +1807,8 @@ TEST_FIXTURE(ForLoop4, LuaFixture)
         "  if i ~= num then break end\n"
         "  t[num] = v\n"
         "  num = num + 1\n"
-        "end";
+        "end\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
@@ -1798,16 +1824,22 @@ TEST_FIXTURE(ForLoop4, LuaFixture)
     lua_rawgeti(L, t, 3);
     CHECK_EQ( lua_tostring(L, -1), "three" );
 
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
+
 }
 
 TEST_FIXTURE(ForLoop5, LuaFixture)
 {
 
     const char* code = 
+        "result = 'failure'\n"
         "index = 0\n"
         "for i = 9,0,-1 do\n"
         "  index = index + 1\n"
-        "end";
+        "end\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
@@ -1819,16 +1851,22 @@ TEST_FIXTURE(ForLoop5, LuaFixture)
     lua_getglobal(L, "i");
     CHECK( lua_isnil(L, -1) != 0 );
 
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
+
 }
 
 TEST_FIXTURE(RepeatLoop, LuaFixture)
 {
 
     const char* code = 
+        "result = 'failure'\n"
         "index = 0\n"
         "repeat\n"
         "  index = index + 1\n"
-        "until index == 10";
+        "until index == 10\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
@@ -1836,23 +1874,33 @@ TEST_FIXTURE(RepeatLoop, LuaFixture)
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 10 );
 
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
+
 }
 
 TEST_FIXTURE(WhileLoopBreak, LuaFixture)
 {
 
     const char* code = 
+        "result = 'failure'\n"
         "index = 0\n"
         "while true do\n"
         "  index = index + 1\n"
         "  break\n"
-        "end";
+        "end\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "index");
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 1 );
+
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
 
 }
 
@@ -1860,17 +1908,23 @@ TEST_FIXTURE(ForLoopBreak, LuaFixture)
 {
 
     const char* code = 
+        "result = 'failure'\n"
         "index = 0\n"
         "for i = 1,10 do\n"
         "  index = index + 1\n"
         "  break\n"
-        "end";
+        "end\n"
+        "result = 'success'";
 
     CHECK( DoString(L, code) );
 
     lua_getglobal(L, "index");
     CHECK( lua_type(L, -1) == LUA_TNUMBER );
     CHECK( lua_tointeger(L, -1) == 1 );
+
+    // Make sure we execute the line immediately after the loop
+    lua_getglobal(L, "result");
+    CHECK_EQ( lua_tostring(L, -1), "success" );
 
 }
 

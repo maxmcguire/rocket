@@ -821,7 +821,6 @@ void Parser_MoveToRegisterOrConstant(Parser* parser, Expression* value, int reg)
 
 void Parser_MakeRKEncodable(Parser* parser, Expression* value)
 {
-    assert(value->exitJump == -1);
     Parser_MoveToRegisterOrConstant(parser, value);
     if (value->index >= 256)
     {
@@ -1015,7 +1014,7 @@ void Parser_EndBlock(Parser* parser)
     while (breakPos != -1)
     {
         int nextBreakPos = Parser_GetInstruction(parser, breakPos);
-        int jumpAmount = currentPos - breakPos;
+        int jumpAmount = currentPos - breakPos - 1;
         Instruction inst = Parser_EncodeAsBx(Opcode_Jmp, 0, jumpAmount);
         Parser_UpdateInstruction(parser, breakPos, inst);
         breakPos = nextBreakPos;
