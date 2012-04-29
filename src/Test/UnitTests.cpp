@@ -3167,21 +3167,28 @@ TEST_FIXTURE( AdjustReturnLogic, LuaFixture )
 
     const char* code =
         "function f () return 1,2,3 end\n"
-        "a, b = true  and f()\n"
-        "c, d = false or  f()";
+        "x1, x2 = true and f()\n"
+        "y1, y2 = f() or false\n"
+        "z1, z2 = false or f()";
 
     CHECK( DoString(L, code) );
     
-    lua_getglobal(L, "a");
+    lua_getglobal(L, "x1");
     CHECK_EQ( lua_tonumber(L, -1), 1.0 );
 
-    lua_getglobal(L, "b");
+    lua_getglobal(L, "x2");
     CHECK( lua_isnil(L, -1) );
 
-    lua_getglobal(L, "c");
+    lua_getglobal(L, "y1");
     CHECK_EQ( lua_tonumber(L, -1), 1.0 );
 
-    lua_getglobal(L, "d");
+    lua_getglobal(L, "y2");
+    CHECK( lua_isnil(L, -1) );
+
+    lua_getglobal(L, "z1");
+    CHECK_EQ( lua_tonumber(L, -1), 1.0 );
+
+    lua_getglobal(L, "z2");
     CHECK( lua_isnil(L, -1) );
 
 }
