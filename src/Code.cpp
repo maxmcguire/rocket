@@ -922,17 +922,21 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         int cond = (op == TokenType_Or) ? 1 : 0;
 
         Parser_ConvertToTest(parser, dst, cond, regHint);
-        int exitJump = dst->index;
-        
+
         Expression arg2;
         Parser_ExpressionLogic(parser, &arg2, regHint);
 
-        *dst = arg2;
-        Parser_AddExitJump(parser, dst, exitJump);
+        if (dst->exitJump != -1)
+        {
+            Parser_AddExitJump(parser, &arg2, dst->exitJump);
+        }
+        Parser_AddExitJump(parser, &arg2, dst->index);
 
         // If the second argument in a logic expression is a function call, we
         // adjust the number of return values to 1.
-        Parser_ResolveCall(parser, dst, 1);
+        Parser_ResolveCall(parser, &arg2, 1);
+        
+        *dst = arg2;
 
     }
 
