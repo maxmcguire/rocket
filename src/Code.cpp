@@ -1436,8 +1436,6 @@ static bool Parser_TryFor(Parser* parser)
     {
         
         // Numeric for loop.
-        
-        Parser_CommitLocals( parser );
 
         // Start value.
         Expression start;
@@ -1460,7 +1458,8 @@ static bool Parser_TryFor(Parser* parser)
             increment.type   = EXPRESSION_NUMBER;
             increment.number = 1.0f;
         }
-
+        
+        Parser_CommitLocals( parser );
         Parser_Expect(parser, TokenType_Do);
 
         Parser_MoveToRegister(parser, &start, internalIndexReg);
