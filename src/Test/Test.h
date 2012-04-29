@@ -11,8 +11,8 @@
 #include <assert.h>
 
 #define CHECK(x)            Test_Check(x, #x, __FILE__, __LINE__)
-#define CHECK_EQ(x, y)      Test_Check( Test_Equal((x), (y)), #x" = "#y, __FILE__, __LINE__ )
-#define CHECK_CLOSE(x, y)   Test_Check( Test_Close((x), (y)), #x" = "#y, __FILE__, __LINE__ )
+#define CHECK_EQ(x, y)      Test_Check( Test_Equal((x), (y)), #x" == "#y, __FILE__, __LINE__ )
+#define CHECK_CLOSE(x, y)   Test_Check( Test_Close((x), (y)), #x" == "#y, __FILE__, __LINE__ )
 
 class Test
 {

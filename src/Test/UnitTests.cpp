@@ -1857,6 +1857,24 @@ TEST_FIXTURE(ForLoop5, LuaFixture)
 
 }
 
+TEST_FIXTURE(ForLoopScope, LuaFixture)
+{
+
+    const char* code =
+        "i = 5\n"
+        "n = 0\n"
+        "for i=i,10 do\n"
+	    "    n = i\n"
+	    "    break\n"
+        "end\n";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "n");
+    CHECK_EQ( lua_tonumber(L, -1), 5.0 );
+
+}
+
 TEST_FIXTURE(RepeatLoop, LuaFixture)
 {
 
