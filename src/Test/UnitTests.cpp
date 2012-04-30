@@ -2975,6 +2975,15 @@ TEST_FIXTURE(NotAnd2, LuaFixture)
     CHECK( !lua_toboolean(L, -1) );
 }
 
+TEST_FIXTURE(NotAnd3, LuaFixture)
+{
+    const char* code =
+        "a = (1 >= 2) and true";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( !lua_toboolean(L, -1) );
+}
+
 TEST_FIXTURE(NotOr1, LuaFixture)
 {
     const char* code =
