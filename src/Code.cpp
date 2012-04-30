@@ -1225,11 +1225,11 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
     while (!done && numValues < numVars)
     {
 
+        Expression value;
+        Parser_Expression0(parser, &value, -1);
+
         int regHint = Parser_GetRegisterHint(parser, &dst[numValues]);
         
-        Expression value;
-        Parser_Expression0(parser, &value, regHint);
-
         // Check if we've reached the end of the list.
         if (!Parser_Accept(parser, ','))
         {
