@@ -575,11 +575,13 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
     {
 
         bool emitBool = (opcode == Opcode_Eq || opcode == Opcode_Le || opcode == Opcode_Lt);
+        int  value    = 0;
 
         // If B is set for a test instruction, that means that it has a not folded
         // into it, which requires the value to be coerced into a boolean.
         if (opcode == Opcode_Test && GET_B(inst))
         {
+            value    = GET_C(inst);
             emitBool = true;
         }
 
@@ -592,7 +594,7 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
             // end of the test.
             if (startPos == jumpPos + 1)
             {
-                Parser_EmitABC(parser, Opcode_LoadBool, reg, 0, 1);
+                Parser_EmitABC(parser, Opcode_LoadBool, reg, value, 1);
             }
             else
             {
@@ -601,7 +603,7 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
             
             // Jump to the loadbool instruction.
             startPos = Parser_GetInstructionCount(parser);
-            Parser_EmitABC(parser, Opcode_LoadBool, reg, 1, 0);
+            Parser_EmitABC(parser, Opcode_LoadBool, reg, 1 - value, 0);
 
         }
         else if (opcode == Opcode_Test && reg != GET_A(inst))

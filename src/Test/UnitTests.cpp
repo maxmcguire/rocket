@@ -2966,6 +2966,15 @@ TEST_FIXTURE(NotAnd1, LuaFixture)
     CHECK_EQ( lua_tostring(L, -1), "test" );
 }
 
+TEST_FIXTURE(NotAnd2, LuaFixture)
+{
+    const char* code =
+        "a = not true and true";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( !lua_toboolean(L, -1) );
+}
+
 TEST_FIXTURE(NotOr1, LuaFixture)
 {
     const char* code =
