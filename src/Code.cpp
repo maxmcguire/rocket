@@ -70,7 +70,7 @@ static bool Parser_FoldConstants(Opcode opcode, lua_Number& dst, lua_Number arg1
     return true;
 }
 
-static void Parser_ResolveExitJump(Parser* parser, Expression* value)
+static void Parser_ResolveJumpToEnd(Parser* parser, Expression* value)
 {
     if (value->exitJump != -1)
     {
@@ -89,7 +89,6 @@ static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, int r
 
     assert(dst != arg1);
     assert(dst != arg2);
-    assert(arg1->exitJump == -1);
 
     Opcode opcode;
     switch (op)
@@ -159,16 +158,12 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
 
     assert(dst != arg1);
     assert(dst != arg2);
-    assert(arg1->exitJump == -1);
-    assert(arg2->exitJump == -1);
 
     Parser_MakeRKEncodable(parser, arg1);
     Parser_MakeRKEncodable(parser, arg2);
 
     Opcode opcode;
-
     bool swapArgs = false;
-    int  cond = 1;
 
     switch (op)
     {
@@ -176,8 +171,7 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         opcode = Opcode_Eq;
         break;
     case TokenType_Ne:
-        opcode = Opcode_Eq;
-        cond = 0;
+        opcode = Opcode_Ne;
         break;
     case '<':
         opcode = Opcode_Lt;
@@ -204,7 +198,7 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         arg2 = temp;
     }
 
-    Parser_EmitABC(parser, opcode, cond,
+    Parser_EmitABC(parser, opcode, 1,
         Parser_EncodeRK(parser, arg1),
         Parser_EncodeRK(parser, arg2));
 
@@ -738,7 +732,7 @@ static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
 		int op = Parser_GetToken(parser);
 
         Parser_ResolveCall(parser, dst, 1);
-        Parser_ResolveExitJump(parser, dst);
+        Parser_ResolveJumpToEnd(parser, dst);
 
         Expression arg1 = *dst;
         Expression arg2;
@@ -819,7 +813,7 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
 		int op = Parser_GetToken(parser);
 
         Parser_ResolveCall(parser, dst, 1);
-        Parser_ResolveExitJump(parser, dst);
+        Parser_ResolveJumpToEnd(parser, dst);
 
         Expression arg1 = *dst;
         Expression arg2;
@@ -838,7 +832,7 @@ static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
 		int op = Parser_GetToken(parser);
 
         Parser_ResolveCall(parser, dst, 1);
-        Parser_ResolveExitJump(parser, dst);
+        Parser_ResolveJumpToEnd(parser, dst);
 
         Expression arg1 = *dst;
         Expression arg2;
@@ -900,7 +894,7 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
 
         Expression arg1 = *dst;
         Parser_ResolveCall(parser, &arg1, 1);
-        Parser_ResolveExitJump(parser, &arg1);
+        Parser_ResolveJumpToEnd(parser, &arg1);
 
         Expression arg2;
         Parser_ExpressionConcat(parser, &arg2, -1);

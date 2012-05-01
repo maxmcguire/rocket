@@ -2380,6 +2380,25 @@ TEST_FIXTURE(LuaCommentBlock, LuaFixture)
 
 }
 
+TEST_FIXTURE(Equal, LuaFixture)
+{
+
+    const char* code =
+        "a = (5 == 6)\n"
+        "b = (7 == 7)";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 0 );
+    
+    lua_getglobal(L, "b");
+    CHECK( lua_isboolean(L, -1) );
+    CHECK( lua_toboolean(L, -1) == 1 );
+
+}
+
 TEST_FIXTURE(NotEqual, LuaFixture)
 {
 
@@ -2975,10 +2994,28 @@ TEST_FIXTURE(NotAnd2, LuaFixture)
     CHECK( !lua_toboolean(L, -1) );
 }
 
-TEST_FIXTURE(NotAnd3, LuaFixture)
+TEST_FIXTURE(EqualAndTrue, LuaFixture)
 {
     const char* code =
-        "a = (1 >= 2) and true";
+        "a = (1 == 2) and true";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( !lua_toboolean(L, -1) );
+}
+
+TEST_FIXTURE(EqualAndFalse, LuaFixture)
+{
+    const char* code =
+        "a = (1 == 1) and false";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK( !lua_toboolean(L, -1) );
+}
+
+TEST_FIXTURE(AndEqual, LuaFixture)
+{
+    const char* code =
+        "a = false and (1 == 1)";
     CHECK( DoString(L, code) );
     lua_getglobal(L, "a");
     CHECK( !lua_toboolean(L, -1) );

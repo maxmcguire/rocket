@@ -495,8 +495,8 @@ bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int
 
 void Parser_OpenJump(Parser* parser, Expression* dst)
 {
-    dst->index = Parser_EmitInstruction(parser, -1);
-    dst->type  = EXPRESSION_JUMP;
+    dst->index   = Parser_EmitInstruction(parser, -1);
+    dst->type    = EXPRESSION_JUMP;
 }
 
 void Parser_AddExitJump(Parser* parser, Expression* jump, int jumpPos)
@@ -505,7 +505,24 @@ void Parser_AddExitJump(Parser* parser, Expression* jump, int jumpPos)
     {
         Parser_UpdateInstruction(parser, jumpPos, jump->exitJump);           
     }
-    jump->exitJump = jumpPos;
+    jump->exitJump  = jumpPos;
+}
+
+/** Returns true of the opcode is a comparison (==, ~=, >=, etc.) */
+static bool GetIsComparison(Opcode opcode)
+{
+    return opcode == Opcode_Ne ||
+           opcode == Opcode_Eq ||
+           opcode == Opcode_Le ||
+           opcode == Opcode_Lt;
+}
+
+/** Returns true if the opcode is a test instruction */
+static bool GetIsTest(Opcode opcode)
+{
+    return opcode == Opcode_Test ||
+           opcode == Opcode_TestSet ||
+           opcode == Opcode_NotTest;
 }
 
 void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
@@ -514,7 +531,7 @@ void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
     {
         // Note, we set the B value here to indicate that the value for this test
         // must be coerced to a boolean. The parser will take this into account.
-        Parser_EmitABC(parser, Opcode_Test, value->index, 1, 1 - test);
+        Parser_EmitABC(parser, Opcode_NotTest, value->index, 1, test);
         Parser_OpenJump(parser, value);
     }
     else if (value->type != EXPRESSION_JUMP)
@@ -530,25 +547,28 @@ void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
     {
         // Update the pairty of the test for the instruction before the jump
         // (if there is a test before the jump).
-        int pos = value->index - 1;
-        if (pos >= 0)
+        if (!test)
         {
-            Instruction inst = Parser_GetInstruction(parser, pos);
-            Opcode op = GET_OPCODE(inst);
-
-            if (op == Opcode_Lt || op == Opcode_Le || op == Opcode_Eq)
+            int pos = value->index - 1;
+            if (pos >= 0)
             {
-                int cond = GET_A(inst);
-                inst = Parser_EncodeABC( op, 1 - (cond ^ test), GET_B(inst), GET_C(inst) );
-                Parser_UpdateInstruction(parser, pos, inst);
-            }
-            else if (op == Opcode_Test || op == Opcode_TestSet)
-            {
-                int cond = GET_C(inst);
-                inst = Parser_EncodeABC( op, GET_A(inst), GET_B(inst), 1 - (cond ^ test) );
-                Parser_UpdateInstruction(parser, pos, inst);
-            }
+                Instruction inst = Parser_GetInstruction(parser, pos);
+                Opcode op = GET_OPCODE(inst);
 
+                if (GetIsComparison(op))
+                {
+                    int cond = GET_A(inst);
+                    inst = Parser_EncodeABC( op, !cond, GET_B(inst), GET_C(inst) );
+                    Parser_UpdateInstruction(parser, pos, inst);
+                }
+                else if (GetIsTest(op))
+                {
+                    int cond = GET_C(inst);
+                    inst = Parser_EncodeABC( op, GET_A(inst), GET_B(inst), !cond );
+                    Parser_UpdateInstruction(parser, pos, inst);
+                }
+
+            }
         }
     }
 }
@@ -571,39 +591,60 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
         startPos = Parser_GetInstructionCount(parser);
     }
 
+    bool invert = false;
+
+    // Convert our temporary instructions to actual VM instructions.
+    if (opcode == Opcode_Ne)
+    {
+        invert = true;
+        opcode = Opcode_Eq;
+        inst   = Parser_EncodeABC(opcode, 1 - GET_A(inst), GET_B(inst), GET_C(inst));
+        Parser_UpdateInstruction(parser, jumpPos - 1, inst);
+    }
+    else if (opcode == Opcode_NotTest)
+    {
+        invert = true;
+        opcode = Opcode_Test;
+        inst   = Parser_EncodeABC(opcode, GET_A(inst), GET_B(inst), 1 - GET_C(inst));
+        Parser_UpdateInstruction(parser, jumpPos - 1, inst);
+    }
+
     if (reg != -1)
     {
 
-        bool emitBool = (opcode == Opcode_Eq || opcode == Opcode_Le || opcode == Opcode_Lt);
-        int  value    = 0;
+        bool emitBool = GetIsComparison(opcode);
+        int  value    = GET_A(inst);
 
         // If B is set for a test instruction, that means that it has a not folded
         // into it, which requires the value to be coerced into a boolean.
         if (opcode == Opcode_Test && GET_B(inst))
         {
-            value    = GET_C(inst);
             emitBool = true;
+            value    = GET_C(inst);
         }
 
         if (emitBool)
         {
 
-            int cond = GET_A(inst);
+            if (invert)
+            {
+                value = 1 - value;
+            }
 
             // Since we have a logic test, we'll need to output a boolean at the
             // end of the test.
             if (startPos == jumpPos + 1)
             {
-                Parser_EmitABC(parser, Opcode_LoadBool, reg, value, 1);
+                Parser_EmitABC(parser, Opcode_LoadBool, reg, 1 - value, 1);
             }
             else
             {
                 Parser_EmitAsBx(parser, Opcode_Jmp, 0, 1);
             }
+            ++startPos;
             
             // Jump to the loadbool instruction.
-            startPos = Parser_GetInstructionCount(parser);
-            Parser_EmitABC(parser, Opcode_LoadBool, reg, 1 - value, 0);
+            Parser_EmitABC(parser, Opcode_LoadBool, reg, value, 0);
 
         }
         else if (opcode == Opcode_Test && reg != GET_A(inst))
@@ -619,7 +660,8 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int reg, int sta
     int jumpAmount = static_cast<int>(startPos - jumpPos - 1);
     Parser_UpdateInstruction(parser, jumpPos, Parser_EncodeAsBx(Opcode_Jmp, 0, jumpAmount));
 
-    Parser_UpdateJumpChain(parser, prevJumpPos, reg, startPos);
+    startPos = Parser_GetInstructionCount(parser);
+    Parser_UpdateJumpChain(parser, prevJumpPos, reg,  startPos );
    
 }
 
@@ -628,7 +670,7 @@ static void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg,
     if (value->exitJump != -1)
     {
         Parser_UpdateJumpChain(parser, value->exitJump, reg, startPos);
-        value->exitJump = -1;
+        value->exitJump  = -1;
     }
 }
 
