@@ -773,6 +773,9 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
 
         Parser_ExpressionUnary(parser, dst, regHint);
 
+        // Jumps must be resolved before we can perform constant folding.
+        Parser_ResolveJumpToEnd(parser, dst);
+
         // Perform constant folding.
         if (dst->type == EXPRESSION_NUMBER)
         {

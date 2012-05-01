@@ -3032,6 +3032,15 @@ TEST_FIXTURE(NotOr1, LuaFixture)
     CHECK( lua_toboolean(L, -1) == 1 );
 }
 
+TEST_FIXTURE(NegativeOr, LuaFixture)
+{
+    const char* code =
+        "a = -(1 or 2)";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tonumber(L, -1), -1 );
+}
+
 TEST_FIXTURE(OrLhs, LuaFixture)
 {
     const char* code =
