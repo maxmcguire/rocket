@@ -44,6 +44,12 @@ static const char* FormatConstant(const Value* value, char buffer[64])
     return buffer;
 }
 
+static const char* FormatK(const Prototype* prototype, char buffer[64], int index)
+{
+    const Value* value = &prototype->constant[index];
+    return FormatConstant(value, buffer);
+}
+
 static const char* FormatRK(const Prototype* prototype, char buffer[64], int index)
 {
     if (index & 256)
@@ -213,6 +219,10 @@ void PrintFunction(Prototype* prototype)
 
         switch (opcode)
         {
+        case Opcode_GetGlobal:
+            arg1 = FormatK(prototype, buffer1, GET_Bx(inst));
+            printf("; r%d = _G[%s]", GET_A(inst), arg1); 
+            break;
         case Opcode_Jmp:
             printf("; goto [%0*d]", lineNumberDigits, line + GET_sBx(inst) + 1); 
             break;
