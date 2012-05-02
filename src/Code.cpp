@@ -1120,7 +1120,7 @@ static bool Parser_TryReturn(Parser* parser)
 
         // The final expression can result in a variable number of values.
         if (Parser_ResolveCall(parser,   &arg, -1) ||
-            Parser_ResolveVarArg(parser, &arg, -1))
+            Parser_ResolveVarArg(parser, &arg, -1, numValues == 1 ? reg : -1))
         {
             numValues = -1;
         }

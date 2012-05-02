@@ -2291,6 +2291,25 @@ TEST_FIXTURE(VarArg6, LuaFixture)
 
 }
 
+TEST_FIXTURE(VarArg7, LuaFixture)
+{
+
+    const char* code =
+        "function f(...) return ... end\n"
+        "local _x, _y = f(1, 2)\n"
+        "x = _x\n"
+        "y = _y";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "x");
+    CHECK_EQ( lua_tonumber(L, -1), 1 );
+    
+    lua_getglobal(L, "y");
+    CHECK_EQ( lua_tonumber(L, -1), 2 );
+
+}
+
 TEST_FIXTURE(DoBlock, LuaFixture)
 {
 
