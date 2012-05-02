@@ -910,29 +910,46 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
     }
 }
 
-static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
+static void Parser_ExpressionAnd(Parser* parser, Expression* dst, int regHint)
 { 
 
     Parser_Expression1(parser, dst, regHint);
 
-    if ( Parser_Accept(parser, TokenType_And) ||
-         Parser_Accept(parser, TokenType_Or) )
+    if ( Parser_Accept(parser, TokenType_And) )
     {
 
-        int op   = Parser_GetToken(parser);
-        int cond = (op == TokenType_Or) ? 1 : 0;
-
-        Parser_ConvertToTest(parser, dst, cond, regHint);
+        Parser_ConvertToTest(parser, dst, 0, regHint);
 
         Expression arg2;
-        Parser_ExpressionLogic(parser, &arg2, regHint);
-
-        Parser_AddExitJump(parser, &arg2, cond, dst->index);
+        Parser_ExpressionAnd(parser, &arg2, regHint);
+        Parser_AddExitJump(parser, &arg2, 0, dst->index);
 
         // If the second argument in a logic expression is a function call, we
         // adjust the number of return values to 1.
         Parser_ResolveCall(parser, &arg2, 1);
-        
+        *dst = arg2;
+
+    }
+
+}
+
+static void Parser_ExpressionOr(Parser* parser, Expression* dst, int regHint)
+{ 
+
+    Parser_ExpressionAnd(parser, dst, regHint);
+
+    if ( Parser_Accept(parser, TokenType_Or) )
+    {
+
+        Parser_ConvertToTest(parser, dst, 1, regHint);
+
+        Expression arg2;
+        Parser_ExpressionOr(parser, &arg2, regHint);
+        Parser_AddExitJump(parser, &arg2, 1, dst->index);
+
+        // If the second argument in a logic expression is a function call, we
+        // adjust the number of return values to 1.
+        Parser_ResolveCall(parser, &arg2, 1);
         *dst = arg2;
 
     }
@@ -944,7 +961,7 @@ static void Parser_Expression0(Parser* parser, Expression* dst, int regHint)
     // Expression parsing is implemented as a recursive descent parser. The
     // farther down the call chain an expression type is parsed, the higher
     // precedence it has (i.e. binds more tightly).
-    Parser_ExpressionLogic(parser, dst, regHint);
+    Parser_ExpressionOr(parser, dst, regHint);
 }
 
 /**
