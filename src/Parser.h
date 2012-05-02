@@ -117,14 +117,14 @@ enum ExpressionType
  */
 struct Expression
 {
-    Expression() { exitJump = -1; }
+    Expression() { exitJump[0] = -1; exitJump[1] = -1; }
     ExpressionType  type;
     int             index;
     lua_Number      number;
     int             key;
     ExpressionType  keyType;
     int             numArgs;
-    int             exitJump;
+    int             exitJump[2];
 };
 
 void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* parent);
@@ -220,7 +220,7 @@ void Parser_OpenJump(Parser* parser, Expression* dst);
  * jump to the current position immediately after the value is moved to a
  * register.
  */
-void Parser_AddExitJump(Parser* parser, Expression* value, int jumpPos);
+void Parser_AddExitJump(Parser* parser, Expression* value, int test, int jumpPos);
 
 /**
  * Returns the index of the register occupied by the value, or -1 if the

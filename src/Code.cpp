@@ -72,7 +72,7 @@ static bool Parser_FoldConstants(Opcode opcode, lua_Number& dst, lua_Number arg1
 
 static void Parser_ResolveJumpToEnd(Parser* parser, Expression* value)
 {
-    if (value->exitJump != -1)
+    if (value->exitJump[0] != -1 || value->exitJump[1] != -1)
     {
         int reg = Parser_AllocateRegister(parser);
         Parser_MoveToRegister(parser, value, reg); 
@@ -163,7 +163,9 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
     Parser_MakeRKEncodable(parser, arg2);
 
     Opcode opcode;
+
     bool swapArgs = false;
+    int  test     = 1;
 
     switch (op)
     {
@@ -171,7 +173,8 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         opcode = Opcode_Eq;
         break;
     case TokenType_Ne:
-        opcode = Opcode_Ne;
+        opcode = Opcode_Eq;
+        test = 0;
         break;
     case '<':
         opcode = Opcode_Lt;
@@ -198,12 +201,13 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
         arg2 = temp;
     }
 
-    Parser_EmitABC(parser, opcode, 1,
+    Parser_EmitABC(parser, opcode, test,
         Parser_EncodeRK(parser, arg1),
         Parser_EncodeRK(parser, arg2));
 
     Expression result;
     Parser_OpenJump(parser, &result);
+    Parser_AddExitJump(parser, &result, 1, result.index);
 
     *dst = result;
 
@@ -923,11 +927,7 @@ static void Parser_ExpressionLogic(Parser* parser, Expression* dst, int regHint)
         Expression arg2;
         Parser_ExpressionLogic(parser, &arg2, regHint);
 
-        if (dst->exitJump != -1)
-        {
-            Parser_AddExitJump(parser, &arg2, dst->exitJump);
-        }
-        Parser_AddExitJump(parser, &arg2, dst->index);
+        Parser_AddExitJump(parser, &arg2, cond, dst->index);
 
         // If the second argument in a logic expression is a function call, we
         // adjust the number of return values to 1.
@@ -1249,7 +1249,14 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
         }
 
         Parser_EmitSet(parser, &dst[numValues], &value);
-        Parser_SetLastRegister(parser, numRegisters);
+
+        int lastRegister = numRegisters;
+        if (dst[numValues].index > numRegisters)
+        {
+            lastRegister = dst[numValues].index;
+        }
+
+        Parser_SetLastRegister(parser, lastRegister);
 
         ++numValues;
 
