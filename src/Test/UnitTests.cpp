@@ -1402,32 +1402,6 @@ TEST_FIXTURE(TableConstructorFunction2, LuaFixture)
 
 }
 
-TEST_FIXTURE(TableConstructorFunctionVarArg, LuaFixture)
-{
-
-    const char* code =
-        "function f(...) return ... end\n"
-        "t = { f(5), f(6, 7) }";
-
-    CHECK( DoString(L, code) );
-    
-    lua_getglobal(L, "t");
-
-    lua_rawgeti(L, -1, 1);
-    CHECK_EQ( lua_tonumber(L, -1), 5.0 );
-    lua_pop(L, 1);
-
-    lua_rawgeti(L, -1, 1);
-    CHECK_EQ( lua_tonumber(L, -1), 6.0 );
-    lua_pop(L, 1);
-
-    lua_rawgeti(L, -1, 1);
-    CHECK_EQ( lua_tonumber(L, -1), 7.0 );
-    lua_pop(L, 1);
-
-
-}
-
 TEST_FIXTURE(TableConstructorTrailingComma, LuaFixture)
 {
 
