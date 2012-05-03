@@ -461,63 +461,6 @@ static void Parser_ConvertLiteralToConstant(Parser* parser, Expression* value)
     }
 }
 
-bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults)
-{
-    if (value->type == EXPRESSION_CALL)
-    {
-        Parser_EmitABC(parser, Opcode_Call, value->index, value->numArgs + 1, numResults + 1);
-        value->type = EXPRESSION_REGISTER;
-        if (numResults != -1)
-        {
-            Parser_SetLastRegister(parser, value->index + numResults - 1);
-        }
-        return true;
-    }
-    return false;
-}
-
-bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int regHint)
-{
-    if (value->type == EXPRESSION_VARARG)
-    {
-        if (regHint == -1)
-        {
-            regHint = Parser_AllocateRegister(parser);
-        }
-        Parser_EmitAB(parser, Opcode_VarArg, regHint, numResults + 1);
-        value->type  = EXPRESSION_REGISTER;
-        value->index = regHint;
-        if (numResults != -1)
-        {
-            Parser_SetLastRegister(parser, value->index + numResults - 1);
-        }
-        return true;
-    }
-    return false;
-}
-
-void Parser_OpenJump(Parser* parser, Expression* dst)
-{
-    dst->index   = Parser_EmitInstruction(parser, -1);
-    dst->type    = EXPRESSION_JUMP;
-}
-
-void Parser_AddExitJump(Parser* parser, Expression* jump, int test, int jumpPos)
-{
-
-    int tail = jump->exitJump[test];
-    jump->exitJump[test] = jumpPos;
-
-    // Since jumpPos might be the start of a linked list of jumps, find the end
-    // of that list and point to the old list.
-    while (Parser_GetInstruction(parser, jumpPos) != -1)
-    {
-        jumpPos = Parser_GetInstruction(parser, jumpPos);
-    }
-    Parser_UpdateInstruction(parser, jumpPos, tail);
-
-}
-
 /** Returns true of the opcode is a comparison (==, ~=, >=, etc.) */
 static bool GetIsComparison(Opcode opcode)
 {
@@ -622,6 +565,73 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int value, int r
 
 }
 
+static void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg, int startPos = -1)
+{
+    Parser_UpdateJumpChain(parser, value->exitJump[0], 0, reg, startPos);
+    value->exitJump[0] = -1;;
+    Parser_UpdateJumpChain(parser, value->exitJump[1], 1, reg, startPos);
+    value->exitJump[1] = -1;
+}
+
+
+bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults)
+{
+    if (value->type == EXPRESSION_CALL)
+    {
+        Parser_EmitABC(parser, Opcode_Call, value->index, value->numArgs + 1, numResults + 1);
+        value->type = EXPRESSION_REGISTER;
+        if (numResults != -1)
+        {
+            Parser_SetLastRegister(parser, value->index + numResults - 1);
+        }
+        Parser_FinalizeExitJumps(parser, value, value->index);
+        return true;
+    }
+    return false;
+}
+
+bool Parser_ResolveVarArg(Parser* parser, Expression* value, int numResults, int regHint)
+{
+    if (value->type == EXPRESSION_VARARG)
+    {
+        if (regHint == -1)
+        {
+            regHint = Parser_AllocateRegister(parser);
+        }
+        Parser_EmitAB(parser, Opcode_VarArg, regHint, numResults + 1);
+        value->type  = EXPRESSION_REGISTER;
+        value->index = regHint;
+        if (numResults != -1)
+        {
+            Parser_SetLastRegister(parser, value->index + numResults - 1);
+        }
+        return true;
+    }
+    return false;
+}
+
+void Parser_OpenJump(Parser* parser, Expression* dst)
+{
+    dst->index   = Parser_EmitInstruction(parser, -1);
+    dst->type    = EXPRESSION_JUMP;
+}
+
+void Parser_AddExitJump(Parser* parser, Expression* jump, int test, int jumpPos)
+{
+
+    int tail = jump->exitJump[test];
+    jump->exitJump[test] = jumpPos;
+
+    // Since jumpPos might be the start of a linked list of jumps, find the end
+    // of that list and point to the old list.
+    while (Parser_GetInstruction(parser, jumpPos) != -1)
+    {
+        jumpPos = Parser_GetInstruction(parser, jumpPos);
+    }
+    Parser_UpdateInstruction(parser, jumpPos, tail);
+
+}
+
 /** Update the parity of the test for the instruction before the jump (if there
 is a test before the jump). **/
 static void Parser_InvertTest(Parser* parser, Expression* value)
@@ -688,14 +698,6 @@ void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
     
     }
 
-}
-
-static void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg, int startPos = -1)
-{
-    Parser_UpdateJumpChain(parser, value->exitJump[0], 0, reg, startPos);
-    value->exitJump[0] = -1;;
-    Parser_UpdateJumpChain(parser, value->exitJump[1], 1, reg, startPos);
-    value->exitJump[1] = -1;
 }
 
 void Parser_CloseJump(Parser* parser, Expression* value, int startPos)
