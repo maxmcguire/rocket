@@ -437,6 +437,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
                     Expression value;
                     Parser_Expression0(parser, &value, -1);
+                    Parser_ResolveJumpToEnd(parser, &value);
 
                     Parser_MakeRKEncodable(parser, &value);
                     Parser_MakeRKEncodable(parser, &key);
