@@ -377,24 +377,20 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
     int hashSize = 0;
     int numFields = 0;
 
-    int num = 0;
+    int  num    = 0;
     bool varArg = false;
+    bool hasSep = true;
 
-    while (!Parser_Accept(parser, '}'))
+    do
     {
 
-        if (listSize + hashSize > 0)
-        {
-            Parser_Expect(parser, ',', ';');
-            // Allow the table constructor to end with a separator token for
-            // convenience to the programmer.
-            if (Parser_Accept(parser, '}'))
-            {
-                break;
-            }
-        }
+        hasSep = false;
 
-        if (Parser_Accept(parser, '['))
+        if (Parser_Accept(parser, '}'))
+        {
+            break;
+        }
+        else if (Parser_Accept(parser, '['))
         {
 
             // Handle the form: [x] = y
@@ -468,6 +464,8 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                 Expression exp;
                 Parser_Expression0(parser, &exp, reg);
 
+                hasSep = (Parser_Accept(parser, ';') || Parser_Accept(parser, ','));
+
                 // Check if this is the last expression in the list.
                 if (Parser_Accept(parser, '}'))
                 {
@@ -500,8 +498,14 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
         
         Parser_SetLastRegister(parser, listReg + numFields - 1);
 
+        if (!hasSep)
+        {
+            hasSep = (Parser_Accept(parser, ';') || Parser_Accept(parser, ','));
+        }
+
     }
-    
+    while (hasSep || !Parser_Accept(parser, '}'));
+
     Instruction inst = Parser_EncodeABC(Opcode_NewTable, dst->index, listSize, hashSize);
     Parser_UpdateInstruction( parser, start, inst );
 
