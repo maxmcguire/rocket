@@ -1,7 +1,12 @@
-RocketVM
+Rocket
 
-Rocket is an alternative implementation of the Lua language.
-It is currently in development and is not fully complete.
+Rocket is an alternative implementation of the Lua language. The core of the parser
+and the VM are written from scratch, although they draw a lot of inspiration from
+the Lua implementation. The implementation of the standard libraries is taken
+directly from Lua.
+
+It is currently in development and is not complete. See the TODO section for a list
+of features that are still being worked on.
 
 See COPYRIGHT for license information
 
@@ -20,5 +25,16 @@ Differences from Lua 5.1:
 Building
 -------------------------------------------------------------------------------
 
-RocketVM uses premake4 (requires at least version 4.4) to generate build files.
+Rocket uses premake4 (requires at least version 4.4) to generate build files.
 premake4 is available from http://industriousone.com/premake.
+
+TODO
+-------------------------------------------------------------------------------
+
+- Coroutines
+- Constant folding for logic operations and conditionals
+- Debug functions
+- Array optimization for tables
+- Non-recursive inner loop for the VM
+- Proper tail recursive
+- Garbage collection
