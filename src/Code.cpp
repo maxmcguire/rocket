@@ -72,7 +72,9 @@ static bool Parser_FoldConstants(Opcode opcode, lua_Number& dst, lua_Number arg1
 
 static void Parser_ResolveJumpToEnd(Parser* parser, Expression* value)
 {
-    if (value->exitJump[0] != -1 || value->exitJump[1] != -1)
+    if (value->type == EXPRESSION_JUMP ||
+        value->exitJump[0] != -1 ||
+        value->exitJump[1] != -1)
     {
         int reg = Parser_AllocateRegister(parser);
         Parser_MoveToRegister(parser, value, reg); 
