@@ -166,65 +166,6 @@ static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, int r
 
 }
 
-static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int regHint, Expression* arg1, Expression* arg2)
-{
-
-    assert(dst != arg1);
-    assert(dst != arg2);
-
-    Parser_MakeRKEncodable(parser, arg1);
-    Parser_MakeRKEncodable(parser, arg2);
-
-    Opcode opcode;
-
-    bool swapArgs = false;
-    int  test     = 1;
-
-    switch (op)
-    {
-    case TokenType_Eq:
-        opcode = Opcode_Eq;
-        break;
-    case TokenType_Ne:
-        opcode = Opcode_Eq;
-        test = 0;
-        break;
-    case '<':
-        opcode = Opcode_Lt;
-        break;
-    case TokenType_Le:
-        opcode = Opcode_Le;
-        break;
-    case '>':
-        opcode = Opcode_Lt;
-        swapArgs = true;
-        break;
-    case TokenType_Ge:
-        opcode = Opcode_Le;
-        swapArgs = true;
-        break;
-    default:
-        assert(0);
-    }
-
-    if (swapArgs)
-    {
-        Expression* temp = arg1;
-        arg1 = arg2;
-        arg2 = temp;
-    }
-
-    Parser_EmitABC(parser, opcode, test,
-        Parser_EncodeRK(parser, arg1),
-        Parser_EncodeRK(parser, arg2));
-
-    Expression result;
-    Parser_OpenJump(parser, &result);
-
-    *dst = result;
-
-}
-
 /**
  * Atempts to parse the empty statement (a semicolon).
  */
@@ -912,14 +853,66 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
             Parser_Accept(parser, '<') || 
             Parser_Accept(parser, '>'))
     {
+
         int op = Parser_GetToken(parser);
 
         Expression arg1 = *dst;
         Parser_PrepareForRK(parser, &arg1);
+        Parser_MakeRKEncodable(parser, &arg1);
 
         Expression arg2;
         Parser_ExpressionConcat(parser, &arg2, -1);
-        Parser_EmitComparison(parser, op, dst, regHint, &arg1, &arg2);
+        Parser_MakeRKEncodable(parser, &arg2);
+
+        Opcode opcode;
+
+        bool swapArgs = false;
+        int  test     = 1;
+
+        switch (op)
+        {
+        case TokenType_Eq:
+            opcode = Opcode_Eq;
+            break;
+        case TokenType_Ne:
+            opcode = Opcode_Eq;
+            test = 0;
+            break;
+        case '<':
+            opcode = Opcode_Lt;
+            break;
+        case TokenType_Le:
+            opcode = Opcode_Le;
+            break;
+        case '>':
+            opcode = Opcode_Lt;
+            swapArgs = true;
+            break;
+        case TokenType_Ge:
+            opcode = Opcode_Le;
+            swapArgs = true;
+            break;
+        default:
+            assert(0);
+        }
+
+        if (swapArgs)
+        {
+            Parser_EmitABC(parser, opcode, test,
+                Parser_EncodeRK(parser, &arg2),
+                Parser_EncodeRK(parser, &arg1));
+        }
+        else
+        {
+            Parser_EmitABC(parser, opcode, test,
+                Parser_EncodeRK(parser, &arg1),
+                Parser_EncodeRK(parser, &arg2));
+        }
+
+        Expression result;
+        Parser_OpenJump(parser, &result);
+
+        *dst = result;
 
     }
 }
