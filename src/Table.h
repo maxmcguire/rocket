@@ -10,11 +10,18 @@
 #include "State.h"
 #include "Gc.h"
 
+/**
+ * To facilitate iterating over a table whilst removing elements, a nodes are
+ * marked as dead. When a node is dead, the key should be treated as nil for
+ * all purposes except iterating. If the node is marked as dead, then references
+ * to the key should not prevent the key from being collected.
+ */
 struct TableNode
 {
-    Value          key;
-    TableNode*     next;
-    Value          value;
+    bool            dead;
+    Value           key;
+    TableNode*      next;
+    Value           value;
 };
 
 struct Table : public Gc_Object
