@@ -1107,6 +1107,7 @@ void Parser_EndBlock(Parser* parser)
     parser->function->numLocals = parser->block[parser->numBlocks].firstLocal;
     parser->function->numCommitedLocals = parser->function->numLocals;
 
+    Parser_FreeRegisters(parser);
 
 }
 

@@ -118,7 +118,7 @@ enum ExpressionType
  */
 struct Expression
 {
-    Expression() { exitJump[0] = -1; exitJump[1] = -1; }
+    Expression() { type = EXPRESSION_NONE; exitJump[0] = -1; exitJump[1] = -1; }
     ExpressionType  type;
     int             index;
     lua_Number      number;

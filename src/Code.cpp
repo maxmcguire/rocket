@@ -81,6 +81,17 @@ static void Parser_ResolveJumpToEnd(Parser* parser, Expression* value)
     }
 }
 
+static void Parser_PrepareForRK(Parser* parser, Expression* value)
+{
+    Parser_ResolveCall(parser, value, 1);
+    Parser_ResolveJumpToEnd(parser, value);
+    if (value->type == EXPRESSION_NOT)
+    {
+        int reg = Parser_AllocateRegister(parser);
+        Parser_MoveToRegister(parser, value, reg);
+    }
+}
+
 /**
  * regHint specifies the index of the register the result should be stored in if
  * the result will be in a register (or -1 if the caller does not require the
@@ -438,7 +449,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
                     Expression value;
                     Parser_Expression0(parser, &value, -1);
-                    Parser_ResolveJumpToEnd(parser, &value);
+                    Parser_PrepareForRK(parser, &value);
 
                     Parser_MakeRKEncodable(parser, &value);
                     Parser_MakeRKEncodable(parser, &key);
@@ -741,8 +752,7 @@ static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
 	{
 		int op = Parser_GetToken(parser);
 
-        Parser_ResolveCall(parser, dst, 1);
-        Parser_ResolveJumpToEnd(parser, dst);
+        Parser_PrepareForRK(parser, dst);
 
         Expression arg1 = *dst;
         Expression arg2;
@@ -825,8 +835,7 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
 	{
 		int op = Parser_GetToken(parser);
 
-        Parser_ResolveCall(parser, dst, 1);
-        Parser_ResolveJumpToEnd(parser, dst);
+        Parser_PrepareForRK(parser, dst);
 
         Expression arg1 = *dst;
         Expression arg2;
@@ -844,8 +853,7 @@ static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
 	{
 		int op = Parser_GetToken(parser);
 
-        Parser_ResolveCall(parser, dst, 1);
-        Parser_ResolveJumpToEnd(parser, dst);
+        Parser_PrepareForRK(parser, dst);
 
         Expression arg1 = *dst;
         Expression arg2;
@@ -906,8 +914,7 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
         int op = Parser_GetToken(parser);
 
         Expression arg1 = *dst;
-        Parser_ResolveCall(parser, &arg1, 1);
-        Parser_ResolveJumpToEnd(parser, &arg1);
+        Parser_PrepareForRK(parser, &arg1);
 
         Expression arg2;
         Parser_ExpressionConcat(parser, &arg2, -1);
