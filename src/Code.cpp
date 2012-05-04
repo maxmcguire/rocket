@@ -767,6 +767,7 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
     if (Parser_Accept(parser, TokenType_Not))
     {
         Parser_ExpressionUnary(parser, dst, regHint);
+        Parser_ResolveJumpToEnd(parser, dst);
         // Don't generate an extra move if the expression we're negating
         // is already stored in a register (but do move to the hint register
         // if it's not).
