@@ -1910,6 +1910,24 @@ TEST_FIXTURE(ForLoopScope, LuaFixture)
 
 }
 
+TEST_FIXTURE(ForLoopEraseWhileIterating, LuaFixture)
+{
+
+    const char* code =
+        "local t = { 1, 2, 3, 4, 5 }\n"
+        "n = 0\n"
+        "for k, v in pairs( t ) do\n"
+        "   n = n+1\n"
+        "   t[k] = nil\n"
+        "end";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "n");
+    CHECK_EQ( lua_tonumber(L, -1), 5.0 );
+
+}
+
 TEST_FIXTURE(RepeatLoop, LuaFixture)
 {
 
