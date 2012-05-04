@@ -573,12 +573,11 @@ void Parser_FinalizeExitJump(Parser* parser, Expression* value, int cond, int re
 
 static void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg, int startPos = -1)
 {
-    Parser_UpdateJumpChain(parser, value->exitJump[0], 0, reg, startPos);
-    value->exitJump[0] = -1;;
     Parser_UpdateJumpChain(parser, value->exitJump[1], 1, reg, startPos);
     value->exitJump[1] = -1;
+    Parser_UpdateJumpChain(parser, value->exitJump[0], 0, reg, startPos);
+    value->exitJump[0] = -1;
 }
-
 
 bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults)
 {
