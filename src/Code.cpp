@@ -207,7 +207,6 @@ static void Parser_EmitComparison(Parser* parser, int op, Expression* dst, int r
 
     Expression result;
     Parser_OpenJump(parser, &result);
-    Parser_AddExitJump(parser, &result, 1, result.index);
 
     *dst = result;
 
@@ -924,10 +923,11 @@ static void Parser_ExpressionAnd(Parser* parser, Expression* dst, int regHint)
     {
 
         Parser_ConvertToTest(parser, dst, 0, regHint);
+        Parser_FinalizeExitJump(parser, dst, 1, regHint);
 
         Expression arg2;
         Parser_ExpressionAnd(parser, &arg2, regHint);
-        Parser_AddExitJump(parser, &arg2, 0, dst->index);
+        Parser_AddExitJump(parser, &arg2, 0, dst->exitJump[0]);
 
         // If the second argument in a logic expression is a function call, we
         // adjust the number of return values to 1.
@@ -947,10 +947,11 @@ static void Parser_ExpressionOr(Parser* parser, Expression* dst, int regHint)
     {
 
         Parser_ConvertToTest(parser, dst, 1, regHint);
+        Parser_FinalizeExitJump(parser, dst, 0, regHint);
 
         Expression arg2;
         Parser_ExpressionOr(parser, &arg2, regHint);
-        Parser_AddExitJump(parser, &arg2, 1, dst->index);
+        Parser_AddExitJump(parser, &arg2, 1, dst->exitJump[1]);
 
         // If the second argument in a logic expression is a function call, we
         // adjust the number of return values to 1.
@@ -1024,6 +1025,8 @@ static void Parser_Conditional(Parser* parser)
 
     // TODO: Peform "constant folding" for the test.
     Parser_ConvertToTest(parser, &test, 0);
+    Parser_FinalizeExitJump(parser, &test, 1, -1);
+
     Parser_BeginBlock(parser, false);
 
     // Parse the "if" part of the conditional.
@@ -1044,7 +1047,7 @@ static void Parser_Conditional(Parser* parser)
         int elseJump;
         Parser_BeginBlock(parser, false);
         Parser_BeginSkip(parser, &elseJump);
-        Parser_CloseJump(parser, &test);
+        Parser_FinalizeExitJump(parser, &test, 0, -1);
 
         // Parse the "else" part of the conditional.
         while (!Parser_Accept(parser, TokenType_End))
@@ -1058,12 +1061,13 @@ static void Parser_Conditional(Parser* parser)
     }
     else if (type == TokenType_ElseIf)
     {
-        Parser_CloseJump(parser, &test);
+        Parser_FinalizeExitJump(parser, &test, 0, -1);
         Parser_Conditional(parser);
     }
     else
     {
-        Parser_CloseJump(parser, &test);
+        Parser_FinalizeExitJump(parser, &test, 0, -1);
+        //Parser_CloseJump(parser, &test);
     }
 
 }

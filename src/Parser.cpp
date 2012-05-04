@@ -565,6 +565,12 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int value, int r
 
 }
 
+void Parser_FinalizeExitJump(Parser* parser, Expression* value, int cond, int reg)
+{
+    Parser_UpdateJumpChain(parser, value->exitJump[cond], 0, reg, -1);
+    value->exitJump[cond] = -1;
+}
+
 static void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg, int startPos = -1)
 {
     Parser_UpdateJumpChain(parser, value->exitJump[0], 0, reg, startPos);
@@ -689,20 +695,23 @@ void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
             Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
             Parser_OpenJump(parser, value);
         }
-
-        // Close up the jumps for the other branch.
-        Parser_UpdateJumpChain(parser, value->exitJump[1 - test], 1 - test, reg);
-        value->exitJump[1 - test] = -1;
-
-        Parser_AddExitJump(parser, value, test, value->index);
     
     }
+
+    // Close up the jumps for the other branch.
+    Parser_UpdateJumpChain(parser, value->exitJump[1 - test], 1 - test, reg);
+    value->exitJump[1 - test] = -1;
+
+    Parser_AddExitJump(parser, value, test, value->index);
+
+    // This type of expression is only used as an intermediate, so change it's
+    // type so that we can catch and problems if it's not used that way.
+    value->type = EXPRESSION_NONE;
 
 }
 
 void Parser_CloseJump(Parser* parser, Expression* value, int startPos)
 {
-    //Parser_AddExitJump(parser, value, value->index);
     Parser_FinalizeExitJumps(parser, value, -1, startPos);
 }
 
@@ -846,8 +855,8 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     }
     else if (value->type == EXPRESSION_JUMP)
     {
-        // Fold the jump into the exit jump chain.
-        //Parser_AddExitJump(parser, value, value->index);
+        // The jump should be after a comparison.
+        Parser_AddExitJump(parser, value, 1, value->index);
     }
     else if (value->type == EXPRESSION_UPVALUE)
     {
@@ -1051,7 +1060,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    //PrintFunction(prototype);
+    PrintFunction(prototype);
 
     return prototype;
 

@@ -71,20 +71,21 @@ struct Parser
 
 enum ExpressionType
 {
-    EXPRESSION_REGISTER     = 1,
-    EXPRESSION_CONSTANT     = 2,
-    EXPRESSION_GLOBAL       = 3,
-    EXPRESSION_TABLE        = 4,
-    EXPRESSION_LOCAL        = 5,
-    EXPRESSION_NIL          = 6,
-    EXPRESSION_FUNCTION     = 7,
-    EXPRESSION_BOOLEAN      = 8,
-    EXPRESSION_NUMBER       = 9,
-    EXPRESSION_CALL         = 10,
-    EXPRESSION_JUMP         = 11,
-    EXPRESSION_UPVALUE      = 12,
-    EXPRESSION_NOT          = 13,
-    EXPRESSION_VARARG       = 14
+    EXPRESSION_NONE,
+    EXPRESSION_REGISTER,
+    EXPRESSION_CONSTANT,
+    EXPRESSION_GLOBAL,
+    EXPRESSION_TABLE,
+    EXPRESSION_LOCAL,
+    EXPRESSION_NIL,
+    EXPRESSION_FUNCTION,
+    EXPRESSION_BOOLEAN,
+    EXPRESSION_NUMBER,
+    EXPRESSION_CALL,
+    EXPRESSION_JUMP,
+    EXPRESSION_UPVALUE,
+    EXPRESSION_NOT,
+    EXPRESSION_VARARG
 };
 
 /**
@@ -221,6 +222,8 @@ void Parser_OpenJump(Parser* parser, Expression* dst);
  * register.
  */
 void Parser_AddExitJump(Parser* parser, Expression* value, int test, int jumpPos);
+
+void Parser_FinalizeExitJump(Parser* parser, Expression* value, int cond, int reg);
 
 /**
  * Returns the index of the register occupied by the value, or -1 if the
