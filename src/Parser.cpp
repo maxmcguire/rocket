@@ -675,32 +675,25 @@ void Parser_ConvertToTest(Parser* parser, Expression* value, int test, int reg)
             Parser_InvertTest(parser, value);
         }
     }
+    else if (value->type == EXPRESSION_NOT)
+    {
+        // Note, we set the B value here to indicate that the value for this test
+        // must be coerced to a boolean. The parser will take this into account.
+        Parser_EmitABC(parser, Opcode_Test, value->index, 1, !test);
+        Parser_OpenJump(parser, value);
+    }
     else
     {
-
-        if (value->type == EXPRESSION_NOT)
+        if (!Parser_ConvertToRegister(parser, value))
         {
-            // Note, we set the B value here to indicate that the value for this test
-            // must be coerced to a boolean. The parser will take this into account.
-            test = 1 - test;
-            Parser_EmitABC(parser, Opcode_Test, value->index, 1, test);
-            Parser_OpenJump(parser, value);
+            Parser_MoveToRegister(parser, value, reg);
         }
-        else
-        {
-            if (!Parser_ConvertToRegister(parser, value))
-            {
-                Parser_MoveToRegister(parser, value, reg);
-            }
-            Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
-            Parser_OpenJump(parser, value);
-        }
-    
+        Parser_EmitABC(parser, Opcode_Test, value->index, 0, test);
+        Parser_OpenJump(parser, value);
     }
 
     // Close up the jumps for the other branch.
-    Parser_UpdateJumpChain(parser, value->exitJump[1 - test], 1 - test, reg);
-    value->exitJump[1 - test] = -1;
+    Parser_FinalizeExitJump(parser, value, 1 - test, reg);
 
     Parser_AddExitJump(parser, value, test, value->index);
 
@@ -1060,7 +1053,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    PrintFunction(prototype);
+    //PrintFunction(prototype);
 
     return prototype;
 
