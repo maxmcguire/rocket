@@ -195,6 +195,11 @@ static void CallTagMethod3Result(lua_State* L, const Value* method, const Value*
 void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
 {
 
+    if (Value_GetIsNil(key))
+    {
+        Vm_Error(L, "table index is nil");
+    }
+
     for (int i = 0; i < MAXTAGLOOP; ++i)
     {
 
