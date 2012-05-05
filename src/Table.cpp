@@ -99,7 +99,7 @@ static inline size_t Table_GetMainIndex(const Table* table, const Value* key)
 
 static inline bool Table_NodeIsEmpty(const TableNode* node)
 {
-    return Value_GetIsNil(&node->key);
+    return node->dead;
 }
 
 /**
@@ -122,11 +122,11 @@ static bool Table_CheckConsistency(const Table* table)
     for (int i = 0; i < table->numNodes; ++i)
     {
         const TableNode* node = &table->nodes[i]; 
-        
-        if (Table_NodeIsEmpty(node))
+
+        if (Value_GetIsNil(&node->key))
         {
-            // Check that empty nodes do not have a next pointer set.
-            if (node->next != NULL)
+            // If a node has a nil key it must be dead.
+            if (!node->dead)
             {
                 assert(0);
                 return false;
@@ -134,11 +134,27 @@ static bool Table_CheckConsistency(const Table* table)
         }
         else
         {
+
             // Check that all of the "next" pointers point to a valid element
-            if (!Table_GetIsValidNode(table, node))
+            if (node->next != NULL && !Table_GetIsValidNode(table, node->next))
             {
                 assert(0);
                 return false;
+            }
+
+            // Check that the "prev" pointer is correct for a dead node.
+            if (node->dead && node->prev != NULL)
+            {
+                if (!Table_GetIsValidNode(table, node->prev))
+                {
+                    assert(0);
+                    return false;
+                }
+                if (node->prev->next != node)
+                {
+                    assert(0);
+                    return false;
+                }
             }
 
             // Check the invariant that either this node is in its main index,
@@ -197,7 +213,9 @@ static bool Table_Resize(lua_State* L, Table* table, int numNodes)
     for (int i = 0; i < numNodes; ++i)
     {
         SetNil(&nodes[i].key);
+        nodes[i].dead = true;
         nodes[i].next = NULL;
+        nodes[i].prev = NULL;
     }
         
     // Rehash all of the nodes.
@@ -220,7 +238,7 @@ static bool Table_Resize(lua_State* L, Table* table, int numNodes)
 
 }
 
-TableNode* Table_GetNode(Table* table, const Value* key)
+static TableNode* Table_GetNodeIncludeDead(Table* table, const Value* key)
 {
 
     if (table->numNodes == 0)
@@ -230,7 +248,7 @@ TableNode* Table_GetNode(Table* table, const Value* key)
   
     size_t index = Table_GetMainIndex(table, key);
     TableNode* node = &table->nodes[index];
-
+  
     while ( node != NULL && !KeysEqual(&node->key, key) )
     {
         node = node->next;
@@ -240,14 +258,51 @@ TableNode* Table_GetNode(Table* table, const Value* key)
 
 }
 
-static bool Table_Remove(Table* table, const Value* key)
+static TableNode* Table_GetNode(Table* table, const Value* key, TableNode** prevNode = NULL)
 {
 
     if (table->numNodes == 0)
     {
+        return NULL;
+    }
+  
+    size_t index = Table_GetMainIndex(table, key);
+    TableNode* node = &table->nodes[index];
+    TableNode* prev = NULL;
+
+    while ( node != NULL && (node->dead || !KeysEqual(&node->key, key)) )
+    {
+        prev = node;
+        node = node->next;
+    }
+
+    if (prevNode)
+    {
+        *prevNode = prev;
+    }
+
+    return node;
+
+}
+
+static bool Table_Remove(Table* table, const Value* key)
+{
+
+    TableNode* prev = NULL;
+    TableNode* node = Table_GetNode(table, key, &prev);
+
+    if (node == NULL)
+    {
         return false;
     }
 
+    node->dead = true;
+    node->prev = prev;
+
+    assert( Table_CheckConsistency(table) );
+    return true;
+
+    /*
     size_t index = Table_GetMainIndex(table, key);
     TableNode* node = &table->nodes[index];
 
@@ -297,6 +352,7 @@ static bool Table_Remove(Table* table, const Value* key)
         nextNode->next = NULL;
 
     }
+    */
 
     assert( Table_CheckConsistency(table) );
     return true;
@@ -350,6 +406,51 @@ bool Table_Update(lua_State* L, Table* table, Value* key, Value* value)
 
 }
 
+static TableNode* Table_UnlinkDeadNode(TableNode* node)
+{
+    assert(node->dead);
+
+    if (node->prev != NULL)
+    {
+        // This node is in the middle of a list, so just unhook it from the
+        // previous and next nodes.
+        node->prev->next = node->next;
+        if (node->next != NULL && node->next->dead)
+        {
+            node->next->prev = node->prev;
+        }
+    }
+    else
+    {
+        // This is the head of the list. We can't unlink it from the chain since
+        // nothing will point to the rest of the list, so move another node the
+        // head of the list.
+        TableNode* next = node->next;
+        if (next != NULL)
+        {
+
+            node->dead  = next->dead;
+            node->key   = next->key;
+            node->value = next->value;
+            node->next  = next->next;
+
+            if (node->dead)
+            {
+                node->prev = NULL;
+            }
+
+            node = next;
+            if (node->next != NULL && node->next->dead)
+            {
+                node->next->prev = node;
+            }
+
+        }
+    }
+
+    return node;
+}
+
 void Table_Insert(lua_State* L, Table* table, Value* key, Value* value)
 {
 
@@ -366,14 +467,27 @@ Start:
     size_t index = Table_GetMainIndex(table, key);
     TableNode* node = &table->nodes[index];
 
-    if ( Table_NodeIsEmpty(node) )
+    if ( node->dead )
     {
+        // If this node is in another list, we need to remove it from that list
+        // since our new node shouldn't be part of that list.
+        if (node->prev != NULL)
+        {
+            node->prev->next = node->next;
+            if (node->next != NULL && node->next->dead)
+            {
+                node->next->prev = node->prev;
+            }
+            node->next = NULL;
+        }
+        node->dead  = false;
         node->key   = *key;
         node->value = *value;
-        node->next  = NULL;
     }
     else
     {
+
+        assert(!node->dead);
 
         // Need to insert a new node into the table.
         TableNode* freeNode = Table_GetFreeNode(table);
@@ -385,6 +499,7 @@ Start:
                 goto Start;
             }
         }
+        freeNode = Table_UnlinkDeadNode(freeNode);
 
         // Something else is in our primary slot, check if it's in its
         // primary slot.
@@ -406,6 +521,7 @@ Start:
             node->key   = *key;
             node->value = *value;
             node->next  = freeNode;
+            node->dead  = false;
             assert(node->next != node);
 
         }
@@ -415,10 +531,14 @@ Start:
             // the free slot and chain it to the other node.
             freeNode->key   = *key;
             freeNode->value = *value;
-            assert(node->next != freeNode);
+            freeNode->dead  = false;
             freeNode->next  = node->next;
             node->next      = freeNode;
-            assert(node->next != node);
+
+            if (freeNode->next != NULL && freeNode->next->dead)
+            {
+                freeNode->next->prev = freeNode;
+            }
         }
 
     }
@@ -511,7 +631,7 @@ const Value* Table_Next(Table* table, Value* key)
     int index = 0;
     if (!Value_GetIsNil(key))
     {
-        TableNode* node = Table_GetNode(table, key);
+        TableNode* node = Table_GetNodeIncludeDead(table, key);
         if (node == NULL)
         {
             return NULL;
@@ -520,7 +640,7 @@ const Value* Table_Next(Table* table, Value* key)
         index = static_cast<int>(node - table->nodes) + 1;
     }
 
-    while (index < table->numNodes && Value_GetIsNil(&table->nodes[index].key))
+    while (index < table->numNodes && table->nodes[index].dead)
     {
         ++index;
     }
