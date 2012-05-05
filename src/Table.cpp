@@ -302,61 +302,6 @@ static bool Table_Remove(Table* table, const Value* key)
     assert( Table_CheckConsistency(table) );
     return true;
 
-    /*
-    size_t index = Table_GetMainIndex(table, key);
-    TableNode* node = &table->nodes[index];
-
-    if ( Table_NodeIsEmpty(node) )
-    {
-        return false;
-    }
-
-    if ( KeysEqual(&node->key, key) )
-    {
-
-        // The node is in its main index, which means it is the first element
-        // in the chain (if there were any collisions).
-
-        TableNode* nextNode = node->next;
-        if (nextNode != NULL)
-        {
-            *node = *nextNode;
-            SetNil(&nextNode->key);
-            nextNode->next = NULL;
-        }
-        else
-        {
-            SetNil(&node->key);
-        }
-
-    }
-    else
-    {
-
-        TableNode* prevNode = node;
-        TableNode* nextNode = node->next;
-        
-        while ( nextNode != NULL && !KeysEqual(&nextNode->key, key) )
-        {
-            prevNode = nextNode;
-            nextNode = nextNode->next;
-        }
-        if (nextNode == NULL)
-        {
-            // Not in the table.
-            return false;
-        }
-
-        prevNode->next = nextNode->next;
-        SetNil(&nextNode->key);
-        nextNode->next = NULL;
-
-    }
-    */
-
-    assert( Table_CheckConsistency(table) );
-    return true;
-
 }
 
 static TableNode* Table_GetFreeNode(Table* table)
