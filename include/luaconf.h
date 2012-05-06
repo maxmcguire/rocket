@@ -315,13 +315,6 @@
 #define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
 /*
-@@ LUAI_MAXASSIGNS determines how many expressions can appear on the left hand
-@* side of an assignment statement.
-** CHANGE it if you require more complicated assignment statements.
-*/
-#define LUAI_MAXASSIGNS     64
-
-/*
 @@ LUA_COMPAT_GETN controls compatibility with old getn behavior.
 ** CHANGE it (define it) if you want exact compatibility with the
 ** behavior of setn/getn in Lua 5.0.

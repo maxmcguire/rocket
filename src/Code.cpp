@@ -1574,6 +1574,76 @@ static bool Parser_TryBreak(Parser* parser)
     return true;
 }
 
+static int Parser_AssignmentList(Parser* parser, int numExps = 1)
+{
+
+    Expression dst;
+    Parser_Expression0(parser, &dst, -1);
+
+    // If this is a function call, then it's a complete expression.
+    if (numExps == 1 && Parser_ResolveCall(parser, &dst, 0))
+    {
+        return -1;
+    }
+
+    int reg;
+    Expression exp;
+
+    if (Parser_Accept(parser, ','))
+    {
+        reg = Parser_AssignmentList(parser, numExps + 1);
+        exp.type  = EXPRESSION_REGISTER;
+        exp.index = reg + numExps - 1;
+    }
+    else
+    {
+
+        Parser_Expect(parser, '=');
+        
+        reg = Parser_GetNumRegisters(parser);
+        int numValues = Parser_ExpressionList(parser, &exp, reg);
+
+        // If the final expression can generate a variable number of results,
+        // adjust the number of results it generates based on how many we need.
+        int numResults = numExps - numValues + 1;
+        if (numResults < 0)
+        {
+            numResults = 0;
+        }
+        if (Parser_ResolveCall(parser, &exp, numResults) ||
+            Parser_ResolveVarArg(parser, &exp, numResults))
+        {
+            // Adjust to the last register.
+            assert(exp.type == EXPRESSION_REGISTER);
+            exp.index += numResults - 1;
+            numValues = numExps;
+        }
+
+        // Not enough values were supplied, pad out with nils.
+        if (numValues < numExps)
+        {
+            Parser_MoveToRegister(parser, &exp, reg + numValues - 1);
+            Parser_EmitAB(parser, Opcode_LoadNil, reg + numValues, reg + numExps - 1);
+            exp.type  = EXPRESSION_REGISTER;
+            exp.index = reg + numExps - 1;
+            numValues = numExps;
+        }
+
+        // Too many values were supplied.
+        if (numValues > numExps)
+        {
+            exp.type  = EXPRESSION_REGISTER;
+            exp.index = reg + numExps - 1;
+            numValues = numExps;
+        }
+
+    }
+
+    Parser_EmitSet(parser, &dst, &exp);
+    return reg;
+
+}
+
 static void Parser_Statement(Parser* parser)
 {
 
@@ -1617,36 +1687,8 @@ static void Parser_Statement(Parser* parser)
     {
         return;
     }
-    
-    // Handle expression statements.
 
-    Expression dst[LUAI_MAXASSIGNS];
-    Parser_Expression0(parser, &dst[0], -1);
-    
-    if (!Parser_ResolveCall(parser, &dst[0], 0))
-    {
-        
-        int numVars = 1;
-        while (numVars < LUAI_MAXASSIGNS && Parser_Accept(parser, ','))
-        {
-            Parser_Expression0(parser, &dst[numVars], -1);
-            ++numVars;
-        }
-
-        if (numVars == LUAI_MAXASSIGNS)
-        {
-            // Because we use a fixed sized array, we impose a limit on the
-            // maximum number of assignments for a single statement. This
-            // shouldn't be a factor for most code, but if it is the statement
-            // can easily be broken into two statements.
-            Lexer_Error(parser->lexer, "maximum number of assignments for a single statment (%d) reached",
-                LUAI_MAXASSIGNS);
-        }
-
-        Parser_Expect(parser, '=');
-        Parser_AssignExpressionList(parser, dst, numVars);
-
-    }
+    Parser_AssignmentList(parser);
 
     // After each statement we can reuse all of the temporary registers.
     Parser_FreeRegisters(parser);

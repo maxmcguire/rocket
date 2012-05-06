@@ -1188,6 +1188,31 @@ TEST_FIXTURE(MultipleAssignment3, LuaFixture)
 
 }
 
+TEST_FIXTURE(MultipleAssignment4, LuaFixture)
+{
+
+    const char* code =
+        "local a = 10\n"
+        "b, a = a, 5";
+   
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "b");
+    CHECK_EQ( lua_tonumber(L, -1), 10 );
+
+}
+
+TEST_FIXTURE(MiultipleAssignment5, LuaFixture)
+{
+    const char* code =
+        "x = 1, 2";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "x");
+    CHECK_EQ( lua_tonumber(L, -1), 1 );
+}
+
 TEST_FIXTURE(AssignmentSideEffect, LuaFixture)
 {
 
