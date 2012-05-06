@@ -1052,7 +1052,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    PrintFunction(prototype);
+    //PrintFunction(prototype);
 
     return prototype;
 
