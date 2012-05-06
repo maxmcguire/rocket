@@ -1202,7 +1202,7 @@ TEST_FIXTURE(MultipleAssignment4, LuaFixture)
 
 }
 
-TEST_FIXTURE(MiultipleAssignment5, LuaFixture)
+TEST_FIXTURE(MultipleAssignment5, LuaFixture)
 {
     const char* code =
         "x = 1, 2";

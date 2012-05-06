@@ -1613,10 +1613,13 @@ static int Parser_AssignmentList(Parser* parser, int numExps = 1)
         if (Parser_ResolveCall(parser, &exp, numResults) ||
             Parser_ResolveVarArg(parser, &exp, numResults))
         {
-            // Adjust to the last register.
-            assert(exp.type == EXPRESSION_REGISTER);
-            exp.index += numResults - 1;
-            numValues = numExps;
+            if (numResults > 0)
+            {
+                // Adjust to the last register.
+                assert(exp.type == EXPRESSION_REGISTER);
+                exp.index += numResults - 1;
+                numValues = numExps;
+            }
         }
 
         // Not enough values were supplied, pad out with nils.
