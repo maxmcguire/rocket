@@ -1422,7 +1422,12 @@ static bool Parser_TryWhile(Parser* parser)
     Parser_ConvertToTest(parser, &test, 0);
 
     Parser_BeginBlock(parser, true);
+    
+    // This inner block is used for lexical scoping.
+    Parser_BeginBlock(parser, false);
     Parser_Block(parser, TokenType_End);
+    Parser_EndBlock(parser);
+    
     Parser_EndLoop(parser, &loop);
     Parser_EndBlock(parser);
 
