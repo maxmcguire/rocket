@@ -518,7 +518,6 @@ TEST_FIXTURE(AddMetamethod, LuaFixture)
 
 }
 
-
 TEST_FIXTURE(UnaryMinusMetamethod, LuaFixture)
 {
 
@@ -565,6 +564,58 @@ TEST_FIXTURE(UnaryMinusMetamethod, LuaFixture)
 
     lua_getglobal(L, "result");
     CHECK_EQ( lua_tostring(L, -1), "result" );
+
+    CHECK( locals.success );
+
+}
+
+TEST_FIXTURE(LessThanMetamethod, LuaFixture)
+{
+
+    struct Locals
+    {
+        static int Op(lua_State* L)
+        {
+            Locals* locals = static_cast<Locals*>(lua_touserdata(L, lua_upvalueindex(1)));
+            if (lua_gettop(L) == 2
+                && lua_touserdata(L, 1) == locals->userData
+                && lua_touserdata(L, 1) == locals->userData)
+            {
+                locals->success = true;
+            }
+            lua_pushboolean(L, 1);
+            return 1;
+        }
+        void*   userData;
+        bool    success;
+    };
+
+    Locals locals;
+    locals.success = false;
+    
+    // Test the __add metamethod.
+
+    locals.userData = lua_newuserdata(L, 10);
+    int object = lua_gettop(L);
+
+    lua_newtable(L);
+    int mt = lua_gettop(L);
+
+    lua_pushlightuserdata(L, &locals);
+    lua_pushcclosure(L, Locals::Op, 1);
+    lua_setfield(L, mt, "__lt");
+
+    lua_setmetatable(L, object);
+
+    lua_pushvalue(L, object);
+    lua_setglobal(L, "ud");
+
+    const char* code = "result = ud < ud";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "result");
+    CHECK( lua_toboolean(L, -1) );
 
     CHECK( locals.success );
 

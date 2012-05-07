@@ -141,6 +141,20 @@ void ArithmeticError(lua_State* L, const Value* arg1, const Value* arg2)
     TypeError(L, arg, "perform arithmetic on");
 }
 
+void ComparisonError(lua_State *L, const Value* arg1, const Value* arg2)
+{
+    const char* type1 = State_TypeName(L, Value_GetType(arg1));
+    const char* type2 = State_TypeName(L, Value_GetType(arg2));
+    if (type1 == type2)
+    {
+        Vm_Error(L, "attempt to compare two %s values", type1);
+    }
+    else
+    {
+        Vm_Error(L, "attempt to compare %s with %s", type1, type2);
+    }
+}
+
 static Value* GetTagMethod(lua_State* L, const Value* value, TagMethod method)
 {
     Table* metatable = Value_GetMetatable(L, value);
@@ -347,6 +361,38 @@ static int MoveResults(lua_State* L, Value* dst, Value* src, int numResults)
     return numResults;
 }
 
+/** Calls a comparison tag method and returns the result (0 for false, 1 for true).
+If there is no appropriate tag method, the function returns -1 */
+static int ComparisionTagMethod(lua_State* L, const Value* arg1, const Value* arg2, TagMethod tm)
+{
+
+    assert(arg1->tag == arg2->tag);
+    
+    const Value* method1 = GetTagMethod(L, arg1, tm);
+    
+    if (method1 == NULL)
+    {
+        return -1;
+    }
+
+    const Value* method2 = GetTagMethod(L, arg2, tm);
+    if (method1 != method2)
+    {
+        return -1;
+    }
+    
+    PushValue(L, method1);
+    PushValue(L, arg1);
+    PushValue(L, arg2);
+    Vm_Call(L, L->stackTop - 3, 2, 1);
+
+    int result = Vm_GetBoolean(L->stackTop - 1);
+    Pop(L, 1);    
+
+    return result;
+
+}
+
 // Returns 0 or 1 depending on whether or not the values are equal
 int Vm_ValuesEqual(const Value* arg1, const Value* arg2)
 {
@@ -354,21 +400,25 @@ int Vm_ValuesEqual(const Value* arg1, const Value* arg2)
     return Value_Equal(arg1, arg2);
 }
 
-int Vm_Less(const Value* arg1, const Value* arg2)
+int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
 {
-    if (arg1->tag != arg2->tag)
+    if (arg1->tag == arg2->tag)
     {
-        return 0;
+        if (Value_GetIsNumber(arg1))
+        {
+            return arg1->number < arg2->number;
+        }
+        else if (Value_GetIsString(arg1))
+        {
+            return String_Compare(arg1->string, arg2->string) < 0;
+        }
+        int result = ComparisionTagMethod(L, arg1, arg2, TagMethod_Lt);
+        if (result != -1)
+        {
+            return result;
+        }
     }
-    if (Value_GetIsNumber(arg1))
-    {
-        return arg1->number < arg2->number;
-    }
-    else if (Value_GetIsString(arg1))
-    {
-        return String_Compare(arg1->string, arg2->string) < 0;
-    }
-    // TODO: Call the metamethod.
+    ComparisonError(L, arg1, arg2);
     return 0;
 }
 
@@ -407,7 +457,7 @@ int ValuesLessEqual(const Value* arg1, const Value* arg2)
     return 0;
 }
 
-int GetBoolean(const Value* value)
+int Vm_GetBoolean(const Value* value)
 {
     if (Value_GetIsNil(value) || (Value_GetIsBoolean(value) && !value->boolean))
     {
@@ -823,40 +873,48 @@ static int Execute(lua_State* L, int numArgs)
             break;
         case Opcode_Unm:
             {
-                int b = GET_B(inst);
-                Value* dst         = &stackBase[a];
-                const Value* src   = &stackBase[b];
-                Vm_UnaryMinus(L, src, dst);
+                PROTECT(
+                    int b = GET_B(inst);
+                    Value* dst         = &stackBase[a];
+                    const Value* src   = &stackBase[b];
+                    Vm_UnaryMinus(L, src, dst);
+                )
             }
             break;
         case Opcode_Eq:
             {
-                const Value* arg1 = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                if (Vm_ValuesEqual(arg1, arg2) != a)
-                {
-                    ++ip;
-                }
+                PROTECT(
+                    const Value* arg1 = RESOLVE_RK( GET_B(inst) );
+                    const Value* arg2 = RESOLVE_RK( GET_C(inst) );
+                    if (Vm_ValuesEqual(arg1, arg2) != a)
+                    {
+                        ++ip;
+                    }
+                )
             }
             break;
         case Opcode_Lt:
             {
-                const Value* arg1 = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                if (Vm_Less(arg1, arg2) != a)
-                {
-                    ++ip;
-                }
+                PROTECT(
+                    const Value* arg1 = RESOLVE_RK( GET_B(inst) );
+                    const Value* arg2 = RESOLVE_RK( GET_C(inst) );
+                    if (Vm_Less(L, arg1, arg2) != a)
+                    {
+                        ++ip;
+                    }
+                )
             }
             break;
         case Opcode_Le:
             {
-                const Value* arg1 = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                if (ValuesLessEqual(arg1, arg2) != a)
-                {
-                    ++ip;
-                }
+                PROTECT(
+                    const Value* arg1 = RESOLVE_RK( GET_B(inst) );
+                    const Value* arg2 = RESOLVE_RK( GET_C(inst) );
+                    if (ValuesLessEqual(arg1, arg2) != a)
+                    {
+                        ++ip;
+                    }
+                )
             }
             break;
         case Opcode_NewTable:
@@ -971,7 +1029,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 int c = GET_C(inst);
                 const Value* value = &stackBase[a];
-                if ( GetBoolean( value ) != c )
+                if ( Vm_GetBoolean( value ) != c )
                 {
                     ++ip;
                 }
@@ -982,7 +1040,7 @@ static int Execute(lua_State* L, int numArgs)
                 int b = GET_B(inst);
                 int c = GET_C(inst);
                 const Value* value = &stackBase[b];
-                if ( GetBoolean( value ) != c )
+                if ( Vm_GetBoolean( value ) != c )
                 {
                     ++ip;
                 }
@@ -997,7 +1055,7 @@ static int Execute(lua_State* L, int numArgs)
                 int b = GET_B(inst);
                 Value* dst         = &stackBase[a];
                 const Value* src   = &stackBase[b];
-                SetValue( dst, GetBoolean(src) == 0 );
+                SetValue( dst, Vm_GetBoolean(src) == 0 );
             }
             break;
         case Opcode_Concat:

@@ -548,7 +548,7 @@ LUA_API lua_Integer lua_tointeger(lua_State *L, int index)
 LUA_API int lua_toboolean(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
-    return GetBoolean(value);
+    return Vm_GetBoolean(value);
 }
 
 LUA_API const char* lua_tolstring(lua_State *L, int index, size_t* length )
@@ -722,7 +722,7 @@ int lua_lessthan(lua_State *L, int index1, int index2)
 {
     const Value* value1 = GetValueForIndex(L, index1);
     const Value* value2 = GetValueForIndex(L, index2);
-    return Vm_Less(value1, value2);
+    return Vm_Less(L, value1, value2);
 }
 
 LUA_API int lua_gettop(lua_State* L)

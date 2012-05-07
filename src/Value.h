@@ -58,6 +58,9 @@ enum TagMethod
     TagMethod_Mod       = 7,
     TagMethod_Pow       = 8,
     TagMethod_Unm       = 9,
+    TagMethod_Lt        = 10,
+    TagMethod_Le        = 11,
+    TagMethod_Eq        = 12,
     TagMethod_NumMethods,
 };
 
