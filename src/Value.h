@@ -61,6 +61,7 @@ enum TagMethod
     TagMethod_Lt        = 10,
     TagMethod_Le        = 11,
     TagMethod_Eq        = 12,
+    TagMethod_Concat    = 13,
     TagMethod_NumMethods,
 };
 

@@ -135,13 +135,13 @@ static void TypeError(lua_State* L, const Value* value, const char* op)
 
 }
 
-void ArithmeticError(lua_State* L, const Value* arg1, const Value* arg2)
+static void ArithmeticError(lua_State* L, const Value* arg1, const Value* arg2)
 {
     const Value* arg = Value_GetIsNumber(arg1) ? arg2 : arg1;
     TypeError(L, arg, "perform arithmetic on");
 }
 
-void ComparisonError(lua_State *L, const Value* arg1, const Value* arg2)
+static void ComparisonError(lua_State *L, const Value* arg1, const Value* arg2)
 {
     const char* type1 = State_TypeName(L, Value_GetType(arg1));
     const char* type2 = State_TypeName(L, Value_GetType(arg2));
@@ -153,6 +153,15 @@ void ComparisonError(lua_State *L, const Value* arg1, const Value* arg2)
     {
         Vm_Error(L, "attempt to compare %s with %s", type1, type2);
     }
+}
+
+static void ConcatError(lua_State* L, const Value* arg1, const Value* arg2)
+{
+    if (Value_GetIsString(arg1) || Value_GetIsNumber(arg1))
+    {
+        arg1 = arg2;
+    }
+    TypeError(L, arg1, "concatenate");
 }
 
 static Value* GetTagMethod(lua_State* L, const Value* value, TagMethod method)
@@ -474,6 +483,36 @@ int Vm_LessEqual(lua_State* L, const Value* arg1, const Value* arg2)
     }
     ComparisonError(L, arg1, arg2);
     return 0;
+}
+
+void Vm_Concat(lua_State* L, Value* dst, Value* arg1, Value* arg2)
+{
+
+    if ( (!Value_GetIsString(arg1) && !Value_GetIsNumber(arg1)) || !ToString(L, arg2) )
+    {
+        Value* method = GetBinaryTagMethod(L, arg1, arg2, TagMethod_Concat);
+        if (method == NULL)
+        {
+            ConcatError(L, arg1, arg2);
+        }
+        CallTagMethod2Result(L, method, arg1, arg2, dst);       
+    }
+    else
+    {
+
+        ToString(L, arg1);
+
+        size_t length1 = arg1->string->length;
+        size_t length2 = arg2->string->length;
+
+        char* buffer = static_cast<char*>( Allocate(L, length1 + length2) );
+        memcpy(buffer, String_GetData(arg1->string), length1);
+        memcpy(buffer + length1, String_GetData(arg2->string), length2);
+
+        SetValue( dst, String_Create(L, buffer, length1 + length2) );
+
+    }
+
 }
 
 int Vm_GetBoolean(const Value* value)

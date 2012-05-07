@@ -41,6 +41,10 @@ int Vm_LessEqual(lua_State L, const Value* arg1, const Value* arg2);
 /** Coerces a value into a number if possible. */
 bool Vm_GetNumber(const Value* value, lua_Number* result);
 
+/** Concatenates two values and stores the result in dst. The arguments may be
+converted into strings. */
+void Vm_Concat(lua_State* L, Value* dst, Value* arg1, Value* arg2);
+
 // Coerces a value into a boolean. Booleans convert to their own value. nil
 // converts to false. All other values convert to true.
 int Vm_GetBoolean(const Value* value);

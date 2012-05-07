@@ -8,6 +8,7 @@
 #include "State.h"
 #include "Table.h"
 #include "String.h"
+#include "Vm.h"
 
 #include <memory.h>
 #include <string.h>
@@ -147,6 +148,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
             "__lt",
             "__le",
             "__eq",
+            "__concat",
         };
     for (int i = 0; i < TagMethod_NumMethods; ++i)
     {
@@ -259,30 +261,8 @@ void Concat(lua_State* L, Value* dst, Value* start, Value* end)
 
     while (arg2 <= end)
     {
-
-        if ( (!Value_GetIsString(arg1) && !Value_GetIsNumber(arg1)) || !ToString(L, arg2) )
-        {
-            // TODO: Call metamethod concat.
-            assert(0);
-        }
-        else
-        {
-
-            ToString(L, arg1);
-
-            size_t length1 = arg1->string->length;
-            size_t length2 = arg2->string->length;
-
-            char* buffer = static_cast<char*>( Allocate(L, length1 + length2) );
-            memcpy(buffer, String_GetData(arg1->string), length1);
-            memcpy(buffer + length1, String_GetData(arg2->string), length2);
-
-            SetValue( dst, String_Create(L, buffer, length1 + length2) );
-
-        }
-
+        Vm_Concat(L, dst, arg1, arg2);
         ++arg2;
-    
     }
 
 }
