@@ -142,6 +142,21 @@ static bool Table_CheckConsistency(const Table* table)
                 return false;
             }
 
+            // Check that the "next" pointer is correct.
+            if (node->next != NULL && node->next->dead)
+            {
+                if (!Table_GetIsValidNode(table, node->next->prev))
+                {
+                    assert(0);
+                    return false;
+                }
+                if (node->next->prev != node)
+                {
+                    assert(0);
+                    return false;
+                }
+            }
+
             // Check that the "prev" pointer is correct for a dead node.
             if (node->dead && node->prev != NULL)
             {
@@ -351,7 +366,7 @@ bool Table_Update(lua_State* L, Table* table, Value* key, Value* value)
 
 }
 
-static TableNode* Table_UnlinkDeadNode(TableNode* node)
+static TableNode* Table_UnlinkDeadNode(Table* table, TableNode* node)
 {
     assert(node->dead);
 
@@ -373,23 +388,16 @@ static TableNode* Table_UnlinkDeadNode(TableNode* node)
         TableNode* next = node->next;
         if (next != NULL)
         {
-
-            node->dead  = next->dead;
-            node->key   = next->key;
-            node->value = next->value;
-            node->next  = next->next;
-
+            *node = *next;
             if (node->dead)
             {
                 node->prev = NULL;
             }
-
-            node = next;
             if (node->next != NULL && node->next->dead)
             {
                 node->next->prev = node;
             }
-
+            node = next;
         }
     }
 
@@ -444,7 +452,8 @@ Start:
                 goto Start;
             }
         }
-        freeNode = Table_UnlinkDeadNode(freeNode);
+        freeNode = Table_UnlinkDeadNode(table, freeNode);
+        assert(freeNode != node);
 
         // Something else is in our primary slot, check if it's in its
         // primary slot.
@@ -452,22 +461,22 @@ Start:
         if (index != collisionIndex)
         {
 
-            // Update the previous node in the chain. 
+            // Update the previous node in the chain.
             TableNode* prevNode = &table->nodes[collisionIndex];
             assert( !Table_NodeIsEmpty(prevNode) );
-            if (prevNode->next == node)
+            while (prevNode->next != node)
             {
-                prevNode->next = freeNode;
+                prevNode = prevNode->next;
             }
+            prevNode->next = freeNode;
 
             // The object in its current spot is not it's primary index,
             // so we can freely move it somewhere else.
             *freeNode = *node;
             node->key   = *key;
             node->value = *value;
-            node->next  = freeNode;
+            node->next  = NULL;
             node->dead  = false;
-            assert(node->next != node);
 
         }
         else
