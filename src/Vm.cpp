@@ -162,6 +162,15 @@ static Value* GetBinaryTagMethod(lua_State* L, const Value* arg1, const Value* a
     return result;
 }
 
+static void CallTagMethod1Result(lua_State* L, const Value* method, const Value* arg1, Value* result)
+{
+    PushValue(L, method);
+    PushValue(L, arg1);
+    Vm_Call(L, L->stackTop - 2, 1, 1);
+    *result = *(L->stackTop - 1);
+    Pop(L, 1);
+}
+
 static void CallTagMethod2Result(lua_State* L, const Value* method, const Value* arg1, const Value* arg2, Value* result)
 {
     PushValue(L, method);
@@ -361,6 +370,23 @@ int Vm_Less(const Value* arg1, const Value* arg2)
     }
     // TODO: Call the metamethod.
     return 0;
+}
+
+void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
+{
+    if (Value_GetIsNumber(arg))
+    {
+        SetValue( dst, -arg->number );
+    }
+    else
+    {
+        const Value* method = GetTagMethod(L, arg, TagMethod_Unm);
+        if (method == NULL)
+        {
+            ArithmeticError(L, arg, NULL);
+        }
+        CallTagMethod1Result(L, method, arg, dst);
+    }
 }
 
 int ValuesLessEqual(const Value* arg1, const Value* arg2)
@@ -800,15 +826,7 @@ static int Execute(lua_State* L, int numArgs)
                 int b = GET_B(inst);
                 Value* dst         = &stackBase[a];
                 const Value* src   = &stackBase[b];
-                if (Value_GetIsNumber(src))
-                {
-                    SetValue( dst, -src->number );
-                }
-                else
-                {
-                    // No metamethod support yet.
-                    assert(0);
-                }
+                Vm_UnaryMinus(L, src, dst);
             }
             break;
         case Opcode_Eq:

@@ -143,6 +143,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
             "__div",
             "__mod",
             "__pow",
+            "__unm",
         };
     for (int i = 0; i < TagMethod_NumMethods; ++i)
     {

@@ -1090,8 +1090,9 @@ static bool Parser_TryIf(Parser* parser)
  * more than one expression, the expressions are put into subsequent registers
  * on the stack. The final expression in the list is stored in dst.
  */
-static int Parser_ExpressionList(Parser* parser, Expression* dst, int reg)
+static int Parser_ExpressionList(Parser* parser, Expression* dst)
 {
+    int reg = Parser_AllocateRegister(parser);
     int numValues = 1;
     Parser_Expression0(parser, dst, reg);
     while (Parser_Accept(parser, ','))
@@ -1125,10 +1126,10 @@ static bool Parser_TryReturn(Parser* parser)
     {
 
         // Return values will go onto the top of the available stack.
-        reg = Parser_AllocateRegister(parser);
+        reg = Parser_GetNumRegisters(parser);
 
         Expression arg;
-        numValues = Parser_ExpressionList(parser, &arg, reg);
+        numValues = Parser_ExpressionList(parser, &arg);
 
         // The final expression can result in a variable number of values.
         if (Parser_ResolveCall(parser,   &arg, -1) ||
@@ -1622,7 +1623,7 @@ static int Parser_AssignmentList(Parser* parser, int numExps = 1)
         Parser_Expect(parser, '=');
         
         reg = Parser_GetNumRegisters(parser);
-        int numValues = Parser_ExpressionList(parser, &exp, reg);
+        int numValues = Parser_ExpressionList(parser, &exp);
 
         // If the final expression can generate a variable number of results,
         // adjust the number of results it generates based on how many we need.

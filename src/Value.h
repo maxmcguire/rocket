@@ -43,7 +43,6 @@ STATIC_ASSERT( sizeof(Tag) == 4, TagMustBe32Bits );
 
 #define LUA_TPROTOTYPE      9
 #define LUA_TUPVALUE        10
-//#define LUA_TDEADKEY	    11
 
 #define NUM_TYPES           10        
 
@@ -58,6 +57,7 @@ enum TagMethod
     TagMethod_Div       = 6,
     TagMethod_Mod       = 7,
     TagMethod_Pow       = 8,
+    TagMethod_Unm       = 9,
     TagMethod_NumMethods,
 };
 
