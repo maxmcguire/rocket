@@ -3376,6 +3376,22 @@ TEST_FIXTURE(ReturnVarFunction, LuaFixture)
 
 }
 
+TEST_FIXTURE(ReturnLogic, LuaFixture)
+{
+
+    const char* code =
+        "function f(a,b)\n"
+	    "  return a or b\n"
+        "end\n"
+        "a = f(true, false)";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "a");
+    CHECK( lua_toboolean(L, -1) );
+
+}
+
 TEST_FIXTURE(ReturnStackCleanup, LuaFixture)
 {
 

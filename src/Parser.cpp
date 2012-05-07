@@ -789,8 +789,8 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
         // The value is already in a register, so nothing to do.
         if (reg == -1 || value->index == reg)
         {
-            Parser_FinalizeExitJumps(parser, value, reg);
-            return reg;
+            Parser_FinalizeExitJumps(parser, value, value->index);
+            return value->index;
         }
     }
 
@@ -1057,7 +1057,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    //PrintFunction(prototype);
+    PrintFunction(prototype);
 
     return prototype;
 

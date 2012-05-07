@@ -979,9 +979,7 @@ void* lua_newuserdata(lua_State* L, size_t size)
 
 int lua_setmetatable(lua_State* L, int index)
 {
-    Value* object = GetValueForIndex(L, index);
-    luai_apicheck(L, !Value_GetIsNil(object) );
-    
+    Value* object    = GetValueForIndex(L, index);
     Value* metatable = GetValueForIndex(L, -1);
 
     Table* table = NULL;
