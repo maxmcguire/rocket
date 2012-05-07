@@ -1081,6 +1081,16 @@ void Parser_BeginBlock(Parser* parser, bool breakable)
     ++parser->numBlocks;
 }
 
+static void Parser_CloseUpValues(Parser* parser, Block* block)
+{
+
+    if (block->firstLocalUpValue != -1)
+    {
+        // Close an local up values.
+        Parser_EmitAB(parser, Opcode_Close, block->firstLocalUpValue, 0);
+    }
+}
+
 void Parser_EndBlock(Parser* parser)
 {
 
@@ -1091,7 +1101,7 @@ void Parser_EndBlock(Parser* parser)
     
     int breakPos = block->firstBreakPos;
     int currentPos = Parser_GetInstructionCount(parser);
-    
+
     while (breakPos != -1)
     {
         int nextBreakPos = Parser_GetInstruction(parser, breakPos);
@@ -1101,12 +1111,8 @@ void Parser_EndBlock(Parser* parser)
         breakPos = nextBreakPos;
     }
 
-    if (block->firstLocalUpValue != -1)
-    {
-        // Close an local up values.
-        Parser_EmitAB(parser, Opcode_Close, block->firstLocalUpValue, 0);
-    }
-    
+    Parser_CloseUpValues(parser, block);
+
     --parser->numBlocks;
     parser->function->numLocals = parser->block[parser->numBlocks].firstLocal;
     parser->function->numCommitedLocals = parser->function->numLocals;
@@ -1143,6 +1149,7 @@ void Parser_BreakBlock(Parser* parser)
         {
             break;
         }
+        Parser_CloseUpValues(parser, &parser->block[blockIndex]);
         --blockIndex;
     }
 

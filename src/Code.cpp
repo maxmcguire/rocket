@@ -1468,6 +1468,9 @@ static bool Parser_TryFor(Parser* parser)
 
     Parser_BeginBlock(parser, true);
 
+    // This inner block is used for lexical scoping.
+    Parser_BeginBlock(parser, false);
+
     // For a numeric loop, a=index, b=limit, c=step
     // For a generic loop, a=generator, b=state, c=control
     int internalIndexReg = Parser_AddLocal( parser, String_Create(parser->L, "(for a)") );
@@ -1515,6 +1518,7 @@ static bool Parser_TryFor(Parser* parser)
         int loop = Parser_EmitInstruction(parser, 0);
 
         Parser_Block(parser, TokenType_End);
+        Parser_EndBlock(parser);
 
         // Close the loop and update the forprep instruction with the correct
         // skip amount.
@@ -1546,8 +1550,9 @@ static bool Parser_TryFor(Parser* parser)
         // Reserve space for the jmp instruction since we don't know the skip
         // amount until after we parse the body.
         int loop = Parser_EmitInstruction(parser, 0);
-        
+                
         Parser_Block(parser, TokenType_End);
+        Parser_EndBlock(parser);
 
         // Close the loop and update the forprep instruction with the correct
         // skip amount.
