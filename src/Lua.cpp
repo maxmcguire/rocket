@@ -507,7 +507,8 @@ int lua_isnumber(lua_State* L, int index)
 
 int lua_isstring(lua_State* L, int index)
 {
-    return lua_type(L, index) == LUA_TSTRING;
+    int type = lua_type(L, index);
+    return type == LUA_TSTRING || type == LUA_TNUMBER;
 }
 
 int lua_iscfunction(lua_State* L, int index)

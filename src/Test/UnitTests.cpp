@@ -3535,6 +3535,12 @@ TEST_FIXTURE(ToNumberFromString, LuaFixture)
 
 }
 
+TEST_FIXTURE(StringNumberCoercion, LuaFixture)
+{
+    lua_pushnumber(L, 10);
+    CHECK( lua_isstring(L, -1) );
+}
+
 TEST_FIXTURE(StringNumberCoercionArithmetic, LuaFixture)
 {
     const char* code =
