@@ -18,10 +18,14 @@
  */
 struct TableNode
 {
-    bool            dead;
+    bool            dead;   // TODO: This could overlap with the value's tag
     Value           key;
     TableNode*      next;
-    Value           value;
+    union
+    {
+        Value       value;  // Valid when the node is alive.
+        TableNode*  prev;   // Valid when the node is dead.
+    };
 };
 
 struct Table : public Gc_Object

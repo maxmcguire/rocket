@@ -195,6 +195,11 @@ static void CallTagMethod3Result(lua_State* L, const Value* method, const Value*
 void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
 {
 
+    if (Value_GetIsNil(key))
+    {
+        Vm_Error(L, "table index is nil");
+    }
+
     for (int i = 0; i < MAXTAGLOOP; ++i)
     {
 
@@ -214,7 +219,10 @@ void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
             method = GetTagMethod(L, dst, TagMethod_NewIndex);
             if (method == NULL)
             {
-                Table_Insert(L, table, key, value);
+                if (!Value_GetIsNil(value))
+                {
+                    Table_Insert(L, table, key, value);
+                }
                 return;
             }
 
@@ -427,6 +435,21 @@ bool Vm_GetNumber(const Value* value, lua_Number* result)
         }
     }
     return false;
+}
+
+/** Converts a value inplace to a number. */
+bool Vm_ToNumber(Value* value)
+{
+    if (!Value_GetIsNumber(value))
+    {
+        lua_Number result;
+        if (!Vm_GetNumber(value, &result))
+        {
+            return false;
+        }
+        SetValue(value, result);
+    }
+    return true;
 }
 
 static lua_Number GetValueLength(lua_State* L, const Value* value)
@@ -858,6 +881,19 @@ static int Execute(lua_State* L, int numArgs)
             break;
         case Opcode_ForPrep:
             {
+                // Make sure the initial value, limit and step are all numbers
+                if (!Vm_ToNumber(&stackBase[a]))
+                {
+                    Vm_Error(L, "initial value must be a number");
+                }
+                if (!Vm_ToNumber(&stackBase[a + 1]))
+                {
+                    Vm_Error(L, "limit must be a number");
+                }
+                if (!Vm_ToNumber(&stackBase[a + 2]))
+                {
+                    Vm_Error(L, "step must be a number");
+                }
                 int sbx = GET_sBx(inst);
                 stackBase[a].number -= stackBase[a + 2].number;
                 ip += sbx;
@@ -866,6 +902,9 @@ static int Execute(lua_State* L, int numArgs)
         case Opcode_ForLoop:
             {
                 Value* iterator = &stackBase[a];
+
+                assert( Value_GetIsNumber(&stackBase[a + 2]) );
+                assert( Value_GetIsNumber(&stackBase[a + 1]) );
                 
                 lua_Number step  = stackBase[a + 2].number;
                 lua_Number limit = stackBase[a + 1].number;

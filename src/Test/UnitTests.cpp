@@ -1174,6 +1174,53 @@ TEST_FIXTURE(MultipleAssignment2, LuaFixture)
 
 }
 
+TEST_FIXTURE(MultipleAssignment3, LuaFixture)
+{
+
+    const char* code =
+        "local a = 10\n"
+        "a, b = 5, a";
+   
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "b");
+    CHECK_EQ( lua_tonumber(L, -1), 10 );
+
+}
+
+TEST_FIXTURE(MultipleAssignment4, LuaFixture)
+{
+
+    const char* code =
+        "local a = 10\n"
+        "b, a = a, 5";
+   
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "b");
+    CHECK_EQ( lua_tonumber(L, -1), 10 );
+
+}
+
+TEST_FIXTURE(MultipleAssignment5, LuaFixture)
+{
+    const char* code =
+        "x = 1, 2";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "x");
+    CHECK_EQ( lua_tonumber(L, -1), 1 );
+}
+
+TEST_FIXTURE(MultipleAssignment6, LuaFixture)
+{
+    const char* code = 
+        "local a = { }\n"
+        "a[1], a = 1, 1";
+    CHECK( DoString(L, code) );
+}
+
 TEST_FIXTURE(AssignmentSideEffect, LuaFixture)
 {
 
@@ -3486,4 +3533,31 @@ TEST_FIXTURE(ToNumberFromString, LuaFixture)
     CHECK_EQ( lua_tonumber(L, -1), 0 );
     lua_pop(L, 1);
 
+}
+
+TEST_FIXTURE(StringNumberCoercion, LuaFixture)
+{
+    lua_pushnumber(L, 10);
+    CHECK( lua_isstring(L, -1) );
+}
+
+TEST_FIXTURE(StringNumberCoercionArithmetic, LuaFixture)
+{
+    const char* code =
+        "a = '1' + 2";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tonumber(L, -1), 3 );
+}
+
+TEST_FIXTURE(StringNumberCoercionForLoop, LuaFixture)
+{
+    const char* code =
+        "a = 0\n"
+        "for i='10','1','-2' do\n"
+	    "    a = a + 1\n"
+        "end\n";
+    CHECK( DoString(L, code) );
+    lua_getglobal(L, "a");
+    CHECK_EQ( lua_tonumber(L, -1), 5 );
 }
