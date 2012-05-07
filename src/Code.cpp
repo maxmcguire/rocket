@@ -1574,6 +1574,13 @@ static bool Parser_TryBreak(Parser* parser)
     return true;
 }
 
+static int Parser_MoveToFreshRegister(Parser* parser, int oldReg)
+{
+    int newReg = Parser_AllocateRegister(parser);
+    Parser_EmitAB(parser, Opcode_Move, newReg, oldReg);
+    return newReg;
+}
+
 static int Parser_AssignmentList(Parser* parser, int numExps = 1)
 {
 
@@ -1591,9 +1598,23 @@ static int Parser_AssignmentList(Parser* parser, int numExps = 1)
 
     if (Parser_Accept(parser, ','))
     {
+
+        // If the target is a table and we reassign one of the registers that
+        // is being referenced by oru target expression, the assignment will not
+        // work properly. So, copy to fresh registers.
+        if (dst.type == EXPRESSION_TABLE)
+        {
+            if (dst.keyType == EXPRESSION_REGISTER)
+            {
+                dst.key = Parser_MoveToFreshRegister(parser, dst.key);
+            }
+            dst.index = Parser_MoveToFreshRegister(parser, dst.index);
+        }
+
         reg = Parser_AssignmentList(parser, numExps + 1);
         exp.type  = EXPRESSION_REGISTER;
         exp.index = reg + numExps - 1;
+
     }
     else
     {

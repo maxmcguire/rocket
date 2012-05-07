@@ -1213,6 +1213,14 @@ TEST_FIXTURE(MultipleAssignment5, LuaFixture)
     CHECK_EQ( lua_tonumber(L, -1), 1 );
 }
 
+TEST_FIXTURE(MultipleAssignment6, LuaFixture)
+{
+    const char* code = 
+        "local a = { }\n"
+        "a[1], a = 1, 1";
+    CHECK( DoString(L, code) );
+}
+
 TEST_FIXTURE(AssignmentSideEffect, LuaFixture)
 {
 
