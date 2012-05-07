@@ -1211,6 +1211,10 @@ int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, void* userData)
 
     if (result != 0)
     {
+        if (L->openUpValue != NULL)
+        {
+            CloseUpValues(L, oldBase);
+        }
         // An error occured.
         // Restore the pre-call state.
         L->stackBase    = oldBase;
