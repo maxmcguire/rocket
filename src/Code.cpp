@@ -1070,7 +1070,6 @@ static void Parser_Conditional(Parser* parser)
     else
     {
         Parser_FinalizeExitJump(parser, &test, 0, -1);
-        //Parser_CloseJump(parser, &test);
     }
 
 }
@@ -1088,16 +1087,16 @@ static bool Parser_TryIf(Parser* parser)
 /**
  * Parses a non-empty list of a expressions separated by commas. If there is
  * more than one expression, the expressions are put into subsequent registers
- * on the stack. The final expression in the list is stored in dst.
+ * on the top of the stack. The final expression in the list is stored in dst.
  */
 static int Parser_ExpressionList(Parser* parser, Expression* dst)
 {
-    int reg = Parser_AllocateRegister(parser);
+    int firstReg = Parser_GetNumRegisters(parser);
     int numValues = 1;
-    Parser_Expression0(parser, dst, reg);
+    Parser_Expression0(parser, dst, -1);
     while (Parser_Accept(parser, ','))
     {
-        int index = reg + numValues - 1;
+        int index = firstReg + numValues - 1;
         Parser_MoveToRegister(parser, dst, index);
         Parser_SetLastRegister(parser, index);
         Parser_Expression0(parser, dst, index + 1);
@@ -1105,7 +1104,6 @@ static int Parser_ExpressionList(Parser* parser, Expression* dst)
     }
     return numValues;
 }
-
 
 static bool Parser_TryReturn(Parser* parser)
 {
@@ -1133,8 +1131,12 @@ static bool Parser_TryReturn(Parser* parser)
 
         // The final expression can result in a variable number of values.
         if (Parser_ResolveCall(parser,   &arg, -1) ||
-            Parser_ResolveVarArg(parser, &arg, -1, numValues == 1 ? reg : -1))
+            Parser_ResolveVarArg(parser, &arg, -1))
         {
+            if (numValues == 1)
+            {
+                reg = arg.index;
+            }
             numValues = -1;
         }
         else if (numValues != 1)
@@ -1635,6 +1637,10 @@ static int Parser_AssignmentList(Parser* parser, int numExps = 1)
         if (Parser_ResolveCall(parser, &exp, numResults) ||
             Parser_ResolveVarArg(parser, &exp, numResults))
         {
+            if (numValues == 1)
+            {
+                reg = exp.index;
+            }
             if (numResults > 0)
             {
                 // Adjust to the last register.
