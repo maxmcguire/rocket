@@ -393,12 +393,6 @@ static int ComparisionTagMethod(lua_State* L, const Value* arg1, const Value* ar
 
 }
 
-int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2)
-{
-    // TODO: invoke metamethod.
-    return Value_Equal(arg1, arg2);
-}
-
 void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
 {
     if (Value_GetIsNumber(arg))
@@ -414,6 +408,23 @@ void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
         }
         CallTagMethod1Result(L, method, arg, dst);
     }
+}
+
+int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2)
+{
+    if (arg1->tag == arg2->tag)
+    {
+        if (Value_Equal(arg1, arg2))
+        {
+            return 1;
+        }
+        int result = ComparisionTagMethod(L, arg1, arg2, TagMethod_Eq);
+        if (result != -1)
+        {
+            return result;
+        }
+    }
+    return 0;
 }
 
 int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
