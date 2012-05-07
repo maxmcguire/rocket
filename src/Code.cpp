@@ -754,7 +754,7 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
         }
         if (regHint == -1)
         {
-            regHint = dst->index;
+            regHint = Parser_AllocateRegister(parser);
         }
 
         Parser_EmitAB(parser, opcode, regHint, dst->index);
