@@ -393,11 +393,27 @@ static int ComparisionTagMethod(lua_State* L, const Value* arg1, const Value* ar
 
 }
 
-// Returns 0 or 1 depending on whether or not the values are equal
-int Vm_ValuesEqual(const Value* arg1, const Value* arg2)
+int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2)
 {
     // TODO: invoke metamethod.
     return Value_Equal(arg1, arg2);
+}
+
+void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
+{
+    if (Value_GetIsNumber(arg))
+    {
+        SetValue( dst, -arg->number );
+    }
+    else
+    {
+        const Value* method = GetTagMethod(L, arg, TagMethod_Unm);
+        if (method == NULL)
+        {
+            ArithmeticError(L, arg, NULL);
+        }
+        CallTagMethod1Result(L, method, arg, dst);
+    }
 }
 
 int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
@@ -422,38 +438,30 @@ int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
     return 0;
 }
 
-void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
+int Vm_LessEqual(lua_State* L, const Value* arg1, const Value* arg2)
 {
-    if (Value_GetIsNumber(arg))
+    if (arg1->tag == arg2->tag)
     {
-        SetValue( dst, -arg->number );
-    }
-    else
-    {
-        const Value* method = GetTagMethod(L, arg, TagMethod_Unm);
-        if (method == NULL)
+        if (Value_GetIsNumber(arg1))
         {
-            ArithmeticError(L, arg, NULL);
+            return arg1->number <= arg2->number;
         }
-        CallTagMethod1Result(L, method, arg, dst);
+        else if (Value_GetIsString(arg1))
+        {
+            return String_Compare(arg1->string, arg2->string) <= 0;
+        }
+        int result = ComparisionTagMethod(L, arg1, arg2, TagMethod_Le);
+        if (result != -1)
+        {
+            return result;
+        }
+        result = ComparisionTagMethod(L, arg2, arg1, TagMethod_Lt);
+        if (result != -1)
+        {
+            return !result;
+        }
     }
-}
-
-int ValuesLessEqual(const Value* arg1, const Value* arg2)
-{
-    if (arg1->tag != arg2->tag)
-    {
-        return 0;
-    }
-    if (Value_GetIsNumber(arg1))
-    {
-        return arg1->number <= arg2->number;
-    }
-    else if (Value_GetIsString(arg1))
-    {
-        return String_Compare(arg1->string, arg2->string) <= 0;
-    }
-    // TODO: Call the metamethod.
+    ComparisonError(L, arg1, arg2);
     return 0;
 }
 
@@ -886,7 +894,7 @@ static int Execute(lua_State* L, int numArgs)
                 PROTECT(
                     const Value* arg1 = RESOLVE_RK( GET_B(inst) );
                     const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                    if (Vm_ValuesEqual(arg1, arg2) != a)
+                    if (Vm_Equal(L, arg1, arg2) != a)
                     {
                         ++ip;
                     }
@@ -910,7 +918,7 @@ static int Execute(lua_State* L, int numArgs)
                 PROTECT(
                     const Value* arg1 = RESOLVE_RK( GET_B(inst) );
                     const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                    if (ValuesLessEqual(arg1, arg2) != a)
+                    if (Vm_LessEqual(L, arg1, arg2) != a)
                     {
                         ++ip;
                     }

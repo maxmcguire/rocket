@@ -32,9 +32,11 @@ extern "C" void Vm_GetTable(lua_State* L, const Value* table, const Value* key, 
 extern "C" void Vm_GetGlobal(lua_State* L, Closure* closure, const Value* key, Value* dst);
 extern "C" void Vm_SetGlobal(lua_State* L, Closure* closure, Value* key, Value* value);
 
-int Vm_ValuesEqual(const Value* arg1, const Value* arg2);
+/** Returns 0 or 1 depending on the result of the comparions. This will call
+metamethods. */
+int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2);
 int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2);
-int ValuesLessEqual(const Value* arg1, const Value* arg2);
+int Vm_LessEqual(lua_State L, const Value* arg1, const Value* arg2);
 
 /** Coerces a value into a number if possible. */
 bool Vm_GetNumber(const Value* value, lua_Number* result);
