@@ -350,8 +350,7 @@ bool Table_Update(lua_State* L, Table* table, Value* key, Value* value)
 
     if (Value_GetIsNil(value))
     {
-        Table_Remove(table, key);
-        return true;
+        return Table_Remove(table, key);
     }
 
     TableNode* node = Table_GetNode(table, key);
@@ -503,7 +502,7 @@ Start:
 
 void Table_SetTable(lua_State* L, Table* table, Value* key, Value* value)
 {
-    if (!Table_Update(L, table, key, value))
+    if (!Table_Update(L, table, key, value) && !Value_GetIsNil(value))
     {
         Table_Insert(L, table, key, value);
     }
