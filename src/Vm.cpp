@@ -385,7 +385,7 @@ static int ComparisionTagMethod(lua_State* L, const Value* arg1, const Value* ar
     }
 
     const Value* method2 = GetTagMethod(L, arg2, tm);
-    if (!Value_Equal(method1, method2))
+    if (method2 == NULL || !Value_Equal(method1, method2))
     {
         return -1;
     }
