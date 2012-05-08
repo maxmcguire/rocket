@@ -45,6 +45,7 @@ struct CallFrame
 
 struct lua_State
 {
+    Value           dummyObject;    // Used when we need to refer to an object that doesn't exist.
     Value*          stack;
     Value*          stackBase;
     Value*          stackTop;       // Points to the next free spot on the stack.

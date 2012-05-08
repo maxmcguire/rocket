@@ -987,7 +987,7 @@ TEST_FIXTURE(CClosure, LuaFixture)
             lua_Integer b = lua_tointeger(L, lua_upvalueindex(3));
             CHECK( a == 10 );
             CHECK( b == 20 );
-            CHECK( lua_isnil(L, lua_upvalueindex(4)) == 1 );
+            CHECK( lua_isnone(L, lua_upvalueindex(4)) == 1 );
             locals->called = true;
             return 0;
         }

@@ -123,6 +123,8 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
 
     Gc_Initialize(&L->gc);
 
+    SetNil(&L->dummyObject);
+
     SetValue( &L->globals, Table_Create(L) );
     SetValue( &L->registry, Table_Create(L) );
 

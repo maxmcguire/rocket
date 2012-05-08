@@ -68,14 +68,13 @@ static Value GetNil()
  */
 static Value* GetValueForIndex(lua_State* L, int index)
 {
-    static Value nil = GetNil();
     Value* result = NULL;
     if (index > 0)
     {
         result = L->stackBase + (index - 1);
         if (result >= L->stackTop)
         {
-            result = &nil;
+            return &L->dummyObject;
         }
     }
     else if (index > LUA_REGISTRYINDEX)
@@ -115,7 +114,7 @@ static Value* GetValueForIndex(lua_State* L, int index)
         {
             return &closure->cclosure.upValue[index - 1];
         }
-        return &nil;
+        return &L->dummyObject;
     }
     assert(result != NULL);
     return result;
@@ -703,6 +702,10 @@ LUA_API void lua_settable(lua_State* L, int index)
 LUA_API int lua_type(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
+    if (value == &L->dummyObject)
+    {
+        return LUA_TNONE;
+    }
     return Value_GetType(value);
 }
 
