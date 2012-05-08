@@ -371,4 +371,7 @@ bool Parser_ConvertToBoolean(Parser* parser, Expression* value);
  */
 void Parser_ResolveName(Parser* parser, Expression* dst, String* name);
 
+bool Parser_GetHasUpValues(Parser* parser);
+void Parser_CloseUpValues(Parser* parser);
+
 #endif

@@ -1445,15 +1445,40 @@ static bool Parser_TryRepeat(Parser* parser)
         return false;
     }
 
-    int loop = Parser_GetInstructionCount(parser);
+    int loop;
+    Parser_BeginLoop(parser, &loop);
 
     Parser_BeginBlock(parser, true);
+    
+    // This inner block is used for lexical scoping.
+    Parser_BeginBlock(parser, false);
     Parser_Block(parser, TokenType_Until);
 
     Expression test;
     Parser_Expression0(parser, &test, -1);
     Parser_ConvertToTest(parser, &test, 0);
-    Parser_CloseJump(parser, &test, loop);
+
+    if (Parser_GetHasUpValues(parser))
+    {
+
+        Parser_FinalizeExitJump(parser, &test, 1, -1);
+        Parser_CloseUpValues(parser);
+
+        int skip;
+        Parser_BeginSkip(parser, &skip);
+
+        Parser_FinalizeExitJump(parser, &test, 0, -1);
+        Parser_EndBlock(parser);
+        Parser_EndLoop(parser, &loop);
+
+        Parser_EndSkip(parser, &skip);
+    
+    }
+    else
+    {
+        Parser_EndBlock(parser);
+        Parser_CloseJump(parser, &test, loop);
+    }
 
     Parser_EndBlock(parser);
 

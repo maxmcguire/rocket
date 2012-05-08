@@ -1081,14 +1081,26 @@ void Parser_BeginBlock(Parser* parser, bool breakable)
     ++parser->numBlocks;
 }
 
+bool Parser_GetHasUpValues(Parser* parser)
+{
+    assert(parser->numBlocks > 0);
+    Block* block = &parser->block[parser->numBlocks - 1]; 
+    return block->firstLocalUpValue != -1;
+}
+
 static void Parser_CloseUpValues(Parser* parser, Block* block)
 {
-
     if (block->firstLocalUpValue != -1)
     {
         // Close an local up values.
         Parser_EmitAB(parser, Opcode_Close, block->firstLocalUpValue, 0);
     }
+}
+
+void Parser_CloseUpValues(Parser* parser)
+{
+    Block* block = &parser->block[parser->numBlocks - 1]; 
+    Parser_CloseUpValues(parser, block);
 }
 
 void Parser_EndBlock(Parser* parser)
