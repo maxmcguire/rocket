@@ -216,6 +216,11 @@ int Parser_AddLocal(Parser* parser, String* name)
 
     Function* function = parser->function;
 
+    if (function->numLocals == LUAI_MAXVARS)
+    {
+        Lexer_Error(parser->lexer, "too many local variables (limit is %d)", LUAI_MAXVARS);
+    }
+
     function->local[function->numLocals] = name;
     ++function->numLocals;
 
