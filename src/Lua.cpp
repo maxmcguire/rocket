@@ -56,13 +56,6 @@ struct Header
     unsigned char   integralFlag;
 };
 
-static Value GetNil()
-{
-    Value nil;
-    SetNil(&nil);
-    return nil;
-}
-
 /**
  * Accepts negative and pseudo indices.
  */
