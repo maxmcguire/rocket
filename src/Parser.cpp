@@ -773,6 +773,11 @@ void Parser_ResolveName(Parser* parser, Expression* dst, String* name)
    }
 }
 
+static bool GetHasExitJumps(Expression* value)
+{
+    return value->exitJump[0] != -1 || value->exitJump[1] != -1;
+}
+
 int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
 {
 
@@ -787,9 +792,21 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     if (value->type == EXPRESSION_REGISTER)
     {
         // The value is already in a register, so nothing to do.
-        if (reg == -1 || value->index == reg)
+        if ((reg == -1 && !GetHasExitJumps(value)) || value->index == reg)
         {
-            Parser_FinalizeExitJumps(parser, value, value->index);
+            if (GetHasExitJumps(value))
+            {
+                Parser_UpdateJumpChain(parser, value->exitJump[1], 1, value->index);
+                value->exitJump[1] = -1;
+
+                int skip;
+                Parser_BeginSkip(parser, &skip);
+        
+                Parser_UpdateJumpChain(parser, value->exitJump[0], 0, value->index);
+                value->exitJump[0] = -1;
+
+                Parser_EndSkip(parser, &skip);
+            }
             return value->index;
         }
     }
@@ -880,11 +897,6 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
 
     return reg;
 
-}
-
-static bool GetHasExitJumps(Expression* value)
-{
-    return value->exitJump[0] != -1 || value->exitJump[1] != -1;
 }
 
 void Parser_MoveToRegisterOrConstant(Parser* parser, Expression* value, int reg)
