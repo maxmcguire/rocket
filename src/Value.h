@@ -90,6 +90,10 @@ STATIC_ASSERT( offsetof(Value, tag) == 4, TagMustBeMSW );
 inline bool Value_GetIsNumber(const Value* value)
     { return value->tag <= 0xfff80000; }
 
+/** Returns true if the value is a number representing the value NaN. */
+inline bool Value_GetIsNaN(const Value* value)
+    { return value->tag == 0xfff80000; }
+
 inline bool Value_GetIsTable(const Value* value)
     { return value->tag == Tag_Table; }
 

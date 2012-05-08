@@ -231,6 +231,13 @@ void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
         Vm_Error(L, "table index is nil");
     }
 
+    if (Value_GetIsNaN(key))
+    {
+        // NaN can't be used a table key, since we can't test if it's equal
+        // to itself!
+        Vm_Error(L, "table index is NaN");
+    }
+
     for (int i = 0; i < MAXTAGLOOP; ++i)
     {
 
