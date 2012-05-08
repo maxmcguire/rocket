@@ -133,6 +133,7 @@ static size_t writefile(lua_State* L, File* file, const void* src, size_t size)
 {
     size_t result;
     lua_rawgeti(L, LUA_ENVIRONINDEX, IO_WRITE_CALLBACK);
+    assert(!lua_isnil(L, -1));
     result = ((luaL_FileWrite)lua_touserdata(L, -1))(L, file->handle, src, size);
     lua_pop(L, 1);
     return result;
@@ -369,7 +370,7 @@ static int io_popen (lua_State *L) {
 static int io_tmpfile (lua_State *L)
 {
     File* pf = newfile(L);
-    pf->handle = tmpfile();
+    pf->handle = openfile(L, NULL, "wb+");
     return (pf->handle == NULL) ? pushresult(L, 0, NULL) : 1;
 }
 
@@ -712,7 +713,7 @@ static const luaL_Reg iolib[] = {
   {"output", io_output},
   /*{"popen", io_popen},*/
   {"read", io_read},
-  /*{"tmpfile", io_tmpfile},*/
+  {"tmpfile", io_tmpfile},
   {"type", io_type},
   {"write", io_write},
   {NULL, NULL}
@@ -778,7 +779,14 @@ static void newfenv (lua_State *L, lua_CFunction cls)
 
 static void* stdio_open(lua_State* L, const char* fileName, const char* mode)
 {
-    return fopen(fileName, mode);
+    if (fileName != NULL)
+    {
+        return fopen(fileName, mode);
+    }
+    else
+    {
+        return tmpfile();
+    }
 }
 
 static int stdio_close(lua_State* L, void* handle)
@@ -808,7 +816,7 @@ static long stdio_seek(lua_State* L, void* handle, long offset, int origin)
 LUALIB_API int luaopen_io (lua_State *L)
 {
     luaL_FileCallbacks callbacks;
-    callbacks.open = stdio_open;
+    callbacks.open  = stdio_open;
     callbacks.close = stdio_close;
     callbacks.read  = stdio_read;
     callbacks.write = stdio_write;
@@ -818,6 +826,10 @@ LUALIB_API int luaopen_io (lua_State *L)
 
 LUALIB_API int luaopen_iocallbacks(lua_State *L, luaL_FileCallbacks* callbacks)
 {
+    /* create (private) environment with the callbacks */
+    lua_newtable(L);
+    lua_replace(L, LUA_ENVIRONINDEX);
+    setenvcallbacks(L, callbacks);
     createmeta(L);
     /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
     newfenv(L, io_fclose);

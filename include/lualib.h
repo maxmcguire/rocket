@@ -16,7 +16,8 @@
 
 /**
 * Callbacks for file I/O.
-*/ 
+*/
+/* If fileName is NULL, a temp file should be opened. */
 typedef void*  (*luaL_FileOpen)  (lua_State* L, const char* fileName, const char* mode );
 /** Returns 0 on success, EOF on failure. */
 typedef int    (*luaL_FileClose) (lua_State* L, void* handle );
