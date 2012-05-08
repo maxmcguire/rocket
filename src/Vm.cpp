@@ -404,9 +404,10 @@ static int ComparisionTagMethod(lua_State* L, const Value* arg1, const Value* ar
 
 void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
 {
-    if (Value_GetIsNumber(arg))
+    lua_Number a;
+    if (Vm_GetNumber(arg, &a))
     {
-        SetValue( dst, -arg->number );
+        SetValue( dst, -a );
     }
     else
     {
