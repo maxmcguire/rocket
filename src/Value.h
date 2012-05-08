@@ -88,7 +88,7 @@ STATIC_ASSERT( offsetof(Value, tag) == 4, TagMustBeMSW );
 /** Returns true if the value represents a number type. This function must be
  used in lieu of directly comparing the tag to the TAG_NUMBER value */
 inline bool Value_GetIsNumber(const Value* value)
-    { return (value->tag & 0xfff80000) != 0xfff80000; }
+    { return value->tag <= 0xfff80000; }
 
 inline bool Value_GetIsTable(const Value* value)
     { return value->tag == Tag_Table; }
