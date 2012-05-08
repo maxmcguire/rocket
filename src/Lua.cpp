@@ -318,8 +318,7 @@ static void Parse(lua_State* L, void* userData)
 
     assert(prototype != NULL);
 
-    Table* env = GetCurrentEnvironment(L);
-
+    Table* env = L->globals.table;
     Closure* closure = Closure_Create(L, prototype, env);
 
     // Initialize the up values. Typically a top level check won't have any up
