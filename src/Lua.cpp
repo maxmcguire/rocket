@@ -71,6 +71,7 @@ static Value* GetValueForIndex(lua_State* L, int index)
     Value* result = NULL;
     if (index > 0)
     {
+        // Absolute stack index.
         result = L->stackBase + (index - 1);
         if (result >= L->stackTop)
         {
@@ -79,7 +80,8 @@ static Value* GetValueForIndex(lua_State* L, int index)
     }
     else if (index > LUA_REGISTRYINDEX)
     {
-        // ???
+        // Stack index relative to the top of the stack.
+        luai_apicheck(L, index != 0 && -index <= L->stackTop - L->stackBase);
         result = L->stackTop + index;
     }
     else if (index == LUA_GLOBALSINDEX)
