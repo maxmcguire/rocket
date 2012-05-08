@@ -241,6 +241,7 @@ void Concat(lua_State* L, int n)
 {
     if (n >= 2)
     {
+        // TODO: this looks like it will be problematic for the garbage collector.
         Value dst;
         Concat(L, &dst, L->stackTop - n, L->stackTop - 1);
         Pop(L, n);

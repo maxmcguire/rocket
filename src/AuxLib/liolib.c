@@ -65,7 +65,7 @@ static long seekfile(lua_State* L, File* file, long offset, int origin)
     luaL_FileSeek seek;
     lua_rawgeti(L, LUA_ENVIRONINDEX, IO_SEEK_CALLBACK);
     seek = (luaL_FileSeek)lua_touserdata(L, -1);
-    result = seek(L, file, offset, origin);
+    result = seek(L, file->handle, offset, origin);
     lua_pop(L, 1);
     file->bufferLength = 0;
     file->bufferPos = 0;
@@ -600,7 +600,8 @@ static int io_read (lua_State *L)
 
 static int f_read (lua_State *L)
 {
-    return g_read(L, tofilep(L), 2);
+    File* file = tofilep(L);
+    return g_read(L, file, 2);
 }
 
 static int io_readline (lua_State *L)
@@ -651,18 +652,19 @@ static int io_write (lua_State *L) {
 }
 
 
-static int f_write (lua_State *L) {
-  return g_write(L, tofilep(L), 2);
+static int f_write (lua_State *L)
+{
+    File* file = tofilep(L);
+    return g_write(L, file, 2);
 }
-
 
 static int f_seek (lua_State *L)
 {
     static const int mode[] = {SEEK_SET, SEEK_CUR, SEEK_END};
     static const char *const modenames[] = {"set", "cur", "end", NULL};
-    File* file = tofilep(L);
     int op = luaL_checkoption(L, 2, "cur", modenames);
     long offset = luaL_optlong(L, 3, 0);
+    File* file = tofilep(L);
     op = seekfile(L, file, offset, mode[op]);
     if (op < 0)
     {
@@ -806,7 +808,7 @@ static size_t stdio_write(lua_State* L, void* handle, const void* src, size_t si
 
 static long stdio_seek(lua_State* L, void* handle, long offset, int origin)
 {
-    if (!fseek(handle, offset, origin))
+    if (fseek(handle, offset, origin))
     {
         return -1;
     }
