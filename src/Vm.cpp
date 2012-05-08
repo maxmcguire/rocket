@@ -422,7 +422,7 @@ void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
 
 int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2)
 {
-    if (arg1->tag == arg2->tag)
+    if ((Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2)) || arg1->tag == arg2->tag)
     {
         if (Value_Equal(arg1, arg2))
         {
@@ -439,13 +439,13 @@ int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2)
 
 int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
 {
-    if (arg1->tag == arg2->tag)
+    if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
     {
-        if (Value_GetIsNumber(arg1))
-        {
-            return arg1->number < arg2->number;
-        }
-        else if (Value_GetIsString(arg1))
+        return arg1->number < arg2->number;
+    }
+    else if (arg1->tag == arg2->tag)
+    {
+        if (Value_GetIsString(arg1))
         {
             return String_Compare(arg1->string, arg2->string) < 0;
         }
@@ -461,13 +461,13 @@ int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
 
 int Vm_LessEqual(lua_State* L, const Value* arg1, const Value* arg2)
 {
-    if (arg1->tag == arg2->tag)
+    if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
     {
-        if (Value_GetIsNumber(arg1))
-        {
-            return arg1->number <= arg2->number;
-        }
-        else if (Value_GetIsString(arg1))
+        return arg1->number <= arg2->number;
+    }
+    else if (arg1->tag == arg2->tag)
+    {
+        if (Value_GetIsString(arg1))
         {
             return String_Compare(arg1->string, arg2->string) <= 0;
         }

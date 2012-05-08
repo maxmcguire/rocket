@@ -158,11 +158,15 @@ inline void SetValue(Value* value, UserData* userData)
  */
 inline int Value_Equal(const Value* arg1, const Value* arg2)
 {
-    if (arg1->tag != arg2->tag)
+    if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
+    {
+        return arg1->number == arg2->number;
+    }
+    else if (arg1->tag != arg2->tag)
     {
         return 0;
     }
-    if (Value_GetIsNil(arg1))
+    else if (Value_GetIsNil(arg1))
     {
         return 1;
     }
