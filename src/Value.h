@@ -70,7 +70,6 @@ union Value
     double              number;
     struct
     {
-        Tag             tag;
         union
         {
             int         boolean;
@@ -81,8 +80,10 @@ union Value
             UserData*   userData;
             Gc_Object*  object;         // Alias for string, table, closure.
         };
+        Tag             tag;
     };
 };
+STATIC_ASSERT( offsetof(Value, tag) == 4, TagMustBeMSW );
 
 /** Returns true if the value represents a number type. This function must be
  used in lieu of directly comparing the tag to the TAG_NUMBER value */

@@ -375,8 +375,6 @@ If there is no appropriate tag method, the function returns -1 */
 static int ComparisionTagMethod(lua_State* L, const Value* arg1, const Value* arg2, TagMethod tm)
 {
 
-    assert(arg1->tag == arg2->tag);
-    
     const Value* method1 = GetTagMethod(L, arg1, tm);
     
     if (method1 == NULL)
