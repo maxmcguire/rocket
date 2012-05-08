@@ -12,6 +12,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 void Value_SetMetatable(lua_State* L, Value* value, Table* table)
 {
@@ -92,4 +93,35 @@ Table* Value_GetEnv(const Value* value)
         return value->userData->env;
     }
     return 0;
+}
+
+bool StringToNumber(const char* string, lua_Number* result)
+{
+
+    char* end;
+    *result = lua_str2number(string, &end);
+
+    if (end == string)
+    {
+        // The conversion failed.
+        return false;
+    }
+    if (*end == 'x' || *end == 'X')
+    {
+        // Try converting as a hexadecimal number.
+        *result = strtoul(string, &end, 16);
+    }
+    // Allow trailing spaces.
+    while (isspace(*end))
+    {
+        ++end;
+    }
+    if (*end == '\0')
+    {
+        // Converted the entire string.
+        return true;
+    }
+
+    return false;
+
 }

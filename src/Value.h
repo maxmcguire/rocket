@@ -195,4 +195,10 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table);
  */
 Table* Value_GetEnv(const Value* value);
 
+/** Converts a string representation of a number into the actual number. Returns
+true if the conversion was successful. The string can contain leading and
+trailing whitespace. This function can accomodate strings in any format that is
+permissiable by the Lua language and uses the current locale settings. */
+bool StringToNumber(const char* string, lua_Number* number);
+
 #endif

@@ -144,155 +144,66 @@ const char* Token_GetString(TokenType token)
     return tokenName[token - TokenType_First];
 }
 
-static bool Lexer_IsNumberTerminal(int c)
-{
-    return !Lexer_IsAlphaNumeric(c) && c != '.';
-}
-
-static bool Lexer_IsHexDigit(int c)
-{
-    return Lexer_IsDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-}
-
-static int Lexer_GetHexValue(int c)
-{
-    c = tolower(c);
-    if (Lexer_IsDigit(c))
-    {
-        return c - '0';
-    }
-    if (c >= 'a' && c <= 'f')
-    {
-        return c - 'a' + 10;
-    }
-    return 0;
-}
-
-static lua_Number Lexer_ReadDecimalDigits(Lexer* lexer, int& c)
-{
-
-    lua_Number number = 0.0;
-
-    while (Lexer_IsDigit(c))
-    {
-        lua_Number digit = static_cast<lua_Number>(c - '0');
-        number = number * 10.0 + digit;
-        if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
-        {
-            return number;
-        }
-        c = Input_ReadByte(lexer->input);
-    }
-
-    if (c == '.')
-    {
-        if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
-        {
-            return number;
-        }
-        c = Input_ReadByte(lexer->input);
-        lua_Number frac = 10.0;
-        while (Lexer_IsDigit(c))
-        {
-            lua_Number digit = static_cast<lua_Number>(c - '0');
-            number += digit / frac;
-            frac *= 10.0;
-            if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
-            {
-                return number;
-            }
-            c = Input_ReadByte(lexer->input);
-        }
-    }
-
-    return number;
-
-}
-
 static bool Lexer_ReadNumber(Lexer* lexer, int c)
 {
 
-    if (c == '.')
-    {
-        int n = Input_PeekByte(lexer->input);
-        if (!Lexer_IsDigit(n))
-        {
-            return false;
-        }
-    }
-    else if (c == '0')
-    {
-        int n = Input_PeekByte(lexer->input);
-        if (n == 'x')
-        {
-            
-            // Hexademical number.
-
-            c = Input_ReadByte(lexer->input);
-            c = Input_ReadByte(lexer->input);
-
-            if (!Lexer_IsHexDigit(c))
-            {
-                Lexer_Error(lexer, "malformed number");
-            }
-
-            lexer->token.type   = TokenType_Number;
-            lexer->token.number = 0.0;
-
-            while (Lexer_IsHexDigit(c))
-            {
-                lua_Number digit = static_cast<lua_Number>(Lexer_GetHexValue(c));
-                lexer->token.number = lexer->token.number * 16.0 + digit;
-                if (Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
-                {
-                    return true;
-                }
-                c = Input_ReadByte(lexer->input);
-            }
-
-            if (!Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
-            {
-                // malformed number.
-                Lexer_Error(lexer, "malformed number");
-            }
-            return true;
-
-        }
-    }
-    else if (!Lexer_IsDigit(c))
+    if (c != '.' && !Lexer_IsDigit(c))
     {
         return false;
     }
 
-    lexer->token.type   = TokenType_Number;
-    lexer->token.number = Lexer_ReadDecimalDigits(lexer, c);
+    int n = Input_PeekByte(lexer->input);
 
-    if (c == 'e' || c == 'E')
+    // The tokens '.' '..' and '...' all begin with a decimal point, so make
+    // sure we don't try to tokenize those as numbers.
+    if (c == '.' && !Lexer_IsDigit(n))
     {
-
-        bool negative = false;
-
-        c = Input_ReadByte(lexer->input);
-        if (c == '-')
-        {
-            negative = true;
-            c = Input_ReadByte(lexer->input);
-        }
-
-        lua_Number exponent = Lexer_ReadDecimalDigits(lexer, c);
-        if (negative)
-        {
-            exponent = -exponent;
-        }
-        lexer->token.number *= luai_numpow(10, exponent);
-        
+        return false;
     }
 
-    if (!Lexer_IsNumberTerminal(Input_PeekByte(lexer->input)))
+    Buffer_Clear(lexer->L, &lexer->buffer);
+    Buffer_Append(lexer->L, &lexer->buffer, c);
+
+    // Grab all of the characters that could belong to the number and accumulate
+    // them into a buffer. The heavy lifting of converting to a number is done
+    // using the StringToNumber function so that the results from the parsing
+    // stage are identical to converting from a string to a number at runtime.
+
+    bool hex = (n == 'x' || n == 'X');
+    int decimalPoint = '.';
+    
+    while (1)
     {
-        // malformed number.
-        Lexer_Error(lexer, "malformed number");
+
+        // Immediately after the exponent indicator we can accept a minus
+        // (except if we're parsing a hex number, where 'E' is a valid digit).
+        bool allowMinus = (!hex && (c == 'e' || c == 'E'));
+
+        c = Input_PeekByte(lexer->input);
+
+        if (allowMinus && c == '-')
+        {
+        }
+        else if ( !Lexer_IsAlphaNumeric(c) && c != decimalPoint )
+        {
+            break;
+        }
+
+        // Already peeked the character, just discard it now.
+        Input_ReadByte(lexer->input);
+        Buffer_Append(lexer->L, &lexer->buffer, c);
+
     }
+
+    // Null terminate since StringToNumber requires it.
+    Buffer_Append(lexer->L, &lexer->buffer, 0);
+
+    if (!StringToNumber( lexer->buffer.data, &lexer->token.number ))
+    {
+        Lexer_Error(lexer, "malformed number");   
+    }
+
+    lexer->token.type = TokenType_Number;
     return true;
 
 }
