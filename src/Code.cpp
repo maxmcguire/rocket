@@ -532,14 +532,14 @@ static bool Parser_Terminal(Parser* parser, Expression* dst, int regHint)
         // Check that we're in a vararg function.
         if (!parser->function->varArg)
         {
-            Lexer_Error(parser->lexer, "cannot use '...' outside a vararg function");
+            Parser_Error(parser, "cannot use '...' outside a vararg function");
         }
         dst->type = EXPRESSION_VARARG;
         return false;
     }
     else
     {
-        Lexer_Error(parser->lexer, "expected variable or constant");
+        Parser_Error(parser, "expected variable or constant");
     }
     return false;
 }
@@ -655,7 +655,7 @@ static bool Parser_TryIndex(Parser* parser, Expression* dst, int regHint)
 
         if (!Parser_TryFunctionArguments(parser, dst, -1))
         {
-            Lexer_Error(parser->lexer, "function arguments expected");
+            Parser_Error(parser, "function arguments expected");
         }
         
         assert(dst->type == EXPRESSION_CALL);
@@ -1010,7 +1010,7 @@ static void Parser_EmitSet(Parser* parser, const Expression* dst, Expression* va
     }
     else
     {
-        Lexer_Error(parser->lexer, "illegal assignment");
+        Parser_Error(parser, "illegal assignment");
     }
 }
 

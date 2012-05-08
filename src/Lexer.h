@@ -84,8 +84,6 @@ void Lexer_Destroy(Lexer* lexer);
 
 void Lexer_NextToken(Lexer* lexer);
 
-void Lexer_Error(Lexer* lexer, const char* fmt, ...);
-
 int Lexer_GetTokenType(Lexer* lexer);
 
 void Lexer_CaptureToken(Lexer* lexer, Token* token);

@@ -69,7 +69,7 @@ void Lexer_Destroy(Lexer* lexer)
     Buffer_Destroy(lexer->L, &lexer->buffer);
 }
 
-void Lexer_Error(Lexer* lexer, const char* fmt, ...)
+static void Lexer_Error(Lexer* lexer, const char* fmt, ...)
 {
 
     PushFString(lexer->L, "Error line %d: ", lexer->lineNumber);

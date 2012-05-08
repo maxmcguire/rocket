@@ -67,6 +67,7 @@ struct Parser
     Function*       function;
     Block           block[LUAI_MAXCCALLS];
     int             numBlocks;
+    int             lineNumber;
 };
 
 enum ExpressionType
@@ -130,6 +131,11 @@ struct Expression
 
 void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* parent);
 void Parser_Destroy(Parser* parser);
+
+/** Reports a formatted error. The error message will include information about
+the location of the error in the chunk being parsed. This function raises a VM
+error, so it will not return. */
+void Parser_Error(Parser* parser, const char* fmt, ...);
 
 bool Parser_Accept(Parser* parser, int token);
  

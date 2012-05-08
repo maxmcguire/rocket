@@ -25,6 +25,7 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
     parser->L                   = L;
     parser->lexer               = lexer;
     parser->numBlocks           = 0;
+    parser->lineNumber          = lexer->lineNumber;
 
     Function* function = static_cast<Function*>( Allocate( L, sizeof(Function) ) );
 
@@ -58,11 +59,28 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
 
 }
 
+void Parser_Error(Parser* parser, const char* fmt, ...)
+{
+
+    PushFString(parser->L, "Error line %d: ", parser->lineNumber);
+
+    va_list argp;
+    va_start(argp, fmt);
+    PushVFString(parser->L, fmt, argp);
+    va_end(argp);
+
+    Concat(parser->L, 2);
+    
+    State_Error(parser->L);
+
+}
+
 bool Parser_Accept(Parser* parser, int token)
 {
     Lexer_NextToken(parser->lexer);
     if (Lexer_GetTokenType(parser->lexer) == token)
     {
+        parser->lineNumber = parser->lexer->lineNumber;
         parser->lexer->haveToken = false;
         return true;
     }
@@ -75,7 +93,7 @@ bool Parser_Expect(Parser* parser, int token)
     {
         return true;
     }
-    Lexer_Error(parser->lexer, "unexpected token");
+    Parser_Error(parser, "unexpected token");
     return false;
 }
 
@@ -86,7 +104,7 @@ bool Parser_Expect(Parser* parser, int token1, int token2)
     {
         return true;
     }
-    Lexer_Error(parser->lexer, "unexpected token");
+    Parser_Error(parser, "unexpected token");
     return false;
 }
 
@@ -181,7 +199,7 @@ static int Parser_AddUpValue(Parser* parser, Function* function, String* name)
         {
             if (function->numUpValues == LUAI_MAXUPVALUES)
             {
-                Lexer_Error(parser->lexer, "too many up values to function");
+                Parser_Error(parser, "too many up values to function");
             }
 
             int n =  function->numUpValues;
@@ -210,7 +228,7 @@ int Parser_AddLocal(Parser* parser, String* name)
     /*
     if (Parser_GetLocalIndex(parser, name) != -1)
     {
-        Lexer_Error(parser->lexer, "local already defined");
+        Parser_Error(parser, "local already defined");
     }
     */
 
@@ -218,7 +236,7 @@ int Parser_AddLocal(Parser* parser, String* name)
 
     if (function->numLocals == LUAI_MAXVARS)
     {
-        Lexer_Error(parser->lexer, "too many local variables (limit is %d)", LUAI_MAXVARS);
+        Parser_Error(parser, "too many local variables (limit is %d)", LUAI_MAXVARS);
     }
 
     function->local[function->numLocals] = name;
@@ -305,7 +323,7 @@ int Parser_EmitInstruction(Parser* parser, Instruction inst)
     ++function->codeSize;
 
     function->code[n] = inst;
-    function->sourceLine[n] = parser->lexer->lineNumber;
+    function->sourceLine[n] = parser->lineNumber;
 
     return n;
 
@@ -928,7 +946,7 @@ void Parser_MakeRKEncodable(Parser* parser, Expression* value)
         if (reg >= 256)
         {
             // This means we've used too many registers.
-            Lexer_Error(parser->lexer, "internal error RK encoding");
+            Parser_Error(parser, "internal error RK encoding");
         }
         Parser_MoveToRegister(parser, value, reg);
     }
@@ -1084,7 +1102,7 @@ void Parser_BeginBlock(Parser* parser, bool breakable)
 {
     if (parser->numBlocks == LUAI_MAXCCALLS)
     {
-        Lexer_Error(parser->lexer, "too many block levels");
+        Parser_Error(parser, "too many block levels");
     }
 
     // Locals must be commited before starting a block.
@@ -1184,7 +1202,7 @@ void Parser_BreakBlock(Parser* parser)
 
     if (blockIndex < 0)
     {
-        Lexer_Error(parser->lexer, "no loop to break");
+        Parser_Error(parser, "no loop to break");
     }
 
     Block* block = &parser->block[blockIndex];
