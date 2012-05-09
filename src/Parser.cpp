@@ -267,6 +267,7 @@ int Parser_AddConstant(Parser* parser, Value* value)
 {
 
     Function* function = parser->function;
+    assert(function->numConstants < 262144);
 
     // We can't store a nil value in a table, so if it's a nil value we need
     // to use some other value to indicate that. We use the constant table

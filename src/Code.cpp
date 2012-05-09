@@ -626,18 +626,23 @@ static bool Parser_TryIndex(Parser* parser, Expression* dst, int regHint)
         Parser_Expect(parser, TokenType_Name);
         Parser_MoveToRegister(parser, dst, -1);
 
-        int reg = regHint;
-        if (reg == -1)
-        {
-            reg = Parser_AllocateRegister(parser);
-        }
-
         Expression method;
         method.index = Parser_AddConstant( parser, Parser_GetString(parser) );
         method.type  = EXPRESSION_CONSTANT;
         Parser_MakeRKEncodable(parser, &method);
+        int c = Parser_EncodeRK(parser, &method);
 
-        Parser_EmitABC(parser, Opcode_Self, reg, dst->index, Parser_EncodeRK(parser, &method));
+        // It's important we allocate the register after making the key encodable
+        // so that if it was a constant that was moved into a register, it does
+        // not overlap with the registers that will be written by the 'self'
+        // instruction.
+        int reg = regHint;
+        if (reg == -1 || (reg + 1 == c))
+        {
+            reg = Parser_AllocateRegister(parser);
+        }
+
+        Parser_EmitABC(parser, Opcode_Self, reg, dst->index, c);
 
         // This is a bit of a hack. Since TryFunctionArguments will put the
         // expression onto the top of the stack, we just set it up to be a

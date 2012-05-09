@@ -735,6 +735,7 @@ static int Execute(lua_State* L, int numArgs)
                 PROTECT(
                     int b = GET_B(inst);
                     const Value* key = RESOLVE_RK( GET_C(inst) );
+                    assert( key != &stackBase[a + 1] );
                     stackBase[a + 1] = stackBase[b];
                     Vm_GetTable(L, &stackBase[b], key, &stackBase[a], false);
                 )

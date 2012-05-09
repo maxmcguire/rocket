@@ -289,7 +289,7 @@ void PrintFunction(Prototype* prototype)
             }
             break;
         case Opcode_LoadK:
-            arg1 = FormatRK( prototype, buffer1, GET_Bx(inst) | 256 );
+            arg1 = FormatK( prototype, buffer1, GET_Bx(inst) );
             printf("; r%d = %s", GET_A(inst), arg1);
             break;
         case Opcode_LoadBool:
