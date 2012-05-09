@@ -86,7 +86,8 @@ enum ExpressionType
     EXPRESSION_JUMP,
     EXPRESSION_UPVALUE,
     EXPRESSION_NOT,
-    EXPRESSION_VARARG
+    EXPRESSION_VARARG,
+    EXPRESSION_TEMP,
 };
 
 /**
@@ -116,17 +117,30 @@ enum ExpressionType
  * If type is EXPRESSION_CALL:
  *  - index is the index of the function.
  *  - numArgs is the number of arguments to the function.
+ *
+ * If type is EXPRESSION_TEMP:
+ *  This represents a result stored in a temporary register 
+ *  - index is address of the instruction which set the value in the temporary
+ *    register. The 'A' parameter for the instruction can be safely updated to
+ *    a new register location.
+ *
  */
 struct Expression
 {
     Expression() { type = EXPRESSION_NONE; exitJump[0] = -1; exitJump[1] = -1; }
-    ExpressionType  type;
-    int             index;
-    lua_Number      number;
-    int             key;
-    ExpressionType  keyType;
-    int             numArgs;
-    int             exitJump[2];
+    ExpressionType          type;
+    int                     exitJump[2];
+    int                     index;
+    union
+    {
+        lua_Number          number;
+        int                 numArgs;
+        struct
+        {
+            int             key;
+            ExpressionType  keyType;
+        };
+    };
 };
 
 void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* parent);

@@ -85,7 +85,7 @@ static void Parser_PrepareForRK(Parser* parser, Expression* value)
 {
     Parser_ResolveCall(parser, value, 1);
     Parser_ResolveJumpToEnd(parser, value);
-    if (value->type == EXPRESSION_NOT)
+    if (value->type == EXPRESSION_NOT || value->type == EXPRESSION_TEMP)
     {
         int reg = Parser_AllocateRegister(parser);
         Parser_MoveToRegister(parser, value, reg);
@@ -97,7 +97,7 @@ static void Parser_PrepareForRK(Parser* parser, Expression* value)
  * the result will be in a register (or -1 if the caller does not require the
  * result to be a specific location).
  */
-static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, int regHint, Expression* arg1, Expression* arg2)
+static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, Expression* arg1, Expression* arg2)
 {
 
     assert(dst != arg1);
@@ -139,30 +139,10 @@ static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, int r
     Parser_MakeRKEncodable(parser, arg1);
     Parser_MakeRKEncodable(parser, arg2);
 
-    if (regHint != -1)
-    {
-        dst->index = regHint;
-    }
-    else
-    {
-        if (Parser_GetIsTemporaryRegister(parser, arg1))
-        {
-            dst->index = arg1->index;
-        }
-        else if (Parser_GetIsTemporaryRegister(parser, arg2))
-        {
-            dst->index = arg2->index;
-        }
-        else
-        {
-            dst->index = Parser_AllocateRegister(parser);
-        }
-    }
-    dst->type = EXPRESSION_REGISTER;
-
-    Parser_EmitABC(parser, opcode, dst->index, 
-        Parser_EncodeRK(parser, arg1), 
-        Parser_EncodeRK(parser, arg2));
+    dst->type  = EXPRESSION_TEMP;
+    dst->index = Parser_EmitABC(parser, opcode, 0,  // Register will be assigned later. 
+                    Parser_EncodeRK(parser, arg1), 
+                    Parser_EncodeRK(parser, arg2));
 
 }
 
@@ -699,7 +679,7 @@ static void Parser_ExpressionPow(Parser* parser, Expression* dst, int regHint)
         Expression arg2;
         Parser_ExpressionUnary(parser, &arg2, -1);
         
-        Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
+        Parser_EmitArithmetic(parser, op, dst, &arg1, &arg2);
 	}
 }
 
@@ -783,7 +763,7 @@ static void Parser_Expression3(Parser* parser, Expression* dst, int regHint)
         Expression arg2;
         Parser_ExpressionUnary(parser, &arg2, -1);
 
-        Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
+        Parser_EmitArithmetic(parser, op, dst, &arg1, &arg2);
 	}
 }
 
@@ -801,7 +781,7 @@ static void Parser_Expression2(Parser* parser, Expression* dst, int regHint)
         Expression arg2;
         Parser_Expression3(parser, &arg2, -1);
 
-        Parser_EmitArithmetic(parser, op, dst, regHint, &arg1, &arg2);
+        Parser_EmitArithmetic(parser, op, dst, &arg1, &arg2);
 	}
 }
 

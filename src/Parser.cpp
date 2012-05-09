@@ -801,6 +801,22 @@ static bool GetHasExitJumps(Expression* value)
     return value->exitJump[0] != -1 || value->exitJump[1] != -1;
 }
 
+static void Parser_UpdateTempLocation(Parser* parser, Expression* value, int reg)
+{
+    assert(value->type == EXPRESSION_TEMP);
+        
+    Instruction inst = Parser_GetInstruction(parser, value->index);
+
+    int b = GET_B(inst);
+    int c = GET_C(inst);
+    
+    inst = Parser_EncodeABC( GET_OPCODE(inst), reg, b, c );
+    Parser_UpdateInstruction( parser, value->index, inst );
+
+    value->type = EXPRESSION_REGISTER;
+    value->index = reg;
+}
+
 int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
 {
 
@@ -838,6 +854,12 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     if (reg == -1)
     {
         reg = Parser_AllocateRegister(parser);
+    }
+
+    if (value->type == EXPRESSION_TEMP)
+    {
+        Parser_UpdateTempLocation(parser, value, reg);
+        return value->index;
     }
 
     // There are no special instructions to load numbers like there are nil and
