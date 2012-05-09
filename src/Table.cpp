@@ -12,6 +12,10 @@
 #include <assert.h>
 #include <memory.h>
 
+// This define will check that the table is in a correct state after each
+// modification. It's helpful for debugging, but it's very slow.
+//#define TABLE_CHECK_CONSISTENCY
+
 template <class T>
 static inline void Swap(T& a, T& b)
 {
@@ -248,7 +252,10 @@ static bool Table_Resize(lua_State* L, Table* table, int numNodes)
 
     Free(L, nodes, numNodes * sizeof(TableNode));
     
+#ifdef TABLE_CHECK_CONSISTENCY
     assert( Table_CheckConsistency(table) );
+#endif
+
     return true;
 
 }
@@ -314,7 +321,10 @@ static bool Table_Remove(Table* table, const Value* key)
     node->dead = true;
     node->prev = prev;
 
+#ifdef TABLE_CHECK_CONSISTENCY
     assert( Table_CheckConsistency(table) );
+#endif
+
     return true;
 
 }
@@ -498,7 +508,9 @@ Start:
 
     }
 
+#ifdef TABLE_CHECK_CONSISTENCY
     assert( Table_CheckConsistency(table) );
+#endif
 
 }
 
