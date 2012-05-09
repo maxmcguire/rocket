@@ -1517,12 +1517,14 @@ static bool Parser_TryFor(Parser* parser)
         // Start value.
         Expression start;
         Parser_Expression0(parser, &start, internalIndexReg);
+        Parser_MoveToRegister(parser, &start, internalIndexReg);
 
         Parser_Expect(parser, ',');
 
         // End value.
         Expression limit;
         Parser_Expression0(parser, &limit, limitReg);
+        Parser_MoveToRegister(parser, &limit, limitReg);
 
         // Increment value.
         Expression increment;
@@ -1535,13 +1537,10 @@ static bool Parser_TryFor(Parser* parser)
             increment.type   = EXPRESSION_NUMBER;
             increment.number = 1.0f;
         }
+        Parser_MoveToRegister(parser, &increment, incrementReg);
         
         Parser_CommitLocals( parser );
         Parser_Expect(parser, TokenType_Do);
-
-        Parser_MoveToRegister(parser, &start, internalIndexReg);
-        Parser_MoveToRegister(parser, &limit, limitReg);
-        Parser_MoveToRegister(parser, &increment, incrementReg);
 
         // Reserve space for the forprep instruction since we don't know the skip
         // amount until after we parse the body.
