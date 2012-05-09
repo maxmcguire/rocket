@@ -289,6 +289,21 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
 
 }
 
+static void Parser_EmitSetList(Parser* parser, int reg, int numFields, int listSize)
+{
+    assert(numFields <= LFIELDS_PER_FLUSH);
+    int c = (listSize - 1) / LFIELDS_PER_FLUSH + 1;
+    if (c <= 511)
+    {
+        Parser_EmitABC(parser, Opcode_SetList,  reg, numFields, c);
+    }
+    else
+    {
+        Parser_EmitABC(parser, Opcode_SetList,  reg, numFields, 0);
+        Parser_EmitInstruction(parser, c);
+    }
+}
+
 static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 {
 
@@ -420,8 +435,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                     {
                         // We have a maximum number of fields to set with a single setlist
                         // opcode, so dispatch now.
-                        int block = (listSize - 1) / LFIELDS_PER_FLUSH;
-                        Parser_EmitABC(parser, Opcode_SetList,  dst->index, numFields, block + 1);
+                        Parser_EmitSetList(parser, dst->index, numFields, listSize);
                         numFields = 0;
                     }
                 }
@@ -445,8 +459,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
 
     if (numFields > 0 || varArg)
     {
-        int block = (listSize - 1) / LFIELDS_PER_FLUSH;
-        Parser_EmitABC(parser, Opcode_SetList,  dst->index, varArg ? 0 : numFields, block + 1);
+        Parser_EmitSetList(parser, dst->index,  varArg ? 0 : numFields, listSize);
     }
 
     return true;
