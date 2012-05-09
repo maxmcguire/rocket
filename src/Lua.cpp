@@ -606,18 +606,19 @@ LUA_API void* lua_touserdata(lua_State* L, int index)
 
 LUA_API size_t lua_objlen(lua_State* L, int index)
 {
-    // Lua handles numbers specially, but the documentation doesn't mention that.
-    const Value* value = GetValueForIndex(L, index);
-
-    if (Value_GetIsString(value))
-    {
-        return value->string->length;
-    }
-    else if (Value_GetIsTable(value))
+    Value* value = GetValueForIndex(L, index);
+    if (Value_GetIsTable(value))
     {
         return Table_GetSize(L, value->table);
     }
-    // TODO: implement userdata.
+    else if (Value_GetIsUserData(value))
+    {
+        return value->userData->size;
+    }
+    else if (Value_GetIsString(value) || (Value_GetIsNumber(value) && ToString(L, value)))
+    {
+        return value->string->length;
+    }
     return 0;
 }
 

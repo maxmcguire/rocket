@@ -3680,3 +3680,32 @@ TEST_FIXTURE(StringNumberCoercionForLoop, LuaFixture)
     lua_getglobal(L, "a");
     CHECK_EQ( lua_tonumber(L, -1), 5 );
 }
+
+TEST_FIXTURE(Objlen, LuaFixture)
+{
+
+    lua_newtable(L);
+    lua_pushstring(L, "one");
+    lua_rawseti(L, -2, 1);
+    lua_pushstring(L, "two");
+    lua_rawseti(L, -2, 2);
+    lua_pushstring(L, "three");
+    lua_rawseti(L, -2, 3);
+
+    CHECK( lua_objlen(L, -1) == 3 );
+    lua_pop(L, 1);
+
+    lua_newuserdata(L, 100);
+    CHECK( lua_objlen(L, -1) == 100 );
+    lua_pop(L, 1);
+
+    lua_pushstring(L, "this is a test");
+    CHECK( lua_objlen(L, -1) == 14 );
+    lua_pop(L, 1);
+
+    lua_pushnumber(L, 12);
+    CHECK( lua_objlen(L, -1) == 2 );
+    CHECK( lua_isstring(L, -1) );
+    lua_pop(L, 1);
+
+}

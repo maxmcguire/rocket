@@ -109,6 +109,9 @@ inline bool Value_GetIsBoolean(const Value* value)
 inline bool Value_GetIsFunction(const Value* value)
     { return value->tag == Tag_Function; }
 
+inline bool Value_GetIsUserData(const Value* value)
+    { return value->tag == Tag_Userdata; }
+
 inline bool Value_GetIsObject(const Value* value)
     { return Value_GetIsString(value) || Value_GetIsTable(value) || Value_GetIsFunction(value); }
 
