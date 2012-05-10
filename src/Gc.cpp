@@ -6,7 +6,6 @@
  */
 
 #include "Gc.h"
-#include "Lua.h"
 #include "State.h"
 #include "Function.h"
 #include "Table.h"

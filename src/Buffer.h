@@ -8,6 +8,8 @@
 #ifndef ROCKETVM_BUFFER_H
 #define ROCKETVM_BUFFER_H
 
+#include <stdlib.h>
+
 struct lua_State;
 
 /**

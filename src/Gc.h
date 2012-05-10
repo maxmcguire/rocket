@@ -8,6 +8,8 @@
 #ifndef ROCKETVM_GC_H
 #define ROCKETVM_GC_H
 
+#include <stdlib.h>
+
 struct lua_State;
 union  Value;
 
