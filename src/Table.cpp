@@ -17,7 +17,7 @@
 // modification. It's helpful for debugging, but it's very slow.
 //#define TABLE_CHECK_CONSISTENCY
 
-bool Table_WriteDot(const Table* table, const char* fileName);
+static bool Table_WriteDot(const Table* table, const char* fileName);
 
 template <class T>
 static inline void Swap(T& a, T& b)
