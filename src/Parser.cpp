@@ -6,7 +6,6 @@
  */
 
 #include "Parser.h"
-#include "Opcode.h"
 #include "Lexer.h"
 #include "String.h"
 #include "State.h"

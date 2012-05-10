@@ -8,6 +8,7 @@
 #ifndef ROCKETVM_PARSER_H
 #define ROCKETVM_PARSER_H
 
+#include "Opcode.h"
 #include "State.h"
 #include "Input.h"
 
