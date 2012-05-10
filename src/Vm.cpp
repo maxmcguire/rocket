@@ -1381,6 +1381,9 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 
         Prototype* prototype = closure->lclosure.prototype;
 
+        // Start location for initializing stack locations to nil.
+        Value* initBase = NULL;
+
         if (prototype->varArg)
         {
             // Duplicate the fixed arguments.
@@ -1393,15 +1396,21 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
                 ++dst;
                 ++arg;
             }
+            initBase = dst;
         }
         else
         {
             L->stackBase = value + 1;
-            // If fewer arguments were supplied than the function expects, fill
-            // in with nil values.
             if (numArgs < prototype->numParams)
             {
-                SetRangeNil(L->stackBase + numArgs, L->stackBase + prototype->numParams);
+                // If we recieved fewer parameters than we expected, we'll need
+                // to initialize the stack locations for the other parameters to
+                // nil.
+                initBase = L->stackBase + numArgs;
+            }
+            else
+            {
+                initBase = L->stackBase + prototype->numParams;
             }
             numArgs = prototype->numParams;
         }
@@ -1412,7 +1421,7 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         frame->stackBase = L->stackBase;
         frame->stackTop  = L->stackTop;
 
-        SetRangeNil(L->stackBase + numArgs, L->stackTop);
+        SetRangeNil(initBase, L->stackTop);
         result = Execute(L, numArgs);
 
     }
