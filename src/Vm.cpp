@@ -119,7 +119,7 @@ static bool GetObjectName(lua_State* L, const CallFrame* frame, const Value* val
 static void TypeError(lua_State* L, const Value* value, const char* op)
 {
 
-    const char* type = State_TypeName(L, Value_GetType(value));
+    const char* type = String_GetData( State_TypeName(L, Value_GetType(value)) );
     const char* name = NULL;
     const char* kind = NULL;
 
@@ -142,8 +142,8 @@ static void ArithmeticError(lua_State* L, const Value* arg1, const Value* arg2)
 
 static void ComparisonError(lua_State *L, const Value* arg1, const Value* arg2)
 {
-    const char* type1 = State_TypeName(L, Value_GetType(arg1));
-    const char* type2 = State_TypeName(L, Value_GetType(arg2));
+    const char* type1 = String_GetData( State_TypeName(L, Value_GetType(arg1)) );
+    const char* type2 = String_GetData( State_TypeName(L, Value_GetType(arg2)) );
     if (type1 == type2)
     {
         Vm_Error(L, "attempt to compare two %s values", type1);

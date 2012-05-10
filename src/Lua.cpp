@@ -448,6 +448,12 @@ LUA_API void lua_pushlightuserdata (lua_State *L, void *p)
     PushLightUserdata(L, p);
 }
 
+LUA_API void lua_pushtypename(lua_State* L, int type)
+{
+    String* typeName = State_TypeName(L, type);
+    PushString(L, typeName);
+}
+
 LUA_API void lua_pushvalue(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
@@ -706,7 +712,7 @@ LUA_API int lua_type(lua_State* L, int index)
 
 LUA_API const char* lua_typename(lua_State* L, int type)
 {
-    return State_TypeName(L, type);
+    return String_GetData( State_TypeName(L, type) );
 }
 
 int lua_rawequal(lua_State* L, int index1, int index2)

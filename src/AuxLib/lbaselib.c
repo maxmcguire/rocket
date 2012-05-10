@@ -218,7 +218,7 @@ static int luaB_collectgarbage (lua_State *L) {
 
 static int luaB_type (lua_State *L) {
   luaL_checkany(L, 1);
-  lua_pushstring(L, luaL_typename(L, 1));
+  lua_pushtypename(L, lua_type(L, 1));
   return 1;
 }
 

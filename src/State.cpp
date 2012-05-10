@@ -133,6 +133,25 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
         L->metatable[i] = NULL;
     }
 
+    // Store the names for the different types, so we don't have to create new
+    // strings when we want to return them.
+    String* unknownName = String_Create(L, "unknown");
+    for (int i = 0; i < NUM_TYPES; ++i)
+    {
+        L->typeName[i] = unknownName;
+    }
+
+    L->typeName[LUA_TNONE]          = String_Create(L, "none");
+    L->typeName[LUA_TNIL]           = String_Create(L, "nil");
+    L->typeName[LUA_TBOOLEAN]       = String_Create(L, "boolean");
+    L->typeName[LUA_TNUMBER]        = String_Create(L, "number");
+    L->typeName[LUA_TSTRING]        = String_Create(L, "string");
+    L->typeName[LUA_TTABLE]         = String_Create(L, "table");
+    L->typeName[LUA_TFUNCTION]      = String_Create(L, "function");
+    L->typeName[LUA_TLIGHTUSERDATA] = String_Create(L, "userdata");
+    L->typeName[LUA_TUSERDATA]      = L->typeName[LUA_TLIGHTUSERDATA];
+    L->typeName[LUA_TTHREAD]        = String_Create(L, "thread");
+
     // Store the tag method names so we don't need to create new strings
     // every time we want to access them.
     const char* tagMethodName[] =
@@ -308,22 +327,7 @@ void State_Error(lua_State* L)
     }
 }
 
-const char* State_TypeName(lua_State* L, int type)
+String* State_TypeName(lua_State* L, int type)
 {
-    switch (type)
-    {
-    case LUA_TNONE:     return "none";
-    case LUA_TNIL:      return "nil";
-    case LUA_TBOOLEAN:  return "boolean";
-    case LUA_TNUMBER:   return "number";
-    case LUA_TSTRING:   return "string";
-    case LUA_TTABLE:    return "table";
-    case LUA_TFUNCTION: return "function";
-    case LUA_TLIGHTUSERDATA:
-    case LUA_TUSERDATA:
-        return "userdata";
-    case LUA_TTHREAD:
-        return "thread";
-    }
-    return "unknown";
+    return L->typeName[type];
 }

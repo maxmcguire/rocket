@@ -170,6 +170,16 @@ LUA_API void  (lua_pushboolean) (lua_State *L, int b);
 LUA_API void  (lua_pushlightuserdata) (lua_State *L, void *p);
 LUA_API int   (lua_pushthread) (lua_State *L);
 
+/**
+ * Pushes a string with the name of the specified type. This is equivalent to
+ * the calls:
+ *
+ *   lua_pushstring(L, lua_typename(L, type) )
+ *
+ * however it is more efficient because it doesn't require the string name to
+ * be converted back and forth from a C string.
+ */
+LUA_API void lua_pushtypename(lua_State* L, int type);
 
 /*
 ** get functions (Lua -> stack)
