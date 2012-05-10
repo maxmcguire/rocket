@@ -567,32 +567,32 @@ static lua_Number GetValueLength(lua_State* L, const Value* value)
     return 0.0;
 }
 
-static inline lua_Number Number_Add(lua_Number a, lua_Number b)
+inline lua_Number Number_Add(lua_Number a, lua_Number b)
 {
     return luai_numadd(a, b);
 }
 
-static inline lua_Number Number_Sub(lua_Number a, lua_Number b)
+inline lua_Number Number_Sub(lua_Number a, lua_Number b)
 {
     return luai_numsub(a, b);
 }
 
-static inline lua_Number Number_Mul(lua_Number a, lua_Number b)
+inline lua_Number Number_Mul(lua_Number a, lua_Number b)
 {
     return luai_nummul(a, b);
 }
 
-static inline lua_Number Number_Div(lua_Number a, lua_Number b)
+inline lua_Number Number_Div(lua_Number a, lua_Number b)
 {
     return luai_numdiv(a, b);
 }
 
-static inline lua_Number Number_Mod(lua_Number a, lua_Number b)
+inline lua_Number Number_Mod(lua_Number a, lua_Number b)
 {
     return luai_nummod(a, b);
 }
 
-static inline lua_Number Number_Pow(lua_Number a, lua_Number b)
+inline lua_Number Number_Pow(lua_Number a, lua_Number b)
 {
     return luai_numpow(a, b);
 }
