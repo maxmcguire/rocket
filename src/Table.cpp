@@ -11,10 +11,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <memory.h>
+#include <stdio.h>
 
 // This define will check that the table is in a correct state after each
 // modification. It's helpful for debugging, but it's very slow.
-//#define TABLE_CHECK_CONSISTENCY
+#define TABLE_CHECK_CONSISTENCY
+
+bool Table_WriteDot(const Table* table, const char* fileName);
 
 template <class T>
 static inline void Swap(T& a, T& b)
@@ -246,7 +249,7 @@ static bool Table_Resize(lua_State* L, Table* table, int numNodes)
     {
         if ( !Table_NodeIsEmpty(&nodes[i]) )
         {
-            Table_SetTable(L, table, &nodes[i].key, &nodes[i].value);
+            Table_Insert(L, table, &nodes[i].key, &nodes[i].value);
         }
     }
 
@@ -464,46 +467,65 @@ Start:
             }
         }
         freeNode = Table_UnlinkDeadNode(table, freeNode);
-        assert(freeNode != node);
+        //assert(freeNode != node);
 
-        // Something else is in our primary slot, check if it's in its
-        // primary slot.
-        size_t collisionIndex = Table_GetMainIndex(table, &node->key);
-        if (index != collisionIndex)
+
+        if (freeNode == node)
         {
-
-            // Update the previous node in the chain.
-            TableNode* prevNode = &table->nodes[collisionIndex];
-            assert( !Table_NodeIsEmpty(prevNode) );
-            while (prevNode->next != node)
-            {
-                prevNode = prevNode->next;
-            }
-            prevNode->next = freeNode;
-
-            // The object in its current spot is not it's primary index,
-            // so we can freely move it somewhere else.
-            *freeNode = *node;
-            node->key   = *key;
-            node->value = *value;
-            node->next  = NULL;
-            node->dead  = false;
-
-        }
-        else
-        {
-            // The current slot is the primary index, so add our new key into a
-            // the free slot and chain it to the other node.
+            // The thing we were colliding with was moved in the unlinking
+            // process, so we can just insert our data into the free node.
             freeNode->key   = *key;
             freeNode->value = *value;
             freeNode->dead  = false;
-            freeNode->next  = node->next;
-            node->next      = freeNode;
+            freeNode->next  = NULL;
+        }
+        else
+        {
 
-            if (freeNode->next != NULL && freeNode->next->dead)
+            // Something else is in our primary slot, check if it's in its
+            // primary slot.
+            size_t collisionIndex = Table_GetMainIndex(table, &node->key);
+            if (index != collisionIndex)
             {
-                freeNode->next->prev = freeNode;
+
+                // Update the previous node in the chain.
+                TableNode* prevNode = &table->nodes[collisionIndex];
+                while (prevNode->next != node)
+                {
+                    prevNode = prevNode->next;
+                }
+                prevNode->next = freeNode;
+
+                // The object in its current spot is not it's primary index,
+                // so we can freely move it somewhere else.
+                *freeNode = *node;
+                node->key   = *key;
+                node->value = *value;
+                node->next  = NULL;
+                node->dead  = false;
+
+                if (freeNode->next != NULL && freeNode->next->dead)
+                {
+                    freeNode->next->prev = freeNode;
+                }
+
             }
+            else
+            {
+                // The current slot is the primary index, so add our new key into a
+                // the free slot and chain it to the other node.
+                freeNode->key   = *key;
+                freeNode->value = *value;
+                freeNode->dead  = false;
+                freeNode->next  = node->next;
+                node->next      = freeNode;
+
+                if (freeNode->next != NULL && freeNode->next->dead)
+                {
+                    freeNode->next->prev = freeNode;
+                }
+            }
+
         }
 
     }
@@ -620,5 +642,107 @@ const Value* Table_Next(Table* table, Value* key)
     }
 
     return NULL;
+
+}
+
+/**
+ * Writes the table in the dot format that can be visualized by graphviz. This
+ * is useful for debugging.
+ */
+static bool Table_WriteDot(const Table* table, const char* fileName)
+{
+
+    FILE* file = fopen(fileName, "wt");
+
+    if (file == NULL)
+    {
+        return false;
+    }
+
+    fprintf(file, "digraph G {\n");
+    fprintf(file, "nodesep=.05;\n");
+    fprintf(file, "rankdir=LR;\n");
+    fprintf(file, "node [shape=none, margin=0];\n");
+    fprintf(file, "table [label=<");
+    fprintf(file, "<table>\n");
+
+    for (int i = 0; i < table->numNodes; ++i)
+    {
+
+        const TableNode* node = &table->nodes[i];
+
+        char buffer[256];
+        int  type = Value_GetType(&node->key);
+
+        if (type == LUA_TLIGHTUSERDATA)
+        {
+            sprintf(buffer, "%p", node->key.lightUserdata);
+        }
+        else if (Value_GetIsObject(&node->key))
+        {
+            sprintf(buffer, "%p", node->key.object);
+        }
+        else if (Value_GetIsNil(&node->key))
+        {
+            sprintf(buffer, "nil");
+        }
+        else
+        {
+            sprintf(buffer, "???");
+        }
+
+        if (node->dead)
+        {
+            fprintf(file, "<tr><td port=\"f%d\" bgcolor=\"#FF0000\">%s</td></tr>\n", i, buffer);
+        }
+        else
+        {
+            fprintf(file, "<tr><td port=\"f%d\">%s</td></tr>\n", i, buffer);
+        }
+
+    }
+
+    fprintf(file, "</table>");
+    fprintf(file, ">, height=2.0];\n");
+
+    bool prevLabeled = false;
+    bool nextLabeled = false;
+
+    for (int i = 0; i < table->numNodes; ++i)
+    {
+
+        const TableNode* node = &table->nodes[i];
+
+        if (node->next != NULL)
+        {
+            const char* label = "";
+            if (!nextLabeled)
+            {
+                label = "next";
+                nextLabeled = true;
+            }
+
+            int j = static_cast<int>(node->next - table->nodes);
+            fprintf(file, "\"table\":f%d:w -> \"table\":f%d:w [colorscheme=set17, color=%d, label=\"%s\"];\n", i, j, i % 10, label);
+        }
+
+        if (node->dead && node->prev != NULL)
+        {
+            const char* label = "";
+            if (!prevLabeled)
+            {
+                label = "prev";
+                prevLabeled = true;
+            }
+            int j = static_cast<int>(node->prev - table->nodes);
+            fprintf(file, "\"table\":f%d:e -> \"table\":f%d:e [colorscheme=set17, color=%d, label=\"%s\"];\n", i, j, i % 10, label);
+        }
+
+    }
+
+    fprintf(file, "}");
+    fclose(file);
+
+    return true;
 
 }

@@ -166,6 +166,11 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
         {
             ++data;
         }
+        else if (type != LUA_TNIL)
+        {
+            PushFString(L, "invalid binary format");
+            State_Error(L);
+        }
     }
 
     // Prototypes.

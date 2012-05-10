@@ -193,9 +193,12 @@ TEST_FIXTURE(PCallTest, LuaFixture)
         }
     };
 
+    lua_pushstring(L, "dummy");
+    int top = lua_gettop(L);
     lua_pushcfunction(L, Locals::ErrorFunction);
     CHECK( lua_pcall(L, 0, 0, 0) == LUA_ERRRUN );
     CHECK( strcmp( lua_tostring(L, -1), "Error message") == 0 );
+    CHECK( lua_gettop(L) - top == 1 );
 
 }
 
@@ -230,6 +233,18 @@ TEST_FIXTURE(ErrorRestore, LuaFixture)
     // Check that the stack is in the correct state.
     CHECK( lua_isstring(L, -2) );
     CHECK( strcmp( lua_tostring(L, -2), "test") == 0);
+
+}
+
+TEST_FIXTURE(ErrorRestore2, LuaFixture)
+{
+
+    lua_pushstring(L, "dummy");
+  
+    int top = lua_gettop(L);
+    int result = luaL_loadbuffer(L, "x", 1, NULL);
+    CHECK( result != 0);
+    CHECK (lua_gettop(L) - top == 1 );
 
 }
 
