@@ -15,7 +15,7 @@
 
 // This define will check that the table is in a correct state after each
 // modification. It's helpful for debugging, but it's very slow.
-#define TABLE_CHECK_CONSISTENCY
+//#define TABLE_CHECK_CONSISTENCY
 
 bool Table_WriteDot(const Table* table, const char* fileName);
 
