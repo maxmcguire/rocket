@@ -21,7 +21,7 @@ extern "C"
  */
 typedef void (*ProtectedFunction)(lua_State *L, void* userData);
 
-int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, void* userData);
+int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop, void* userData, Value* errorHandler);
 int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Value* errorHandler);
 extern "C" void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults);
 

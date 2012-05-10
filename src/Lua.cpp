@@ -341,7 +341,7 @@ LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char
     args.userdata   = userdata;
     args.name       = name;
 
-    int result = Vm_ProtectedCall(L, Parse, &args);
+    int result = Vm_ProtectedCall(L, Parse, L->stackTop, &args, NULL);
 
     if (result == LUA_ERRRUN)
     {
@@ -1220,7 +1220,7 @@ LUA_API const char* lua_setupvalue(lua_State* L, int funcindex, int n)
     if (name != NULL)
     {
         assert(upValue != NULL);
-        CopyValue( upValue, L->stackTop - 1 );
+        Value_Copy( upValue, L->stackTop - 1 );
         Pop(L, 1);
     }
 

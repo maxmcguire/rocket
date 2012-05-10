@@ -257,7 +257,7 @@ void Concat(lua_State* L, int n)
 void Concat(lua_State* L, Value* dst, Value* start, Value* end)
 {
 
-    CopyValue(dst, start);
+    Value_Copy(dst, start);
 
     Value* arg1 = dst;
     Value* arg2 = start + 1;
