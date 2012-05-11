@@ -3112,7 +3112,7 @@ TEST_FIXTURE(OperatorPrecedence, LuaFixture)
 TEST_FIXTURE(OperatorPrecedenceRightAssociative, LuaFixture)
 {
     const char* code =
-        "ASSERT( true or false and nil )";
+        "assert( true or false and nil )";
     CHECK( DoString(L, code) );
 }
 
