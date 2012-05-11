@@ -9,7 +9,7 @@
 #include "String.h"
 
 #include <stdlib.h>
-#include <assert.h>
+#include <ASSERT.h>
 #include <memory.h>
 #include <stdio.h>
 
@@ -135,7 +135,7 @@ static bool Table_CheckConsistency(const Table* table)
             // If a node has a nil key it must be dead.
             if (!node->dead)
             {
-                assert(0);
+                ASSERT(0);
                 return false;
             }
         }
@@ -145,7 +145,7 @@ static bool Table_CheckConsistency(const Table* table)
             // Check that all of the "next" pointers point to a valid element
             if (node->next != NULL && !Table_GetIsValidNode(table, node->next))
             {
-                assert(0);
+                ASSERT(0);
                 return false;
             }
 
@@ -154,12 +154,12 @@ static bool Table_CheckConsistency(const Table* table)
             {
                 if (!Table_GetIsValidNode(table, node->next->prev))
                 {
-                    assert(0);
+                    ASSERT(0);
                     return false;
                 }
                 if (node->next->prev != node)
                 {
-                    assert(0);
+                    ASSERT(0);
                     return false;
                 }
             }
@@ -169,12 +169,12 @@ static bool Table_CheckConsistency(const Table* table)
             {
                 if (!Table_GetIsValidNode(table, node->prev))
                 {
-                    assert(0);
+                    ASSERT(0);
                     return false;
                 }
                 if (node->prev->next != node)
                 {
-                    assert(0);
+                    ASSERT(0);
                     return false;
                 }
             }
@@ -189,7 +189,7 @@ static bool Table_CheckConsistency(const Table* table)
             {
                 if (Table_GetMainIndex(table, &collidingNode->key) != mainIndex)
                 {
-                    assert(0);
+                    ASSERT(0);
                     return false;
                 }
 
@@ -202,7 +202,7 @@ static bool Table_CheckConsistency(const Table* table)
                 }
                 if (n != node)
                 {
-                    assert(0);
+                    ASSERT(0);
                     return false;
                 }
 
@@ -256,7 +256,7 @@ static bool Table_Resize(lua_State* L, Table* table, int numNodes)
     Free(L, nodes, numNodes * sizeof(TableNode));
     
 #ifdef TABLE_CHECK_CONSISTENCY
-    assert( Table_CheckConsistency(table) );
+    ASSERT( Table_CheckConsistency(table) );
 #endif
 
     return true;
@@ -325,7 +325,7 @@ static bool Table_Remove(Table* table, const Value* key)
     node->prev = prev;
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    assert( Table_CheckConsistency(table) );
+    ASSERT( Table_CheckConsistency(table) );
 #endif
 
     return true;
@@ -380,7 +380,7 @@ bool Table_Update(lua_State* L, Table* table, Value* key, Value* value)
 
 static TableNode* Table_UnlinkDeadNode(Table* table, TableNode* node)
 {
-    assert(node->dead);
+    ASSERT(node->dead);
 
     if (node->prev != NULL)
     {
@@ -419,7 +419,7 @@ static TableNode* Table_UnlinkDeadNode(Table* table, TableNode* node)
 void Table_Insert(lua_State* L, Table* table, Value* key, Value* value)
 {
 
-    assert( !Value_GetIsNil(value) );
+    ASSERT( !Value_GetIsNil(value) );
 
     if (table->numNodes == 0)
     {
@@ -454,7 +454,7 @@ Start:
     else
     {
 
-        assert(!node->dead);
+        ASSERT(!node->dead);
 
         // Need to insert a new node into the table.
         TableNode* freeNode = Table_GetFreeNode(table);
@@ -467,7 +467,7 @@ Start:
             }
         }
         freeNode = Table_UnlinkDeadNode(table, freeNode);
-        //assert(freeNode != node);
+        //ASSERT(freeNode != node);
 
 
         if (freeNode == node)
@@ -531,7 +531,7 @@ Start:
     }
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    assert( Table_CheckConsistency(table) );
+    ASSERT( Table_CheckConsistency(table) );
 #endif
 
 }
@@ -558,7 +558,7 @@ Value* Table_GetTable(lua_State* L, Table* table, const Value* key)
     {
         return NULL;
     }
-    assert( !Table_NodeIsEmpty(node) );
+    ASSERT( !Table_NodeIsEmpty(node) );
     return &node->value;
 }
 

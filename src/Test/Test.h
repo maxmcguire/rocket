@@ -8,7 +8,7 @@
 #ifndef ROCKETVM_TEST_H
 #define ROCKETVM_TEST_H
 
-#include <assert.h>
+#include <ASSERT.h>
 
 #define CHECK(x)            Test_Check(x, #x, __FILE__, __LINE__)
 #define CHECK_EQ(x, y)      Test_Check( Test_Equal((x), (y)), #x" == "#y, __FILE__, __LINE__ )

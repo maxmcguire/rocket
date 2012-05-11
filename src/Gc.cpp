@@ -11,7 +11,7 @@
 #include "Table.h"
 
 #include <stdlib.h>
-#include <assert.h>
+#include <ASSERT.h>
 #include <stdio.h>
 
 #define GCSTEPSIZE	1024u
@@ -123,7 +123,7 @@ static void Gc_MarkRoots(lua_State* L, Gc* gc)
 
 static void Gc_Start(lua_State* L, Gc* gc)
 {
-    assert( gc->firstGrey == NULL );
+    ASSERT( gc->firstGrey == NULL );
     Gc_MarkRoots(L, gc);
     gc->state = Gc_State_Propagate;
 }
@@ -249,7 +249,7 @@ static void Gc_Sweep(lua_State* L, Gc* gc)
             // Strings should never be collected from the global list; they
             // are referenced from the string pool and are collected when we
             // sweep the strings.
-            assert(object->type != LUA_TSTRING);
+            ASSERT(object->type != LUA_TSTRING);
 
             // Remove from the global object list.
             if (prevObject != NULL)

@@ -10,6 +10,7 @@ extern "C"
 #include "lua.h"
 }
 
+#include "Assert.h"
 #include "State.h"
 #include "Function.h"
 #include "String.h"
@@ -19,7 +20,6 @@ extern "C"
 #include "Input.h"
 #include "Code.h"
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -111,7 +111,7 @@ static Value* GetValueForIndex(lua_State* L, int index)
         }
         return &L->dummyObject;
     }
-    assert(result != NULL);
+    ASSERT(result != NULL);
     return result;
 }
 
@@ -240,7 +240,7 @@ static void Output_Prototype( Output* output, Prototype* prototype )
         else
         {
             // Unexpected constant type.
-            assert(0);
+            ASSERT(0);
         }
     }
 
@@ -316,7 +316,7 @@ static void Parse(lua_State* L, void* userData)
         prototype = Parse(L, &input, args->name);
     }
 
-    assert(prototype != NULL);
+    ASSERT(prototype != NULL);
 
     Table* env = L->globals.table;
     Closure* closure = Closure_Create(L, prototype, env);
@@ -839,7 +839,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
         frame = L->callStackBase + ar->activeFunction;
         if (frame->function != NULL)
         {
-            assert( Value_GetIsFunction(frame->function) );
+            ASSERT( Value_GetIsFunction(frame->function) );
             function = frame->function->closure;
         }
     }
@@ -911,7 +911,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
             // are valid on the function. (A valid line is a line with some associated code,
             // that is, a line where you can put a break point. Non-valid lines include empty
             // lines and comments
-            assert(0);
+            ASSERT(0);
             break;
         default:
             result = 0;
@@ -1115,55 +1115,55 @@ LUA_API lua_CFunction lua_atpanic(lua_State* L, lua_CFunction panic)
 LUA_API int lua_pushthread(lua_State* L)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);
     return 0;
 }
 
 LUA_API lua_State* lua_tothread(lua_State* L, int index)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);
     return 0;
 }
 
 LUA_API lua_State* lua_newthread(lua_State* L)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);
     return 0;
 }
 
 LUA_API int lua_yield(lua_State* L, int nresults)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);
     return 0;
 }
 
 LUA_API int lua_resume(lua_State *L, int narg)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);
     return 0;
 }
 
 LUA_API int lua_status(lua_State *L)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);
     return 0;
 }
 
 LUA_API void lua_setlevel(lua_State* from, lua_State* to)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);
 }
 
 LUA_API void lua_xmove(lua_State* from, lua_State* to, int n)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);
 }
 
 LUA_API const char* lua_getlocal(lua_State* L, const lua_Debug* ar, int n)
@@ -1175,7 +1175,7 @@ LUA_API const char* lua_getlocal(lua_State* L, const lua_Debug* ar, int n)
 LUA_API const char* lua_setlocal (lua_State *L, const lua_Debug* ar, int n)
 {
     // Not yet implemented.
-    assert(0);
+    ASSERT(0);(0);
     return 0;
 }
 
@@ -1225,7 +1225,7 @@ LUA_API const char* lua_setupvalue(lua_State* L, int funcindex, int n)
     
     if (name != NULL)
     {
-        assert(upValue != NULL);
+        ASSERT(upValue != NULL);
         Value_Copy( upValue, L->stackTop - 1 );
         Pop(L, 1);
     }

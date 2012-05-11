@@ -5,6 +5,7 @@
  * See copyright notice in COPYRIGHT
  */
 
+#include "Global.h"
 #include "State.h"
 #include "Table.h"
 #include "String.h"
@@ -13,7 +14,6 @@
 #include <memory.h>
 #include <string.h>
 #include <stdio.h>
-#include <assert.h>
 #include <stdlib.h>
 
 int AlignOffset(void* p, int align)
@@ -48,12 +48,12 @@ void* Reallocate(lua_State* L, void* p, size_t oldSize, size_t newSize)
     if (p != NULL)
     {
         mem = static_cast<size_t*>(p) - 1;
-        assert(*mem == oldSize);
+        lua_assert(*mem == oldSize);
         mem = static_cast<size_t*>( L->alloc( L->userdata, mem, oldSize, newSize) );
     }
     else
     {
-        assert(oldSize == 0);
+        lua_assert(oldSize == 0);
         mem = static_cast<size_t*>( L->alloc( L->userdata, NULL, 0, newSize) );
     }
 
@@ -173,7 +173,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
         };
     for (int i = 0; i < TagMethod_NumMethods; ++i)
     {
-        assert( i < sizeof(tagMethodName) / sizeof(const char*) );
+        ASSERT( i < sizeof(tagMethodName) / sizeof(const char*) );
         L->tagMethodName[i] = String_Create(L, tagMethodName[i]);
     }
 
