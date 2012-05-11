@@ -8,8 +8,6 @@
 #include "Table.h"
 #include "String.h"
 
-#include <stdlib.h>
-#include <memory.h>
 #include <stdio.h>
 
 // This define will check that the table is in a correct state after each

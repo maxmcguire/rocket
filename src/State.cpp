@@ -14,7 +14,6 @@
 #include <memory.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 int AlignOffset(void* p, int align)
 {
@@ -34,7 +33,7 @@ void Free(lua_State* L, void* p, size_t oldSize)
 void* Reallocate(lua_State* L, void* p, size_t oldSize, size_t newSize)
 {
 
-#ifdef _DEBUG
+#ifdef DEBUG
 
     // In debug mode, keep track of the actual allocation size of the block of
     // memory immediately before the memory we return. This allows us to detect

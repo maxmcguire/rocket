@@ -9,8 +9,6 @@
 #include "String.h"
 #include "Compiler.h"
 
-#include <stdlib.h>
-#include <memory.h>
 #include <string.h>
 
 void Prototype_GetName(Prototype* prototype, char *out, size_t bufflen)

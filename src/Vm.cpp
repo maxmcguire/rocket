@@ -20,9 +20,6 @@ extern "C"
 #include "Function.h"
 
 #include <memory.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 
 struct CallArgs
 {
@@ -679,7 +676,7 @@ static int Execute(lua_State* L, int numArgs)
     CallFrame* frame = State_GetCallFrame(L );
     Closure* closure = frame->function->closure;
 
-    lua_assert( !closure->c );
+    ASSERT( !closure->c );
     LClosure* lclosure = &closure->lclosure;
 
     Prototype* prototype = lclosure->prototype;
@@ -710,7 +707,7 @@ static int Execute(lua_State* L, int numArgs)
         case Opcode_LoadK:
             {
                 int bx = GET_Bx(inst);
-                lua_assert(bx >= 0 && bx < prototype->numConstants);
+                ASSERT(bx >= 0 && bx < prototype->numConstants);
                 const Value* value = &constant[bx];
                 stackBase[a] = *value;
             }
@@ -735,7 +732,7 @@ static int Execute(lua_State* L, int numArgs)
                 PROTECT(
                     int b = GET_B(inst);
                     const Value* key = RESOLVE_RK( GET_C(inst) );
-                    lua_assert( key != &stackBase[a + 1] );
+                    ASSERT( key != &stackBase[a + 1] );
                     stackBase[a + 1] = stackBase[b];
                     Vm_GetTable(L, &stackBase[b], key, &stackBase[a], false);
                 )
@@ -751,7 +748,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     int bx = GET_Bx(inst);
-                    lua_assert(bx >= 0 && bx < prototype->numConstants);
+                    ASSERT(bx >= 0 && bx < prototype->numConstants);
                     Value* key = &constant[bx];
                     Value* value = &stackBase[a];
                     Vm_SetGlobal(L, closure, key, value);
@@ -762,7 +759,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     int bx = GET_Bx(inst);
-                    lua_assert(bx >= 0 && bx < prototype->numConstants);
+                    ASSERT(bx >= 0 && bx < prototype->numConstants);
                     const Value* key = &constant[bx];
                     Value* dst = &L->stackBase[a];
                     Vm_GetGlobal(L, closure, key, dst);
@@ -982,7 +979,7 @@ static int Execute(lua_State* L, int numArgs)
                     }
                     else
                     {
-                        lua_assert( GET_OPCODE(inst) == Opcode_GetUpVal );
+                        ASSERT( GET_OPCODE(inst) == Opcode_GetUpVal );
                         c->lclosure.upValue[i] = lclosure->upValue[b];
                     }
                 }
@@ -1020,8 +1017,8 @@ static int Execute(lua_State* L, int numArgs)
             {
                 Value* iterator = &stackBase[a];
 
-                lua_assert( Value_GetIsNumber(&stackBase[a + 2]) );
-                lua_assert( Value_GetIsNumber(&stackBase[a + 1]) );
+                ASSERT( Value_GetIsNumber(&stackBase[a + 2]) );
+                ASSERT( Value_GetIsNumber(&stackBase[a + 1]) );
                 
                 lua_Number step  = stackBase[a + 2].number;
                 lua_Number limit = stackBase[a + 1].number;
@@ -1115,7 +1112,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     Value* dst = &stackBase[a];
-                    lua_assert( Value_GetIsTable(dst) );
+                    ASSERT( Value_GetIsTable(dst) );
                     Table* table = dst->table;
                     int b = GET_B(inst);
                     int c = GET_C(inst);
@@ -1169,7 +1166,7 @@ static int Execute(lua_State* L, int numArgs)
             break;
         default:
             // Unimplemented opcode!
-            lua_assert(0);
+            ASSERT(0);
         }
         
     }
@@ -1220,7 +1217,7 @@ int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop
         else
         {
             // The other error codes should never get to this point.
-            lua_assert(0);
+            ASSERT(0);
         }
     
         if (L->openUpValue != NULL)
@@ -1268,17 +1265,18 @@ int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Va
 
 }
 
-// Calls the specified value. The value should be on the stack with its
-// arguments following it. Returns the number of results from the funtion
-// which are on the stack starting at the position where the function was.
-void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
+/**
+ * Prepares a value to be called as a function. If the value isn't a function,
+ * it's call metamethod (if there is one) will replace the value on the stack.
+ * If the metamethod is being called, the number of arguments will be adjusted.
+ * If the value isn't a function and there's no metamethod, an error will be
+ * generated.
+ */
+static void PrepareValueForCall(lua_State* L, Value* value, int& numArgs)
 {
 
-    if (numArgs == -1)
-    {
-        numArgs = static_cast<int>(L->stackTop - value) - 1;
-    }
-
+    ASSERT(numArgs != -1);
+    
     if (!Value_GetIsFunction(value))
     {
         // Try the "call" tag method.
@@ -1298,6 +1296,20 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         ++numArgs;
     }
 
+}
+
+void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
+{
+
+    // Adjust the number of arguments if a variable number was supplied.
+    if (numArgs == -1)
+    {
+        numArgs = static_cast<int>(L->stackTop - value) - 1;
+    }
+
+    PrepareValueForCall(L, value, numArgs);
+
+    ASSERT( Value_GetIsFunction(value) );
     Closure* closure = value->closure;
 
     // Push into the call stack.
@@ -1311,15 +1323,12 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
     frame->function = value;
 
     int result = 0;
-    
-    // Adjust the stack to begin with the first function argument and include
-    // all of the arguments.
-
-    Value* oldBase = L->stackBase;
-    Value* oldTop  = L->stackTop;
 
     if (closure->c)
     {
+    
+        // Adjust the stack to begin with the first function argument and include
+        // all of the arguments.
 
         L->stackBase = value + 1;
         L->stackTop  = L->stackBase + numArgs;
@@ -1414,28 +1423,18 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 
     if (result >= 0)
     {
-        if (numResults == -1)
-        {
-            numResults = result;
-        }
-        else
+        if (numResults != -1)
         {
             // If we want more results than were provided, fill in nil values.
             Value* firstResult = L->stackBase - 1;
             SetRangeNil(firstResult + result, firstResult + numResults);
             result = numResults;
         }
-    }
-
-    L->stackBase = oldBase;
-    L->stackTop  = oldTop;
-
-    if (result >= 0)
-    {
         L->stackTop = value + result;
     }
 
     --L->callStackTop;
+    L->stackBase = (L->callStackTop - 1)->stackBase;
 
 }
 

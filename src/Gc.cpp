@@ -10,9 +10,6 @@
 #include "Function.h"
 #include "Table.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-
 #define GCSTEPSIZE	1024u
 
 void Gc_Initialize(Gc* gc)

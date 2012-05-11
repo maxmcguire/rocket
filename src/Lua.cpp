@@ -19,9 +19,7 @@ extern "C"
 #include "Input.h"
 #include "Code.h"
 
-#include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 /**
  * Arguments that are passed into lua_load.
