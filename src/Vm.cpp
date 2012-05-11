@@ -1326,14 +1326,12 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
     frame->function = value;
 
     int result = 0;
-    
-    // Adjust the stack to begin with the first function argument and include
-    // all of the arguments.
-
-    Value* oldBase = L->stackBase;
 
     if (closure->c)
     {
+    
+        // Adjust the stack to begin with the first function argument and include
+        // all of the arguments.
 
         L->stackBase = value + 1;
         L->stackTop  = L->stackBase + numArgs;
