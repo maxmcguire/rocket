@@ -48,12 +48,12 @@ void* Reallocate(lua_State* L, void* p, size_t oldSize, size_t newSize)
     if (p != NULL)
     {
         mem = static_cast<size_t*>(p) - 1;
-        lua_assert(*mem == oldSize);
+        ASSERT(*mem == oldSize);
         mem = static_cast<size_t*>( L->alloc( L->userdata, mem, oldSize, newSize) );
     }
     else
     {
-        lua_assert(oldSize == 0);
+        ASSERT(oldSize == 0);
         mem = static_cast<size_t*>( L->alloc( L->userdata, NULL, 0, newSize) );
     }
 
@@ -110,6 +110,8 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     L->errorHandler = NULL;
     L->totalBytes   = size;
 
+    StringPool_Initialize(L, &L->stringPool);
+
     // Always include one call frame which will represent calling into the Lua
     // API from C.
     L->callStackTop->function   = NULL;
@@ -118,7 +120,6 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     L->callStackTop->stackTop   = L->stackTop;
     ++L->callStackTop;
 
-    memset(L->stringPoolEntry, 0, sizeof(L->stringPoolEntry));
     memset(L->tagMethodName, 0, sizeof(L->tagMethodName));
 
     Gc_Initialize(&L->gc);

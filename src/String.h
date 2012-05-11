@@ -24,6 +24,13 @@ struct String : public Gc_Object
 #endif
 };
 
+struct StringPool
+{
+    String**        node;
+    int             numStrings;
+    int             numNodes;
+};
+
 inline const char* String_GetData(const String* string)
     { return reinterpret_cast<const char*>(string + 1); }
 
@@ -43,5 +50,10 @@ void String_Destroy(lua_State* L, String* string);
 
 // Return value is the same as strcmp.
 int String_Compare(String* string1, String* string2);
+
+void StringPool_Initialize(lua_State* L, StringPool* stringPool);
+void StringPool_Shutdown(lua_State* L, StringPool* stringPool);
+
+void StringPool_SweepStrings(lua_State* L, StringPool* stringPool);
 
 #endif

@@ -289,30 +289,6 @@ static void Gc_Sweep(lua_State* L, Gc* gc)
 
 }
 
-static void Gc_SweepStrings(lua_State* L, Gc* gc)
-{
-    
-    String** stringPool = L->stringPoolEntry;
-
-    for (int i = 0; i < LUAI_MAXSTRINGPOOL; ++i)
-    {
-        String* string = stringPool[i];
-        if (string != NULL)
-        {
-            if (string->color == Color_White)
-            {
-                String_Destroy(L, string);
-                stringPool[i] = NULL;
-            }
-            else
-            {
-                string->color = Color_White;
-            }
-        }
-    }
-                    
-}
-
 static void Gc_Finish(lua_State* L, Gc* gc)
 {
 
@@ -334,7 +310,7 @@ static void Gc_Finish(lua_State* L, Gc* gc)
 
     // Sweep the string pool. We don't mark the strings since the string pool
     // acts a weak reference.
-    Gc_SweepStrings(L, gc);
+    StringPool_SweepStrings(L, &L->stringPool);
 
     // Return to the start state.
     gc->state = Gc_State_Paused;

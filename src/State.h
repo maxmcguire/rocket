@@ -26,7 +26,6 @@ struct UserData;
 struct UpValue;
 
 #define LUAI_MAXCCALLS      200
-#define LUAI_MAXSTRINGPOOL  256
 
 typedef int Instruction;
 
@@ -68,7 +67,7 @@ struct lua_State
     String*         typeName[NUM_TYPES];
     String*         tagMethodName[TagMethod_NumMethods];
     CallFrame       callStackBase[LUAI_MAXCCALLS];
-    String*         stringPoolEntry[LUAI_MAXSTRINGPOOL];
+    StringPool      stringPool;
 };
 
 /**
