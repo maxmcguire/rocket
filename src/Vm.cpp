@@ -1268,17 +1268,18 @@ int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Va
 
 }
 
-// Calls the specified value. The value should be on the stack with its
-// arguments following it. Returns the number of results from the funtion
-// which are on the stack starting at the position where the function was.
-void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
+/**
+ * Prepares a value to be called as a function. If the value isn't a function,
+ * it's call metamethod (if there is one) will replace the value on the stack.
+ * If the metamethod is being called, the number of arguments will be adjusted.
+ * If the value isn't a function and there's no metamethod, an error will be
+ * generated.
+ */
+static void PrepareValueForCall(lua_State* L, Value* value, int& numArgs)
 {
 
-    if (numArgs == -1)
-    {
-        numArgs = static_cast<int>(L->stackTop - value) - 1;
-    }
-
+    ASSERT(numArgs != -1);
+    
     if (!Value_GetIsFunction(value))
     {
         // Try the "call" tag method.
@@ -1298,6 +1299,20 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         ++numArgs;
     }
 
+}
+
+void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
+{
+
+    // Adjust the number of arguments if a variable number was supplied.
+    if (numArgs == -1)
+    {
+        numArgs = static_cast<int>(L->stackTop - value) - 1;
+    }
+
+    PrepareValueForCall(L, value, numArgs);
+
+    ASSERT( Value_GetIsFunction(value) );
     Closure* closure = value->closure;
 
     // Push into the call stack.
@@ -1316,7 +1331,6 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
     // all of the arguments.
 
     Value* oldBase = L->stackBase;
-    Value* oldTop  = L->stackTop;
 
     if (closure->c)
     {
@@ -1414,28 +1428,18 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 
     if (result >= 0)
     {
-        if (numResults == -1)
-        {
-            numResults = result;
-        }
-        else
+        if (numResults != -1)
         {
             // If we want more results than were provided, fill in nil values.
             Value* firstResult = L->stackBase - 1;
             SetRangeNil(firstResult + result, firstResult + numResults);
             result = numResults;
         }
-    }
-
-    L->stackBase = oldBase;
-    L->stackTop  = oldTop;
-
-    if (result >= 0)
-    {
         L->stackTop = value + result;
     }
 
     --L->callStackTop;
+    L->stackBase = (L->callStackTop - 1)->stackBase;
 
 }
 

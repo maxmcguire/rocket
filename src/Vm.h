@@ -23,6 +23,12 @@ typedef void (*ProtectedFunction)(lua_State *L, void* userData);
 
 int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop, void* userData, Value* errorHandler);
 int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Value* errorHandler);
+
+/**
+ * Calls the specified value. The value should be on the stack with its
+ * arguments following it. Returns the number of results from the funtion
+ * which are on the stack starting at the position where the function was.
+ */
 extern "C" void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults);
 
 // These trigger metamethods.
