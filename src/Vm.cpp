@@ -8,6 +8,7 @@
 extern "C"
 {
 #include "lua.h"
+#include "lualib.h"
 }
 
 #include "Opcode.h"
@@ -20,7 +21,6 @@ extern "C"
 
 #include <memory.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 #include <math.h>
 
@@ -119,7 +119,7 @@ static bool GetObjectName(lua_State* L, const CallFrame* frame, const Value* val
 static void TypeError(lua_State* L, const Value* value, const char* op)
 {
 
-    const char* type = State_TypeName(L, Value_GetType(value));
+    const char* type = String_GetData( State_TypeName(L, Value_GetType(value)) );
     const char* name = NULL;
     const char* kind = NULL;
 
@@ -142,8 +142,8 @@ static void ArithmeticError(lua_State* L, const Value* arg1, const Value* arg2)
 
 static void ComparisonError(lua_State *L, const Value* arg1, const Value* arg2)
 {
-    const char* type1 = State_TypeName(L, Value_GetType(arg1));
-    const char* type2 = State_TypeName(L, Value_GetType(arg2));
+    const char* type1 = String_GetData( State_TypeName(L, Value_GetType(arg1)) );
+    const char* type2 = String_GetData( State_TypeName(L, Value_GetType(arg2)) );
     if (type1 == type2)
     {
         Vm_Error(L, "attempt to compare two %s values", type1);
@@ -679,7 +679,7 @@ static int Execute(lua_State* L, int numArgs)
     CallFrame* frame = State_GetCallFrame(L );
     Closure* closure = frame->function->closure;
 
-    assert( !closure->c );
+    lua_assert( !closure->c );
     LClosure* lclosure = &closure->lclosure;
 
     Prototype* prototype = lclosure->prototype;
@@ -710,7 +710,7 @@ static int Execute(lua_State* L, int numArgs)
         case Opcode_LoadK:
             {
                 int bx = GET_Bx(inst);
-                assert(bx >= 0 && bx < prototype->numConstants);
+                lua_assert(bx >= 0 && bx < prototype->numConstants);
                 const Value* value = &constant[bx];
                 stackBase[a] = *value;
             }
@@ -735,7 +735,7 @@ static int Execute(lua_State* L, int numArgs)
                 PROTECT(
                     int b = GET_B(inst);
                     const Value* key = RESOLVE_RK( GET_C(inst) );
-                    assert( key != &stackBase[a + 1] );
+                    lua_assert( key != &stackBase[a + 1] );
                     stackBase[a + 1] = stackBase[b];
                     Vm_GetTable(L, &stackBase[b], key, &stackBase[a], false);
                 )
@@ -751,7 +751,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     int bx = GET_Bx(inst);
-                    assert(bx >= 0 && bx < prototype->numConstants);
+                    lua_assert(bx >= 0 && bx < prototype->numConstants);
                     Value* key = &constant[bx];
                     Value* value = &stackBase[a];
                     Vm_SetGlobal(L, closure, key, value);
@@ -762,7 +762,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     int bx = GET_Bx(inst);
-                    assert(bx >= 0 && bx < prototype->numConstants);
+                    lua_assert(bx >= 0 && bx < prototype->numConstants);
                     const Value* key = &constant[bx];
                     Value* dst = &L->stackBase[a];
                     Vm_GetGlobal(L, closure, key, dst);
@@ -982,7 +982,7 @@ static int Execute(lua_State* L, int numArgs)
                     }
                     else
                     {
-                        assert( GET_OPCODE(inst) == Opcode_GetUpVal );
+                        lua_assert( GET_OPCODE(inst) == Opcode_GetUpVal );
                         c->lclosure.upValue[i] = lclosure->upValue[b];
                     }
                 }
@@ -1020,8 +1020,8 @@ static int Execute(lua_State* L, int numArgs)
             {
                 Value* iterator = &stackBase[a];
 
-                assert( Value_GetIsNumber(&stackBase[a + 2]) );
-                assert( Value_GetIsNumber(&stackBase[a + 1]) );
+                lua_assert( Value_GetIsNumber(&stackBase[a + 2]) );
+                lua_assert( Value_GetIsNumber(&stackBase[a + 1]) );
                 
                 lua_Number step  = stackBase[a + 2].number;
                 lua_Number limit = stackBase[a + 1].number;
@@ -1034,7 +1034,7 @@ static int Execute(lua_State* L, int numArgs)
                 {
                     int sbx = GET_sBx(inst);
                     ip += sbx;
-                    CopyValue( &stackBase[a + 3], iterator );
+                    Value_Copy( &stackBase[a + 3], iterator );
                 }
             }
             break;
@@ -1115,7 +1115,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     Value* dst = &stackBase[a];
-                    assert( Value_GetIsTable(dst) );
+                    lua_assert( Value_GetIsTable(dst) );
                     Table* table = dst->table;
                     int b = GET_B(inst);
                     int c = GET_C(inst);
@@ -1169,7 +1169,7 @@ static int Execute(lua_State* L, int numArgs)
             break;
         default:
             // Unimplemented opcode!
-            assert(0);
+            lua_assert(0);
         }
         
     }
@@ -1178,7 +1178,7 @@ static int Execute(lua_State* L, int numArgs)
 
 }
 
-int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, void* userData)
+int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop, void* userData, Value* errorFunc)
 {
 
     ErrorHandler* oldErrorHandler = L->errorHandler;
@@ -1194,14 +1194,48 @@ int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, void* userData)
 
     if (result != 0)
     {
+
+        // An error occured.
+
+        if (result == LUA_ERRRUN)
+        {
+
+            // Call the error handler function with the error message.
+            if (errorFunc != NULL)
+            {
+                PushValue(L, errorFunc);
+                PushValue(L, L->stackTop - 2);
+                if (Vm_ProtectedCall(L, L->stackTop - 2, 1, 1, NULL) != 0)
+                {
+                    SetValue( L->stackTop - 1, String_Create(L, "error in error handling") );
+                    result = LUA_ERRERR;
+                }
+            }
+
+        }
+        else if (result == LUA_ERRMEM)
+        {
+            PushString( L, String_Create(L, "not enough memory") );
+        }
+        else
+        {
+            // The other error codes should never get to this point.
+            lua_assert(0);
+        }
+    
         if (L->openUpValue != NULL)
         {
             CloseUpValues(L, oldBase);
         }
-        // An error occured.
-        // Restore the pre-call state.
+        
+        // Restore the pre-call state with the error message.
         L->stackBase    = oldBase;
         L->callStackTop = oldFrame;
+
+        // Move the error message to the top of the pre-call stack.
+        Value_Copy(restoreTop, L->stackTop - 1);
+        L->stackTop = restoreTop + 1;
+
     }
     else
     {
@@ -1230,55 +1264,7 @@ int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Va
     callArgs.numResults = numResults;
     callArgs.errorFunc  = errorFunc;
 
-    int result = Vm_ProtectedCall(L, Call, &callArgs);
-
-    if (result != 0)
-    {
-
-        // An error occured.
-
-        // For certain types of errors, there will be an error message on the
-        // top of the stack.
-        Value* errorMessage = L->stackTop - 1;
-
-        L->stackTop = value;
-
-        if (errorFunc != NULL)
-        {
-            PushValue(L, errorFunc);
-            errorFunc = L->stackTop - 1;
-        }
-
-        Value message;
-        switch (result)
-        {
-        case LUA_ERRMEM:
-            SetValue( &message, String_Create(L, "not enough memory") );
-            break;
-        case LUA_ERRRUN:
-        case LUA_ERRSYNTAX:
-            message = *errorMessage;
-            break;
-        default:
-            // LUA_ERRERR should only be generated by this function.
-            assert( result != LUA_ERRERR );
-            SetNil(&message);
-        }
-        PushValue(L, &message);
-
-        if (errorFunc != NULL)
-        {
-            // Call the error function.
-            if (Vm_ProtectedCall(L, errorFunc, 1, 1, NULL) != 0)
-            {
-                SetValue( L->stackTop - 1, String_Create(L, "error in error handling") );
-                result = LUA_ERRERR;
-            }
-        }
-
-    }
-
-    return result;
+    return Vm_ProtectedCall(L, Call, value, &callArgs, errorFunc);
 
 }
 

@@ -10,13 +10,14 @@ extern "C"
 #include "lua.h"
 }
 
+#include "Global.h"
 #include "UserData.h"
 
 #include <stdlib.h>
 
 UserData* UserData_Create(lua_State* L, size_t size, Table* env)
 {
-    assert(env != NULL);
+    ASSERT(env != NULL);
 
     UserData* userData = static_cast<UserData*>(Gc_AllocateObject(L, LUA_TUSERDATA, sizeof(UserData) + size));
     userData->size      = size;

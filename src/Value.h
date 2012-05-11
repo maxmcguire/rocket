@@ -139,7 +139,7 @@ inline int Value_GetInteger(const Value* value)
         return 0;
     }
 
-inline void CopyValue(Value* dst, Value* src)
+inline void Value_Copy(Value* dst, Value* src)
     { *dst = *src; }
 
 inline void SetNil(Value* value)

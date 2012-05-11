@@ -10,7 +10,6 @@
 #include "UserData.h"
 #include "Table.h"
 
-#include <assert.h>
 #include <stdlib.h>
 #include <ctype.h>
 
@@ -36,7 +35,7 @@ void Value_SetMetatable(lua_State* L, Value* value, Table* table)
         {
             // Set the global metatable for the type.
             int type = Value_GetType(value);
-            assert(type >= 0 && type < NUM_TYPES );
+            ASSERT(type >= 0 && type < NUM_TYPES );
             L->metatable[type] = table;
             // TODO: Gc_WriteBarrier?
         }
@@ -55,7 +54,7 @@ Table* Value_GetMetatable(lua_State* L, const Value* value)
     }
     // Get the global metatable for the type.
     int type = Value_GetType(value);
-    assert(type >= 0 && type < NUM_TYPES );
+    ASSERT(type >= 0 && type < NUM_TYPES );
     return L->metatable[type];
 }
 
@@ -69,7 +68,7 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table)
         return 1;
     case Tag_Thread:
         // TODO: implement.
-        assert(0);
+        ASSERT(0);
         return 1;
     case Tag_Userdata:
         value->userData->env = table;
@@ -87,7 +86,7 @@ Table* Value_GetEnv(const Value* value)
         return value->closure->env;
     case Tag_Thread:
         // TODO: implement.
-        assert(0);
+        ASSERT(0);
         return 0;
     case Tag_Userdata:
         return value->userData->env;

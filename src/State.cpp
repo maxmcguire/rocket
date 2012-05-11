@@ -5,6 +5,7 @@
  * See copyright notice in COPYRIGHT
  */
 
+#include "Global.h"
 #include "State.h"
 #include "Table.h"
 #include "String.h"
@@ -13,7 +14,6 @@
 #include <memory.h>
 #include <string.h>
 #include <stdio.h>
-#include <assert.h>
 #include <stdlib.h>
 
 int AlignOffset(void* p, int align)
@@ -48,12 +48,12 @@ void* Reallocate(lua_State* L, void* p, size_t oldSize, size_t newSize)
     if (p != NULL)
     {
         mem = static_cast<size_t*>(p) - 1;
-        assert(*mem == oldSize);
+        ASSERT(*mem == oldSize);
         mem = static_cast<size_t*>( L->alloc( L->userdata, mem, oldSize, newSize) );
     }
     else
     {
-        assert(oldSize == 0);
+        ASSERT(oldSize == 0);
         mem = static_cast<size_t*>( L->alloc( L->userdata, NULL, 0, newSize) );
     }
 
@@ -110,6 +110,8 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     L->errorHandler = NULL;
     L->totalBytes   = size;
 
+    StringPool_Initialize(L, &L->stringPool);
+
     // Always include one call frame which will represent calling into the Lua
     // API from C.
     L->callStackTop->function   = NULL;
@@ -118,7 +120,6 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     L->callStackTop->stackTop   = L->stackTop;
     ++L->callStackTop;
 
-    memset(L->stringPoolEntry, 0, sizeof(L->stringPoolEntry));
     memset(L->tagMethodName, 0, sizeof(L->tagMethodName));
 
     Gc_Initialize(&L->gc);
@@ -132,6 +133,27 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     {
         L->metatable[i] = NULL;
     }
+
+    // Store the names for the different types, so we don't have to create new
+    // strings when we want to return them.
+    String* unknownName = String_Create(L, "unknown");
+    for (int i = 0; i < NUM_TYPES; ++i)
+    {
+        L->typeName[i] = unknownName;
+    }
+
+    L->typeName[LUA_TNONE]          = String_Create(L, "no value");
+    L->typeName[LUA_TNIL]           = String_Create(L, "nil");
+    L->typeName[LUA_TBOOLEAN]       = String_Create(L, "boolean");
+    L->typeName[LUA_TNUMBER]        = String_Create(L, "number");
+    L->typeName[LUA_TSTRING]        = String_Create(L, "string");
+    L->typeName[LUA_TTABLE]         = String_Create(L, "table");
+    L->typeName[LUA_TFUNCTION]      = String_Create(L, "function");
+    L->typeName[LUA_TLIGHTUSERDATA] = String_Create(L, "userdata");
+    L->typeName[LUA_TUSERDATA]      = L->typeName[LUA_TLIGHTUSERDATA];
+    L->typeName[LUA_TTHREAD]        = String_Create(L, "thread");
+    L->typeName[LUA_TUPVALUE]       = String_Create(L, "upval");
+    L->typeName[LUA_TPROTOTYPE]     = String_Create(L, "proto");
 
     // Store the tag method names so we don't need to create new strings
     // every time we want to access them.
@@ -154,7 +176,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
         };
     for (int i = 0; i < TagMethod_NumMethods; ++i)
     {
-        assert( i < sizeof(tagMethodName) / sizeof(const char*) );
+        ASSERT( i < sizeof(tagMethodName) / sizeof(const char*) );
         L->tagMethodName[i] = String_Create(L, tagMethodName[i]);
     }
 
@@ -257,7 +279,7 @@ void Concat(lua_State* L, int n)
 void Concat(lua_State* L, Value* dst, Value* start, Value* end)
 {
 
-    CopyValue(dst, start);
+    Value_Copy(dst, start);
 
     Value* arg1 = dst;
     Value* arg2 = start + 1;
@@ -308,22 +330,7 @@ void State_Error(lua_State* L)
     }
 }
 
-const char* State_TypeName(lua_State* L, int type)
+String* State_TypeName(lua_State* L, int type)
 {
-    switch (type)
-    {
-    case LUA_TNONE:     return "none";
-    case LUA_TNIL:      return "nil";
-    case LUA_TBOOLEAN:  return "boolean";
-    case LUA_TNUMBER:   return "number";
-    case LUA_TSTRING:   return "string";
-    case LUA_TTABLE:    return "table";
-    case LUA_TFUNCTION: return "function";
-    case LUA_TLIGHTUSERDATA:
-    case LUA_TUSERDATA:
-        return "userdata";
-    case LUA_TTHREAD:
-        return "thread";
-    }
-    return "unknown";
+    return L->typeName[type];
 }

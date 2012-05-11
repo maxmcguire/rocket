@@ -8,6 +8,8 @@
 #ifndef ROCKETVM_GLOBAL_H
 #define ROCKETVM_GLOBAL_H
 
+#include <assert.h>
+
 #ifdef __GNUC__
 #define STATIC_ASSERT_HELPER(expr, msg) \
     (!!sizeof \ (struct { unsigned int STATIC_ASSERTION__##msg: (expr) ? 1 : -1; }))
@@ -17,6 +19,12 @@
     #define STATIC_ASSERT(expr, msg)   \
     extern char STATIC_ASSERTION__##msg[1]; \
     extern char STATIC_ASSERTION__##msg[(expr)?1:2]
+#endif
+
+#ifdef DEBUG
+#define ASSERT(x) assert(x)
+#else
+#define ASSERT(x) ((void)0)
 #endif
 
 #endif

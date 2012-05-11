@@ -12,7 +12,6 @@
 #include "Function.h"
 
 #include <stdio.h>
-#include <assert.h>
 #include <string.h>
 
 static const char* FormatConstant(const Value* value, char buffer[64])
@@ -38,7 +37,7 @@ static const char* FormatConstant(const Value* value, char buffer[64])
         // Some other type of constant was stored that can't be saved into
         // the file. If this happens, it means we've introduced some new type
         // of constant but haven't handled it here.
-        assert(0);
+        ASSERT(0);
         return "Unknown";
     }
     return buffer;

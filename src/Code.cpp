@@ -9,7 +9,6 @@
 #include "Lexer.h"
 #include "Opcode.h"
 
-#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
@@ -100,8 +99,8 @@ static void Parser_PrepareForRK(Parser* parser, Expression* value)
 static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, Expression* arg1, Expression* arg2)
 {
 
-    assert(dst != arg1);
-    assert(dst != arg2);
+    ASSERT(dst != arg1);
+    ASSERT(dst != arg2);
 
     Opcode opcode;
     switch (op)
@@ -291,7 +290,7 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
 
 static void Parser_EmitSetList(Parser* parser, int reg, int numFields, int listSize)
 {
-    assert(numFields <= LFIELDS_PER_FLUSH);
+    ASSERT(numFields <= LFIELDS_PER_FLUSH);
     int c = (listSize - 1) / LFIELDS_PER_FLUSH + 1;
     if (c <= 511)
     {
@@ -656,7 +655,7 @@ static bool Parser_TryIndex(Parser* parser, Expression* dst, int regHint)
             Parser_Error(parser, "function arguments expected");
         }
         
-        assert(dst->type == EXPRESSION_CALL);
+        ASSERT(dst->type == EXPRESSION_CALL);
 
         // Since we have the extra self paramter, we need to adjust the register
         // where the function is located.
@@ -891,7 +890,7 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
             swapArgs = true;
             break;
         default:
-            assert(0);
+            ASSERT(0);
         }
 
         if (swapArgs)
@@ -1267,7 +1266,7 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
             if (Parser_ResolveCall(parser, &value, numResults) ||
                 Parser_ResolveVarArg(parser, &value, numResults, regHint))
             {
-                assert(value.type == EXPRESSION_REGISTER);
+                ASSERT(value.type == EXPRESSION_REGISTER);
                 for (int i = 0; i < numResults; ++i)
                 {
                     Expression src = value;
@@ -1676,7 +1675,7 @@ static int Parser_AssignmentList(Parser* parser, int numExps = 1)
             if (numResults > 0)
             {
                 // Adjust to the last register.
-                assert(exp.type == EXPRESSION_REGISTER);
+                ASSERT(exp.type == EXPRESSION_REGISTER);
                 exp.index += numResults - 1;
                 numValues = numExps;
             }

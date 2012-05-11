@@ -12,7 +12,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 static const char* tokenName[] =
     {
@@ -585,13 +584,13 @@ void Lexer_RestoreTokens(Lexer* lexer, const Token token[], int numTokens)
     // it will be lost.
     if (lexer->haveToken)
     {
-        assert( lexer->numRestoreTokens + 1 <= Lexer_maxRestoreTokens );
+        ASSERT( lexer->numRestoreTokens + 1 <= Lexer_maxRestoreTokens );
         lexer->restoreToken[ lexer->numRestoreTokens ] = lexer->token;
         ++lexer->numRestoreTokens;
         lexer->haveToken = false;
     }
 
-    assert( lexer->numRestoreTokens + numTokens <= Lexer_maxRestoreTokens );
+    ASSERT( lexer->numRestoreTokens + numTokens <= Lexer_maxRestoreTokens );
     memcpy( lexer->restoreToken + lexer->numRestoreTokens, token, numTokens * sizeof(Token) );
     lexer->numRestoreTokens += numTokens;    
 

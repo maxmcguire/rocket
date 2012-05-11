@@ -133,7 +133,7 @@ static size_t writefile(lua_State* L, File* file, const void* src, size_t size)
 {
     size_t result;
     lua_rawgeti(L, LUA_ENVIRONINDEX, IO_WRITE_CALLBACK);
-    assert(!lua_isnil(L, -1));
+    lua_assert(!lua_isnil(L, -1));
     result = ((luaL_FileWrite)lua_touserdata(L, -1))(L, file->handle, src, size);
     lua_pop(L, 1);
     return result;

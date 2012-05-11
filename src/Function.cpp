@@ -9,7 +9,6 @@
 #include "String.h"
 #include "Compiler.h"
 
-#include <assert.h>
 #include <stdlib.h>
 #include <memory.h>
 #include <string.h>
@@ -240,7 +239,7 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
 
     // Source line debug info.
     int numSourceLines = *reinterpret_cast<const int*>(data);
-    assert(numSourceLines == 0 || numSourceLines == codeSize);
+    ASSERT(numSourceLines == 0 || numSourceLines == codeSize);
     data += sizeof(int);
     for (int i = 0; i < numSourceLines; ++i)
     {
@@ -303,7 +302,7 @@ void Prototype_Destroy(lua_State* L, Prototype* prototype)
 Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env)
 {
 
-    assert(env != NULL);
+    ASSERT(env != NULL);
 
     size_t size = sizeof(Closure);
     size += prototype->numUpValues * sizeof(UpValue*);
@@ -325,7 +324,7 @@ Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env)
 Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues, Table* env)
 {
 
-    assert(env != NULL);
+    ASSERT(env != NULL);
 
     size_t size = sizeof(Closure);
     size += numUpValues * sizeof(Value);

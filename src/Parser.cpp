@@ -14,7 +14,6 @@
 #include "Code.h"
 #include "Print.h"
 
-#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -147,7 +146,7 @@ static void Parser_MarkUpValue(Function* function, int local)
 {
 
     Parser* parser = function->parser;
-    assert(parser != NULL);
+    ASSERT(parser != NULL);
 
     // Find the block that contains the local.
     for (int i = parser->numBlocks - 1; i >= 0; --i)
@@ -266,7 +265,7 @@ int Parser_AddConstant(Parser* parser, Value* value)
 {
 
     Function* function = parser->function;
-    assert(function->numConstants < 262144);
+    ASSERT(function->numConstants < 262144);
 
     // We can't store a nil value in a table, so if it's a nil value we need
     // to use some other value to indicate that. We use the constant table
@@ -296,9 +295,9 @@ int Parser_AddConstant(Parser* parser, Value* value)
 
 int Parser_EncodeRK(Parser* parser, Expression* location)
 {
-    assert(location->type == EXPRESSION_REGISTER ||
+    ASSERT(location->type == EXPRESSION_REGISTER ||
            location->type == EXPRESSION_CONSTANT);
-    assert(location->index < 256);
+    ASSERT(location->index < 256);
 
     if (location->type == EXPRESSION_REGISTER)
     {
@@ -332,14 +331,14 @@ int Parser_EmitInstruction(Parser* parser, Instruction inst)
 void Parser_UpdateInstruction(Parser* parser, int pos, Instruction inst)
 {
     Function* function = parser->function;
-    assert( pos >= 0 && pos < function->codeSize );
+    ASSERT( pos >= 0 && pos < function->codeSize );
     function->code[pos] = inst;
 }
 
 Instruction Parser_GetInstruction(Parser* parser, int pos)
 {
     Function* function = parser->function;
-    assert( pos >= 0 && pos < function->codeSize );
+    ASSERT( pos >= 0 && pos < function->codeSize );
     return function->code[pos];
 }
 
@@ -504,7 +503,7 @@ static int Parser_GetJumpList(Parser* parser, int jumpPos, int jump[256])
     int numJumps = 0;
     while (jumpPos != -1)
     {
-        assert(numJumps < 256);
+        ASSERT(numJumps < 256);
         jump[numJumps] = jumpPos;
         ++numJumps;
         jumpPos = Parser_GetInstruction(parser, jumpPos);
@@ -664,7 +663,7 @@ void Parser_AddExitJump(Parser* parser, Expression* jump, int test, int jumpPos)
 is a test before the jump). **/
 static void Parser_InvertTest(Parser* parser, Expression* value)
 {
-    assert(value->type == EXPRESSION_JUMP);
+    ASSERT(value->type == EXPRESSION_JUMP);
     int pos = value->index - 1;
     if (pos >= 0)
     {
@@ -746,7 +745,7 @@ static void Parser_EmitUpValueBinding(Parser* parser, Function* closure)
         {
             // The up value in the closure is an up value in our function.
             index = Parser_GetUpValueIndex(function, name);
-            assert(index != -1);
+            ASSERT(index != -1);
             Parser_EmitAB(parser, Opcode_GetUpVal, 0, index);
         }
     }
@@ -803,7 +802,7 @@ static bool GetHasExitJumps(Expression* value)
 
 static void Parser_UpdateTempLocation(Parser* parser, Expression* value, int reg)
 {
-    assert(value->type == EXPRESSION_TEMP);
+    ASSERT(value->type == EXPRESSION_TEMP);
         
     Instruction inst = Parser_GetInstruction(parser, value->index);
 
@@ -932,7 +931,7 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     else
     {
         // Expression type not handled.
-        assert(0);
+        ASSERT(0);
     }
 
     value->type     = EXPRESSION_REGISTER;
@@ -1092,7 +1091,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
 
     while (value = Table_Next(constants, &key))
     {
-        assert(Value_GetIsNumber(value));
+        ASSERT(Value_GetIsNumber(value));
         int i = static_cast<int>(value->number);
         if (Value_GetIsTable(&key) && key.table == constants)
         {
@@ -1128,7 +1127,7 @@ void Parser_BeginBlock(Parser* parser, bool breakable)
     }
 
     // Locals must be commited before starting a block.
-    assert( parser->function->numLocals == parser->function->numCommitedLocals );
+    ASSERT( parser->function->numLocals == parser->function->numCommitedLocals );
 
     Block* block = &parser->block[parser->numBlocks];
     block->firstLocal           = parser->function->numLocals;
@@ -1140,7 +1139,7 @@ void Parser_BeginBlock(Parser* parser, bool breakable)
 
 bool Parser_GetHasUpValues(Parser* parser)
 {
-    assert(parser->numBlocks > 0);
+    ASSERT(parser->numBlocks > 0);
     Block* block = &parser->block[parser->numBlocks - 1]; 
     return block->firstLocalUpValue != -1;
 }
@@ -1163,7 +1162,7 @@ void Parser_CloseUpValues(Parser* parser)
 void Parser_EndBlock(Parser* parser)
 {
 
-    assert(parser->numBlocks > 0);
+    ASSERT(parser->numBlocks > 0);
     Block* block = &parser->block[parser->numBlocks - 1]; 
     
     // Update the break instructions.
@@ -1197,14 +1196,14 @@ int Parser_GetToken(Parser* parser)
 
 String* Parser_GetString(Parser* parser)
 {
-    assert( parser->lexer->token.type == TokenType_Name ||
+    ASSERT( parser->lexer->token.type == TokenType_Name ||
             parser->lexer->token.type == TokenType_String );
     return parser->lexer->token.string;
 }
 
 lua_Number Parser_GetNumber(Parser* parser)
 {
-    assert( parser->lexer->token.type == TokenType_Number );
+    ASSERT( parser->lexer->token.type == TokenType_Number );
     return parser->lexer->token.number;
 }
 

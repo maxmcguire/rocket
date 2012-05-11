@@ -81,7 +81,7 @@ void Compiler_Compile(lua_State* L, Prototype* prototype)
 
     // Our generated code assumes the size of Value is 16 bytes and uses
     // 128-bit XMM registers to move values around.
-    assert( sizeof(Value) == 16 );
+    ASSERT( sizeof(Value) == 16 );
 
     Assembler as;
 
@@ -148,7 +148,7 @@ void Compiler_Compile(lua_State* L, Prototype* prototype)
             {
 
                 int bx = GET_Bx(inst);
-                assert(bx >= 0 && bx < prototype->numConstants);
+                ASSERT(bx >= 0 && bx < prototype->numConstants);
 
                 // stackBase[a] = constants[bx]
                 as.movdqa( xmm1, dword_ptr(edi, bx * sizeof(Value)) );
@@ -214,7 +214,7 @@ void Compiler_Compile(lua_State* L, Prototype* prototype)
                 Label l2 = as.newLabel();
 
                 int bx = GET_Bx(inst);
-                assert(bx >= 0 && bx < prototype->numConstants);
+                ASSERT(bx >= 0 && bx < prototype->numConstants);
 
                 PUSH_CONSTANT(bx);
                 PUSH_L();
@@ -238,7 +238,7 @@ void Compiler_Compile(lua_State* L, Prototype* prototype)
         case Opcode_SetGlobal:
             {
                 int bx = GET_Bx(inst);
-                assert(bx >= 0 && bx < prototype->numConstants);
+                ASSERT(bx >= 0 && bx < prototype->numConstants);
 
                 PUSH_STACK( a );
                 PUSH_CONSTANT( bx );
@@ -357,7 +357,7 @@ void Compiler_Compile(lua_State* L, Prototype* prototype)
                 Label doneLabel  = as.newLabel();
 
                 // We're relying on the fact that LUA_TNIL is 0.
-                assert(LUA_TNIL == 0);
+                ASSERT(LUA_TNIL == 0);
 
                 // ecx will be 0 for nil values and non zero otherwise.
                 as.mov( ecx, ADDRESS_RK_32(c, offsetof(Value, type) ) );
@@ -445,7 +445,7 @@ void Compiler_Compile(lua_State* L, Prototype* prototype)
                         }
                         else
                         {
-                            assert( GET_OPCODE(inst) == Opcode_GetUpVal );
+                            ASSERT( GET_OPCODE(inst) == Opcode_GetUpVal );
                             // c->upValue[i] = closure->upValue[b];
                             as.mov( eax, dword_ptr(edi, i * sizeof(UpValue*)) );
                             as.mov( dword_ptr(ebx, i * sizeof(UpValue*)), eax );
@@ -490,7 +490,7 @@ void Compiler_Compile(lua_State* L, Prototype* prototype)
             break;
         default:
             // Unimplemented opcode.
-            assert(0);
+            ASSERT(0);
             break;
 
         }

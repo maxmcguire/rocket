@@ -26,7 +26,6 @@ struct UserData;
 struct UpValue;
 
 #define LUAI_MAXCCALLS      200
-#define LUAI_MAXSTRINGPOOL  256
 
 typedef int Instruction;
 
@@ -64,10 +63,11 @@ struct lua_State
     Value           env;            // Temporary storage for the env table for a function.
     Gc              gc;
     size_t          totalBytes;
-    Table*          metatable[NUM_TYPES];  // Metatables for basic types.
+    Table*          metatable[NUM_TYPES];   // Metatables for basic types.
+    String*         typeName[NUM_TYPES];
     String*         tagMethodName[TagMethod_NumMethods];
     CallFrame       callStackBase[LUAI_MAXCCALLS];
-    String*         stringPoolEntry[LUAI_MAXSTRINGPOOL];
+    StringPool      stringPool;
 };
 
 /**
@@ -183,7 +183,7 @@ bool ToString(lua_State* L, Value* value);
 void State_Error(lua_State* L);
 
 // Returns a human readable type name.
-const char* State_TypeName(lua_State* L, int type);
+String* State_TypeName(lua_State* L, int type);
 
 inline CallFrame* State_GetCallFrame(lua_State* L)
     { return L->callStackTop - 1; }
