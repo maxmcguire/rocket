@@ -11,7 +11,6 @@
 #include "Table.h"
 
 #include <stdlib.h>
-#include <ASSERT.h>
 #include <stdio.h>
 
 #define GCSTEPSIZE	1024u

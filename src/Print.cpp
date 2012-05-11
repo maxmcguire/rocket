@@ -12,7 +12,6 @@
 #include "Function.h"
 
 #include <stdio.h>
-#include <ASSERT.h>
 #include <string.h>
 
 static const char* FormatConstant(const Value* value, char buffer[64])

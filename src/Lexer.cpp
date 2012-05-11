@@ -12,7 +12,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ASSERT.h>
 
 static const char* tokenName[] =
     {

@@ -9,7 +9,6 @@
 #include "String.h"
 
 #include <stdlib.h>
-#include <ASSERT.h>
 #include <memory.h>
 #include <stdio.h>
 

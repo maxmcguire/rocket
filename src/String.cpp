@@ -117,7 +117,7 @@ String* StringPool_Insert(lua_State* L, StringPool* stringPool, const char* data
 		memcpy( stringData, data, length );
 		stringData[length] = 0;
 
-#ifdef _DEBUG
+#ifdef DEBUG
         string->_data = stringData;
 #endif
 

@@ -15,7 +15,7 @@
 #include <AsmJit/Logger.h>
 #include <AsmJit/MemoryManager.h>
 
-#include <ASSERT.h>
+#include <assert.h>
 #include <stddef.h>
 
 #include <new>
