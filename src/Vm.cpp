@@ -852,12 +852,12 @@ static int Execute(lua_State* L, int numArgs)
             break;
         case Opcode_Return:
             {
-                int numResults = GET_B(inst) - 1;
-                numResults = MoveResults(L, frame->function, &stackBase[a], numResults);
                 if (L->openUpValue != NULL)
                 {
                     CloseUpValues(L, stackBase);
-                }
+                }       
+                int numResults = GET_B(inst) - 1;
+                numResults = MoveResults(L, frame->function, &stackBase[a], numResults);
                 return numResults;
             }
             break;
