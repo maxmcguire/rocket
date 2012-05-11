@@ -14,8 +14,7 @@
 #include "Code.h"
 #include "Print.h"
 
-#include <string.h>
-#include <stdlib.h>
+#include <memory.h>
 
 void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* parent)
 {

@@ -10,7 +10,6 @@
 #include "UserData.h"
 #include "Table.h"
 
-#include <stdlib.h>
 #include <ctype.h>
 
 void Value_SetMetatable(lua_State* L, Value* value, Table* table)

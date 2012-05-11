@@ -9,10 +9,7 @@
 #include "Lexer.h"
 #include "Opcode.h"
 
-#include <stdio.h>
-#include <string.h>
 #include <malloc.h>
-#include <math.h>
 
 static void Parser_Block(Parser* parser, int endToken);
 static void Parser_Statement(Parser* parser);

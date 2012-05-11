@@ -14,7 +14,6 @@
 #include <memory.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 int AlignOffset(void* p, int align)
 {

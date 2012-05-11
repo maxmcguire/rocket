@@ -9,7 +9,6 @@
 #include "State.h"
 
 #include <memory.h>
-#include <stdlib.h>
 
 void Input_Initialize(lua_State* L, Input* input, lua_Reader reader, void* userdata)
 {
