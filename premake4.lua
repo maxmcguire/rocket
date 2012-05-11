@@ -9,7 +9,7 @@ solution "Rocket"
         ["Source Files"] = { "**.cpp", "**.c", "**.asm" },
         ["Linker Files"] = { "**.def" }
     }
-
+	
     configuration "Debug"
         defines { "DEBUG" }
         flags { "Symbols" }
@@ -19,21 +19,6 @@ solution "Rocket"
         defines { "NDEBUG" }
         flags { "Symbols", "Optimize" }
         targetdir "bin/release"      	
-	--[[
-  configuration "Debug"
-        defines { "DEBUG" }
-        flags { "Symbols" }
-		objdir ("Intermediate/" .. name .. "/Debug")
-        targetdir ("libs/" .. name)
-		targetsuffix "D"
-
-    configuration "Release"
-        defines { "NDEBUG" }
-        flags { "Symbols", "Optimize" }
-		objdir ("Intermediate/" .. name .. "/Release")
-        targetdir ("libs/" .. name)	
-		]]
-	
 
 -- Main library
 project "Rocket"
@@ -44,7 +29,6 @@ project "Rocket"
     includedirs { "include" }
     links { "AuxLib" }
     defines { "ROCKET_EXPORTS", "LUA_CORE" }
-
      
 -- Auxiliary library     
 project "AuxLib"
