@@ -17,7 +17,7 @@ struct String : public Gc_Object
 	unsigned int    hash;
 	size_t 			length;
 	String*			nextString;	// For chaining in the string pool.
-#ifdef _DEBUG
+#ifdef DEBUG
     // Useful for viewing in the watch window, but not necessary since the
     // string data is immediately after the structure in memory.
     const char*     _data;
