@@ -10,6 +10,31 @@ solution "Rocket"
         ["Linker Files"] = { "**.def" }
     }
 
+    configuration "Debug"
+        defines { "DEBUG" }
+        flags { "Symbols" }
+        targetdir "bin/debug"
+
+    configuration "Release"
+        defines { "NDEBUG" }
+        flags { "Symbols", "Optimize" }
+        targetdir "bin/release"      	
+	--[[
+  configuration "Debug"
+        defines { "DEBUG" }
+        flags { "Symbols" }
+		objdir ("Intermediate/" .. name .. "/Debug")
+        targetdir ("libs/" .. name)
+		targetsuffix "D"
+
+    configuration "Release"
+        defines { "NDEBUG" }
+        flags { "Symbols", "Optimize" }
+		objdir ("Intermediate/" .. name .. "/Release")
+        targetdir ("libs/" .. name)	
+		]]
+	
+
 -- Main library
 project "Rocket"
     kind "SharedLib"
@@ -20,15 +45,6 @@ project "Rocket"
     links { "AuxLib" }
     defines { "ROCKET_EXPORTS", "LUA_CORE" }
 
-    configuration "Debug"
-        defines { "DEBUG" }
-        flags { "Symbols" }
-        targetdir "bin/debug"
-
-    configuration "Release"
-        defines { "NDEBUG" }
-        flags { "Optimize" }
-        targetdir "bin/release"   
      
 -- Auxiliary library     
 project "AuxLib"
@@ -38,16 +54,6 @@ project "AuxLib"
     files { "src/AuxLib/*.h", "src/AuxLib/*.c", "src/AuxLib/*.cpp" }
     includedirs { "include" }
 
-    configuration "Debug"
-        defines { "DEBUG" }
-        flags { "Symbols" }
-        targetdir "bin/debug"
-
-    configuration "Release"
-        defines { "NDEBUG" }
-        flags { "Optimize" }
-        targetdir "bin/release"         
-
 -- Unit test     
 project "Test"
     kind "ConsoleApp"
@@ -56,13 +62,3 @@ project "Test"
     files { "src/Test/*.h", "src/Test/*.c", "src/Test/*.cpp" }
     includedirs { "include" }
     links { "Rocket" }
-
-    configuration "Debug"
-        defines { "DEBUG" }
-        flags { "Symbols" }
-        targetdir "bin/debug"
-
-    configuration "Release"
-        defines { "NDEBUG" }
-        flags { "Optimize" }     
-        targetdir "bin/release"
