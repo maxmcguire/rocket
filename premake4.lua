@@ -9,6 +9,16 @@ solution "Rocket"
         ["Source Files"] = { "**.cpp", "**.c", "**.asm" },
         ["Linker Files"] = { "**.def" }
     }
+	
+    configuration "Debug"
+        defines { "DEBUG" }
+        flags { "Symbols", "NoExceptions", "NoRTTI" }
+        targetdir "bin/debug"
+
+    configuration "Release"
+        defines { "NDEBUG" }
+        flags { "Symbols", "Optimize", "EnableSSE2", "NoExceptions", "NoRTTI" }
+        targetdir "bin/release"      	
 
 -- Main library
 project "Rocket"
@@ -19,16 +29,6 @@ project "Rocket"
     includedirs { "include" }
     links { "AuxLib" }
     defines { "ROCKET_EXPORTS", "LUA_CORE" }
-
-    configuration "Debug"
-        defines { "DEBUG" }
-        flags { "Symbols" }
-        targetdir "bin/debug"
-
-    configuration "Release"
-        defines { "NDEBUG" }
-        flags { "Optimize" }
-        targetdir "bin/release"   
      
 -- Auxiliary library     
 project "AuxLib"
@@ -38,16 +38,6 @@ project "AuxLib"
     files { "src/AuxLib/*.h", "src/AuxLib/*.c", "src/AuxLib/*.cpp" }
     includedirs { "include" }
 
-    configuration "Debug"
-        defines { "DEBUG" }
-        flags { "Symbols" }
-        targetdir "bin/debug"
-
-    configuration "Release"
-        defines { "NDEBUG" }
-        flags { "Optimize" }
-        targetdir "bin/release"         
-
 -- Unit test     
 project "Test"
     kind "ConsoleApp"
@@ -56,13 +46,3 @@ project "Test"
     files { "src/Test/*.h", "src/Test/*.c", "src/Test/*.cpp" }
     includedirs { "include" }
     links { "Rocket" }
-
-    configuration "Debug"
-        defines { "DEBUG" }
-        flags { "Symbols" }
-        targetdir "bin/debug"
-
-    configuration "Release"
-        defines { "NDEBUG" }
-        flags { "Optimize" }     
-        targetdir "bin/release"

@@ -123,6 +123,9 @@ static void Parser_EmitArithmetic(Parser* parser, int op, Expression* dst, Expre
     case '^':
         opcode = Opcode_Pow;
         break;
+    default:
+        ASSERT(0);
+        return;
     }
     
     if (arg1->type == EXPRESSION_NUMBER &&
@@ -324,7 +327,6 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
     int hashSize = 0;
     int numFields = 0;
 
-    int  num    = 0;
     bool varArg = false;
     bool hasSep = true;
 
@@ -728,6 +730,9 @@ static void Parser_ExpressionUnary(Parser* parser, Expression* dst, int regHint)
         case '-':
             opcode = Opcode_Unm;
             break;
+        default:
+            ASSERT(0);
+            return;
         }
 
         Parser_ExpressionUnary(parser, dst, regHint);
@@ -891,6 +896,7 @@ static void Parser_Expression1(Parser* parser, Expression* dst, int regHint)
             break;
         default:
             ASSERT(0);
+            return;
         }
 
         if (swapArgs)
@@ -1340,7 +1346,7 @@ static bool Parser_TryLocal(Parser* parser)
 
     int maxStackSize = parser->function->maxStackSize;
 
-    int reg;
+    int reg     = 0;
     int numVars = 0;
     do
     {
@@ -1763,7 +1769,6 @@ static void Parser_Statement(Parser* parser)
  */
 void Parser_Block(Parser* parser, int endToken)
 {
-    Function* function = parser->function;
     while (!Parser_Accept(parser, endToken))
     {
         Parser_Statement(parser);
