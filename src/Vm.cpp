@@ -679,7 +679,7 @@ static int Execute(lua_State* L, int numArgs)
     CallFrame* frame = State_GetCallFrame(L );
     Closure* closure = frame->function->closure;
 
-    lua_assert( !closure->c );
+    ASSERT( !closure->c );
     LClosure* lclosure = &closure->lclosure;
 
     Prototype* prototype = lclosure->prototype;
@@ -710,7 +710,7 @@ static int Execute(lua_State* L, int numArgs)
         case Opcode_LoadK:
             {
                 int bx = GET_Bx(inst);
-                lua_assert(bx >= 0 && bx < prototype->numConstants);
+                ASSERT(bx >= 0 && bx < prototype->numConstants);
                 const Value* value = &constant[bx];
                 stackBase[a] = *value;
             }
@@ -735,7 +735,7 @@ static int Execute(lua_State* L, int numArgs)
                 PROTECT(
                     int b = GET_B(inst);
                     const Value* key = RESOLVE_RK( GET_C(inst) );
-                    lua_assert( key != &stackBase[a + 1] );
+                    ASSERT( key != &stackBase[a + 1] );
                     stackBase[a + 1] = stackBase[b];
                     Vm_GetTable(L, &stackBase[b], key, &stackBase[a], false);
                 )
@@ -751,7 +751,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     int bx = GET_Bx(inst);
-                    lua_assert(bx >= 0 && bx < prototype->numConstants);
+                    ASSERT(bx >= 0 && bx < prototype->numConstants);
                     Value* key = &constant[bx];
                     Value* value = &stackBase[a];
                     Vm_SetGlobal(L, closure, key, value);
@@ -762,7 +762,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     int bx = GET_Bx(inst);
-                    lua_assert(bx >= 0 && bx < prototype->numConstants);
+                    ASSERT(bx >= 0 && bx < prototype->numConstants);
                     const Value* key = &constant[bx];
                     Value* dst = &L->stackBase[a];
                     Vm_GetGlobal(L, closure, key, dst);
@@ -982,7 +982,7 @@ static int Execute(lua_State* L, int numArgs)
                     }
                     else
                     {
-                        lua_assert( GET_OPCODE(inst) == Opcode_GetUpVal );
+                        ASSERT( GET_OPCODE(inst) == Opcode_GetUpVal );
                         c->lclosure.upValue[i] = lclosure->upValue[b];
                     }
                 }
@@ -1020,8 +1020,8 @@ static int Execute(lua_State* L, int numArgs)
             {
                 Value* iterator = &stackBase[a];
 
-                lua_assert( Value_GetIsNumber(&stackBase[a + 2]) );
-                lua_assert( Value_GetIsNumber(&stackBase[a + 1]) );
+                ASSERT( Value_GetIsNumber(&stackBase[a + 2]) );
+                ASSERT( Value_GetIsNumber(&stackBase[a + 1]) );
                 
                 lua_Number step  = stackBase[a + 2].number;
                 lua_Number limit = stackBase[a + 1].number;
@@ -1115,7 +1115,7 @@ static int Execute(lua_State* L, int numArgs)
             {
                 PROTECT(
                     Value* dst = &stackBase[a];
-                    lua_assert( Value_GetIsTable(dst) );
+                    ASSERT( Value_GetIsTable(dst) );
                     Table* table = dst->table;
                     int b = GET_B(inst);
                     int c = GET_C(inst);
@@ -1169,7 +1169,7 @@ static int Execute(lua_State* L, int numArgs)
             break;
         default:
             // Unimplemented opcode!
-            lua_assert(0);
+            ASSERT(0);
         }
         
     }
@@ -1220,7 +1220,7 @@ int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop
         else
         {
             // The other error codes should never get to this point.
-            lua_assert(0);
+            ASSERT(0);
         }
     
         if (L->openUpValue != NULL)
