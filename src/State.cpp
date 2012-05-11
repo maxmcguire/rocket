@@ -141,7 +141,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
         L->typeName[i] = unknownName;
     }
 
-    L->typeName[LUA_TNONE]          = String_Create(L, "none");
+    L->typeName[LUA_TNONE]          = String_Create(L, "no value");
     L->typeName[LUA_TNIL]           = String_Create(L, "nil");
     L->typeName[LUA_TBOOLEAN]       = String_Create(L, "boolean");
     L->typeName[LUA_TNUMBER]        = String_Create(L, "number");
@@ -151,6 +151,8 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     L->typeName[LUA_TLIGHTUSERDATA] = String_Create(L, "userdata");
     L->typeName[LUA_TUSERDATA]      = L->typeName[LUA_TLIGHTUSERDATA];
     L->typeName[LUA_TTHREAD]        = String_Create(L, "thread");
+    L->typeName[LUA_TUPVALUE]       = String_Create(L, "upval");
+    L->typeName[LUA_TPROTOTYPE]     = String_Create(L, "proto");
 
     // Store the tag method names so we don't need to create new strings
     // every time we want to access them.
