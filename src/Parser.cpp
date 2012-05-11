@@ -216,7 +216,7 @@ static int Parser_AddUpValue(Parser* parser, Function* function, String* name)
 int Parser_AddUpValue(Parser* parser, String* name)
 {
     Function* function = parser->function;
-    return Parser_AddUpValue(parser, parser->function, name);
+    return Parser_AddUpValue(parser, function, name);
 }
 
 int Parser_AddLocal(Parser* parser, String* name)
@@ -402,13 +402,6 @@ void Parser_EndLoop(Parser* parser, int* id)
     Parser_EmitAsBx(parser, Opcode_Jmp, 0, jumpAmount);
 }
 
-static int Parser_AddConstant(Parser* parser, lua_Number number)
-{
-    Value value;
-    SetValue(&value, number);
-    return Parser_AddConstant(parser, &value);
-}
-
 int Parser_AddConstant(Parser* parser, String* string)
 {
     Value value;
@@ -535,8 +528,6 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int value, int r
 
         Instruction inst = Parser_GetInstruction(parser, jumpPos - 1);
         Opcode opcode = GET_OPCODE(inst);
-
-        int prevJumpPos = Parser_GetInstruction(parser, jumpPos);
 
         if (startPos == -1)
         {

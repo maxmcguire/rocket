@@ -10,7 +10,6 @@ extern "C"
 #include "lua.h"
 }
 
-#include "Assert.h"
 #include "State.h"
 #include "Function.h"
 #include "String.h"
