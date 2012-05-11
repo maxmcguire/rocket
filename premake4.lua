@@ -12,12 +12,12 @@ solution "Rocket"
 	
     configuration "Debug"
         defines { "DEBUG" }
-        flags { "Symbols" }
+        flags { "Symbols", "NoExceptions", "NoRTTI" }
         targetdir "bin/debug"
 
     configuration "Release"
         defines { "NDEBUG" }
-        flags { "Symbols", "Optimize", "EnableSSE2" }
+        flags { "Symbols", "Optimize", "EnableSSE2", "NoExceptions", "NoRTTI" }
         targetdir "bin/release"      	
 
 -- Main library
