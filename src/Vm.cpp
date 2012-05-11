@@ -1298,7 +1298,12 @@ static void PrepareValueForCall(lua_State* L, Value* value, int& numArgs)
 
 }
 
-void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
+/**
+ * Setups up the stack and call frame for executing a function call. If the
+ * function is a C function, the function to call is returned. Otherwise the
+ * function to call is a Lua function which is read to be executed.
+ */
+static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs)
 {
 
     // Adjust the number of arguments if a variable number was supplied.
@@ -1336,9 +1341,9 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         // Store the stack information for debugging.
         frame->stackBase = L->stackBase;
         frame->stackTop  = L->stackTop;
+        frame->ip        = NULL;
 
-        result = closure->cclosure.function(L);
-        result = MoveResults(L, value, L->stackTop - result, result);
+        return closure->cclosure.function;
 
     }
     else
@@ -1417,8 +1422,26 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         frame->stackTop  = L->stackTop;
 
         SetRangeNil(initBase, L->stackTop);
-        result = Execute(L, numArgs);
+        return NULL;
 
+    }
+
+}
+
+/**
+ * The cFunction template parameter should be true if this is a return from a C
+ * function call. This is implemented as a template instead of an ordinary
+ * parameter so that the branch can be eliminated at compile-time.
+ */
+template <bool cFunction>
+static void ReturnFromCall(lua_State* L, int result, int numResults)
+{
+
+    Value* firstValue = (L->callStackTop - 1)->function;
+
+    if (cFunction)
+    {
+        result = MoveResults(L, firstValue, L->stackTop - result, result);
     }
 
     if (result >= 0)
@@ -1426,16 +1449,34 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
         if (numResults != -1)
         {
             // If we want more results than were provided, fill in nil values.
-            Value* firstResult = L->stackBase - 1;
-            SetRangeNil(firstResult + result, firstResult + numResults);
+            //Value* firstResult = L->stackBase - 1;
+            SetRangeNil(firstValue + result, firstValue + numResults);
             result = numResults;
         }
-        L->stackTop = value + result;
+        L->stackTop = firstValue + result;
     }
 
     --L->callStackTop;
     L->stackBase = (L->callStackTop - 1)->stackBase;
 
+}
+
+void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
+{
+
+    lua_CFunction function = PrepareCall(L, value, numArgs);
+
+    if (function != NULL)
+    {
+        int result = function(L);
+        ReturnFromCall<true>(L, result, numResults);    
+    }
+    else
+    {
+        int result = Execute(L, numArgs);
+        ReturnFromCall<false>(L, result, numResults);    
+    }
+   
 }
 
 int Vm_GetCallStackSize(lua_State* L)
