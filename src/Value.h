@@ -168,7 +168,7 @@ inline int Value_Equal(const Value* arg1, const Value* arg2)
 {
     if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
     {
-        return arg1->number == arg2->number;
+        return luai_numeq(arg1->number, arg2->number);
     }
     else if (arg1->tag != arg2->tag)
     {

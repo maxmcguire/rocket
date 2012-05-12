@@ -444,7 +444,7 @@ int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
 {
     if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
     {
-        return arg1->number < arg2->number;
+        return luai_numlt(arg1->number, arg2->number);
     }
     else if (arg1->tag == arg2->tag)
     {
@@ -466,7 +466,7 @@ int Vm_LessEqual(lua_State* L, const Value* arg1, const Value* arg2)
 {
     if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
     {
-        return arg1->number <= arg2->number;
+        return luai_numle(arg1->number, arg2->number);
     }
     else if (arg1->tag == arg2->tag)
     {
