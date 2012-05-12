@@ -40,6 +40,7 @@ struct CallFrame
     Value*              stackBase;
     Value*              stackTop;
     const Instruction*  ip;
+    int                 numResults; // Expected number of results from the call.
 };
 
 struct lua_State

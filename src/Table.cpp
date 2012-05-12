@@ -70,7 +70,7 @@ static inline unsigned int Hash(void* key)
     return a;
 }
 
-static inline unsigned int Hash(const Value* key)
+FORCE_INLINE static unsigned int Hash(const Value* key)
 {
     if (Value_GetIsNumber(key))
     {
@@ -87,7 +87,7 @@ static inline unsigned int Hash(const Value* key)
     return Hash(key->object);
 }
 
-static inline bool KeysEqual(const Value* key1, const Value* key2)
+FORCE_INLINE static bool KeysEqual(const Value* key1, const Value* key2)
 {
     if (key1->tag != key2->tag)
     {
@@ -96,12 +96,12 @@ static inline bool KeysEqual(const Value* key1, const Value* key2)
     return key1->object == key2->object;
 }
 
-static inline size_t Table_GetMainIndex(const Table* table, const Value* key)
+FORCE_INLINE static size_t Table_GetMainIndex(const Table* table, const Value* key)
 {
     return Hash(key) & (table->numNodes - 1);
 }
 
-static inline bool Table_NodeIsEmpty(const TableNode* node)
+FORCE_INLINE static bool Table_NodeIsEmpty(const TableNode* node)
 {
     return node->dead;
 }

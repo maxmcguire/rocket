@@ -639,7 +639,7 @@ static void Arithmetic(lua_State* L, Value* dst, const Value* arg1, const Value*
  * function is a C function, the function to call is returned. Otherwise the
  * function to call is a Lua function which is read to be executed.
  */
-static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs)
+static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs, int numResults)
 {
 
     // Adjust the number of arguments if a variable number was supplied.
@@ -680,7 +680,8 @@ static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs)
     CallFrame* frame = L->callStackTop;
     ++L->callStackTop;
 
-    frame->function = value;
+    frame->function   = value;
+    frame->numResults = numResults;
 
     int result = 0;
 
@@ -775,6 +776,7 @@ static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs)
         // Store the stack information for debugging.
         frame->stackBase = L->stackBase;
         frame->stackTop  = L->stackTop;
+        frame->ip        = prototype->code;
 
         SetRangeNil(initBase, L->stackTop);
         return NULL;
@@ -783,22 +785,35 @@ static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs)
 
 }
 
-/**
- * The cFunction template parameter should be true if this is a return from a C
- * function call. This is implemented as a template instead of an ordinary
- * parameter so that the branch can be eliminated at compile-time.
- */
-template <bool cFunction>
-static void ReturnFromCall(lua_State* L, int result, int numResults)
+static void ReturnFromCCall(lua_State* L, int result, int numResults)
 {
 
     CallFrame* frame = L->callStackTop - 1;
     Value* firstValue = frame->function;
 
-    if (cFunction)
+    result = MoveResults(L, firstValue, L->stackTop - result, result);
+
+    if (result >= 0)
     {
-        result = MoveResults(L, firstValue, L->stackTop - result, result);
+        if (numResults != -1)
+        {
+            // If we want more results than were provided, fill in nil values.
+            SetRangeNil(firstValue + result, firstValue + numResults);
+            result = numResults;
+        }
+        L->stackTop = firstValue + result;
     }
+
+    --L->callStackTop;
+    L->stackBase = (L->callStackTop - 1)->stackBase;
+
+}
+
+static void ReturnFromLuaCall(lua_State* L, int result, int numResults)
+{
+
+    CallFrame* frame = L->callStackTop - 1;
+    Value* firstValue = frame->function;
 
     if (result >= 0)
     {
@@ -819,7 +834,7 @@ static void ReturnFromCall(lua_State* L, int result, int numResults)
 /**
  * Executes the function on the top of the call stack.
  */
-static int Execute(lua_State* L, int numArgs)
+static int Execute(lua_State* L /*, int numArgs*/)
 {
 
     // Assembly language VM.
@@ -855,6 +870,10 @@ static int Execute(lua_State* L, int numArgs)
             )                                                                   \
         }
 
+    int numEntries = 1; // Number of times we've "re-entered" this function.
+
+Start:
+
     CallFrame* frame = State_GetCallFrame(L );
     Closure* closure = frame->function->closure;
 
@@ -863,8 +882,8 @@ static int Execute(lua_State* L, int numArgs)
 
     Prototype* prototype = lclosure->prototype;
 
-    const Instruction* ip  = prototype->code;
-    const Instruction* end = ip + prototype->codeSize;
+    const Instruction* ip  = frame->ip;
+    const Instruction* end = prototype->code + prototype->codeSize;
 
     register Value* stackBase = L->stackBase;
     register Value* constant  = prototype->constant;
@@ -992,11 +1011,21 @@ static int Execute(lua_State* L, int numArgs)
             break;
         case Opcode_Call:
             {
-                PROTECT(
-                    int numArgs     = GET_B(inst) - 1;
-                    int numResults  = GET_C(inst) - 1;
-                    Value* value   = &stackBase[a];
-                    Vm_Call(L, value, numArgs, numResults);
+
+                frame->ip = ip;
+
+                int numArgs     = GET_B(inst) - 1;
+                int numResults  = GET_C(inst) - 1;
+                Value* value   = &stackBase[a];
+                
+                lua_CFunction function = PrepareCall(L, value, numArgs, numResults);
+
+                if (function != NULL)
+                {
+                    // Call the C function immediately.
+                    int result = function(L);
+                    ReturnFromCCall(L, result, numResults);
+
                     // Restore the top of the stack unless we're expecting a
                     // variable number of results (in which case the next
                     // instruction will restore it).
@@ -1004,7 +1033,15 @@ static int Execute(lua_State* L, int numArgs)
                     {
                         L->stackTop = frame->stackTop;
                     }
-                 )
+                }
+                else
+                {
+                    // "Re-enter" the function to start execution in the new Lua
+                    // function.
+                    ++numEntries;
+                    goto Start;
+                }
+
             }
             break;
         case Opcode_TailCall:
@@ -1036,7 +1073,29 @@ static int Execute(lua_State* L, int numArgs)
                 }       
                 int numResults = GET_B(inst) - 1;
                 numResults = MoveResults(L, frame->function, &stackBase[a], numResults);
-                return numResults;
+
+                --numEntries;
+                if (numEntries == 0)
+                {
+                    // We have exited out of all of the Lua functions that were
+                    // called, so return.
+                    return numResults;
+                }
+                else
+                {
+                    // Restart back at the execution point for the previous
+                    // function.
+                    ReturnFromLuaCall(L, numResults, frame->numResults);    
+
+                    // Restore the top of the stack unless we're expecting a
+                    // variable number of results (in which case the next
+                    // instruction will restore it).
+                    if (frame->numResults >= 0)
+                    {
+                        L->stackTop = frame->stackTop;
+                    }
+                    goto Start;
+                }
             }
             break;
         case Opcode_Add:
@@ -1327,6 +1386,7 @@ static int Execute(lua_State* L, int numArgs)
             break;
         case Opcode_VarArg:
             {
+                int numArgs    = static_cast<int>(frame->stackBase - frame->function) - 1;
                 int numVarArgs = numArgs - prototype->numParams;
                 int num = GET_B(inst) - 1;
                 if (num < 0)
@@ -1446,17 +1506,17 @@ int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Va
 void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 {
   
-    lua_CFunction function = PrepareCall(L, value, numArgs);
+    lua_CFunction function = PrepareCall(L, value, numArgs, numResults);
 
     if (function != NULL)
     {
         int result = function(L);
-        ReturnFromCall<true>(L, result, numResults);
+        ReturnFromCCall(L, result, numResults);
     }
     else
     {
-        int result = Execute(L, numArgs);
-        ReturnFromCall<false>(L, result, numResults);    
+        int result = Execute(L);
+        ReturnFromLuaCall(L, result, numResults);    
     }
 
 }

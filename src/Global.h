@@ -22,9 +22,15 @@
 #endif
 
 #ifdef DEBUG
-#define ASSERT(x) assert(x)
+    #define ASSERT(x) assert(x)
 #else
-#define ASSERT(x) ((void)0)
+    #define ASSERT(x) ((void)0)
+#endif
+
+#ifdef __GNUC__
+    #define FORCE_INLINE    inline
+#else
+    #define FORCE_INLINE    __forceinline
 #endif
 
 #endif
