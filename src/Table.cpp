@@ -464,8 +464,6 @@ Start:
             }
         }
         freeNode = Table_UnlinkDeadNode(table, freeNode);
-        //ASSERT(freeNode != node);
-
 
         if (freeNode == node)
         {

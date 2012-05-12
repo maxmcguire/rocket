@@ -18,7 +18,7 @@
  */
 struct TableNode
 {
-    bool            dead;   // TODO: This could overlap with the value's tag
+    bool            dead;
     Value           key;
     TableNode*      next;
     union
