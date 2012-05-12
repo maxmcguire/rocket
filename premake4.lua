@@ -17,7 +17,7 @@ solution "Rocket"
 
     configuration "Release"
         defines { "NDEBUG" }
-        flags { "Symbols", "Optimize", "EnableSSE2", "NoExceptions", "NoRTTI" }
+        flags { "Symbols", "Optimize", "NoExceptions", "NoRTTI" }
         targetdir "bin/release"      	
 
 -- Main library
