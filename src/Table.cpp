@@ -280,7 +280,27 @@ static TableNode* Table_GetNodeIncludeDead(Table* table, const Value* key)
 
 }
 
-static TableNode* Table_GetNode(Table* table, const Value* key, TableNode** prevNode = NULL)
+static TableNode* Table_GetNode(Table* table, const Value* key)
+{
+
+    if (table->numNodes == 0)
+    {
+        return NULL;
+    }
+  
+    size_t index = Table_GetMainIndex(table, key);
+    TableNode* node = &table->nodes[index];
+
+    while ( node != NULL && (node->dead || !KeysEqual(&node->key, key)) )
+    {
+        node = node->next;
+    }
+
+    return node;
+
+}
+
+static TableNode* Table_GetNode(Table* table, const Value* key, TableNode** prevNode)
 {
 
     if (table->numNodes == 0)
@@ -298,11 +318,7 @@ static TableNode* Table_GetNode(Table* table, const Value* key, TableNode** prev
         node = node->next;
     }
 
-    if (prevNode)
-    {
-        *prevNode = prev;
-    }
-
+    *prevNode = prev;
     return node;
 
 }
