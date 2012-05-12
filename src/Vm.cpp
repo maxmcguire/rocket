@@ -21,6 +21,8 @@ extern "C"
 
 #include <memory.h>
 
+extern "C" int Vm_Execute(lua_State* L, LClosure* closure);
+
 struct CallArgs
 {
     Value*  value;
@@ -397,7 +399,7 @@ static int ComparisionTagMethod(lua_State* L, const Value* arg1, const Value* ar
     Vm_Call(L, L->stackTop - 3, 2, 1);
 
     int result = Vm_GetBoolean(L->stackTop - 1);
-    Pop(L, 1);    
+    Pop(L, 1);
 
     return result;
 
@@ -632,7 +634,187 @@ static void Arithmetic(lua_State* L, Value* dst, const Value* arg1, const Value*
     
 }
 
-extern "C" int Vm_Execute(lua_State* L, LClosure* closure);
+/**
+ * Setups up the stack and call frame for executing a function call. If the
+ * function is a C function, the function to call is returned. Otherwise the
+ * function to call is a Lua function which is read to be executed.
+ */
+static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs)
+{
+
+    // Adjust the number of arguments if a variable number was supplied.
+    if (numArgs == -1)
+    {
+        numArgs = static_cast<int>(L->stackTop - value) - 1;
+    }
+
+    // Prepares a value to be called as a function. If the value isn't a function,
+    // it's call metamethod (if there is one) will replace the value on the stack.
+  
+    if (!Value_GetIsFunction(value))
+    {
+        // Try the "call" tag method.
+        const Value* method = GetTagMethod(L, value, TagMethod_Call);
+        if (method == NULL || !Value_GetIsFunction(method))
+        {
+            TypeError(L, (method ? method : value), "call");
+        }
+        // Move the method onto the stack before the function so we can
+        // call it.
+        for (Value* q = value + numArgs + 1; q > value; q--)
+        {
+            *q = *(q - 1);
+        }
+        *value = *method;
+        ++L->stackTop;
+        ++numArgs;
+    }
+
+    Closure* closure = value->closure;
+
+    // Push into the call stack.
+    if (L->callStackTop - L->callStackBase >= LUAI_MAXCCALLS)
+    {
+        Vm_Error(L, "call stack overflow");
+    }
+    CallFrame* frame = L->callStackTop;
+    ++L->callStackTop;
+
+    frame->function = value;
+
+    int result = 0;
+
+    if (closure->c)
+    {
+    
+        // Adjust the stack to begin with the first function argument and include
+        // all of the arguments.
+
+        L->stackBase = value + 1;
+        L->stackTop  = L->stackBase + numArgs;
+
+        // Store the stack information for debugging.
+        frame->stackBase = L->stackBase;
+        frame->stackTop  = L->stackTop;
+        frame->ip        = NULL;
+
+        return closure->cclosure.function;
+
+    }
+    else
+    {
+
+        // The Lua stack is setup like this when the function accepts a variable
+        // number of arguments:
+
+        //  +------------+
+        //  |  function  |
+        //  +------------+
+        //  |            |
+        //  . fixed args .
+        //  |            |
+        //  +------------+
+        //  |            |
+        //  .  var args  .
+        //  |            |
+        //  +------------+ <--- base
+        //  |            |
+        //  . fixed args .
+        //  |            |
+        //  +------------+
+        //  |            |
+        //  .   locals   .
+        //  |            |
+        //  +------------+
+
+        // The fixed arguments are duplicated when we have a vararg function
+        // so that the register locations used by the arguments are deterministic
+        // regardless of the number of arguments. The varargs are not accessed
+        // directly by register, but through the VARARG instruction which will
+        // copy them from before the stack location before the base pointer to
+        // the target registers.
+
+        Prototype* prototype = closure->lclosure.prototype;
+
+        // Start location for initializing stack locations to nil.
+        Value* initBase = NULL;
+
+        if (prototype->varArg)
+        {
+            // Duplicate the fixed arguments.
+            Value* arg = value + 1;
+            Value* dst = value + 1 + numArgs;
+            L->stackBase = dst;
+            for (int i = 0; i < prototype->numParams; ++i)
+            {
+                *dst = *arg;
+                ++dst;
+                ++arg;
+            }
+            initBase = dst;
+        }
+        else
+        {
+            L->stackBase = value + 1;
+            if (numArgs < prototype->numParams)
+            {
+                // If we recieved fewer parameters than we expected, we'll need
+                // to initialize the stack locations for the other parameters to
+                // nil.
+                initBase = L->stackBase + numArgs;
+            }
+            else
+            {
+                initBase = L->stackBase + prototype->numParams;
+            }
+            numArgs = prototype->numParams;
+        }
+
+        L->stackTop = L->stackBase + prototype->maxStackSize;
+
+        // Store the stack information for debugging.
+        frame->stackBase = L->stackBase;
+        frame->stackTop  = L->stackTop;
+
+        SetRangeNil(initBase, L->stackTop);
+        return NULL;
+
+    }
+
+}
+
+/**
+ * The cFunction template parameter should be true if this is a return from a C
+ * function call. This is implemented as a template instead of an ordinary
+ * parameter so that the branch can be eliminated at compile-time.
+ */
+template <bool cFunction>
+static void ReturnFromCall(lua_State* L, int result, int numResults)
+{
+
+    CallFrame* frame = L->callStackTop - 1;
+    Value* firstValue = frame->function;
+
+    if (cFunction)
+    {
+        result = MoveResults(L, firstValue, L->stackTop - result, result);
+    }
+
+    if (result >= 0)
+    {
+        if (numResults != -1)
+        {
+            // If we want more results than were provided, fill in nil values.
+            SetRangeNil(firstValue + result, firstValue + numResults);
+            result = numResults;
+        }
+        L->stackTop = firstValue + result;
+    }
+
+    --L->callStackTop;
+    L->stackBase = (L->callStackTop - 1)->stackBase;
+
+}
 
 /**
  * Executes the function on the top of the call stack.
@@ -814,19 +996,15 @@ static int Execute(lua_State* L, int numArgs)
                     int numArgs     = GET_B(inst) - 1;
                     int numResults  = GET_C(inst) - 1;
                     Value* value   = &stackBase[a];
-                    if (numArgs >= 0)
-                    {
-                        L->stackTop = value + numArgs;
-                    }
                     Vm_Call(L, value, numArgs, numResults);
+                    // Restore the top of the stack unless we're expecting a
+                    // variable number of results (in which case the next
+                    // instruction will restore it).
                     if (numResults >= 0)
                     {
-                        // If we are expecting a specific number of results, then
-                        // we have already prepared the destination registers in
-                        // such a way that we don't want to adjust the stack top.
-                        L->stackTop = frame->stackTop; 
+                        L->stackTop = frame->stackTop;
                     }
-                )
+                 )
             }
             break;
         case Opcode_TailCall:
@@ -1126,6 +1304,8 @@ static int Execute(lua_State* L, int numArgs)
                     {
                         // Initialize will all of the elements on the stack.
                         b = static_cast<int>(L->stackTop - stackBase) - a - 1;
+                        // Restore the top of the stack from the previous call.
+                        L->stackTop = frame->stackTop;
                     }
                     for (int i = 1; i <= b; ++i)
                     {
@@ -1175,7 +1355,7 @@ static int Execute(lua_State* L, int numArgs)
 
 }
 
-int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop, void* userData, Value* errorFunc)
+int Vm_RunProtected(lua_State* L, ProtectedFunction function, Value* stackTop, void* userData, Value* errorFunc)
 {
 
     ErrorHandler* oldErrorHandler = L->errorHandler;
@@ -1196,7 +1376,6 @@ int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop
 
         if (result == LUA_ERRRUN)
         {
-
             // Call the error handler function with the error message.
             if (errorFunc != NULL)
             {
@@ -1208,7 +1387,6 @@ int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop
                     result = LUA_ERRERR;
                 }
             }
-
         }
         else if (result == LUA_ERRMEM)
         {
@@ -1224,14 +1402,14 @@ int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop
         {
             CloseUpValues(L, oldBase);
         }
+
+        // Move the error message to the top of the pre-call stack.
+        Value_Copy(stackTop, L->stackTop - 1);
+        L->stackTop = stackTop + 1;
         
         // Restore the pre-call state with the error message.
         L->stackBase    = oldBase;
         L->callStackTop = oldFrame;
-
-        // Move the error message to the top of the pre-call stack.
-        Value_Copy(restoreTop, L->stackTop - 1);
-        L->stackTop = restoreTop + 1;
 
     }
     else
@@ -1261,222 +1439,26 @@ int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Va
     callArgs.numResults = numResults;
     callArgs.errorFunc  = errorFunc;
 
-    return Vm_ProtectedCall(L, Call, value, &callArgs, errorFunc);
-
-}
-
-/**
- * Prepares a value to be called as a function. If the value isn't a function,
- * it's call metamethod (if there is one) will replace the value on the stack.
- * If the metamethod is being called, the number of arguments will be adjusted.
- * If the value isn't a function and there's no metamethod, an error will be
- * generated.
- */
-static void PrepareValueForCall(lua_State* L, Value* value, int& numArgs)
-{
-
-    ASSERT(numArgs != -1);
-    
-    if (!Value_GetIsFunction(value))
-    {
-        // Try the "call" tag method.
-        const Value* method = GetTagMethod(L, value, TagMethod_Call);
-        if (method == NULL || !Value_GetIsFunction(method))
-        {
-            TypeError(L, (method ? method : value), "call");
-        }
-        // Move the method onto the stack before the function so we can
-        // call it.
-        for (Value* q = value + numArgs + 1; q > value; q--)
-        {
-            *q = *(q - 1);
-        }
-        *value = *method;
-        ++L->stackTop;
-        ++numArgs;
-    }
-
-}
-
-/**
- * Setups up the stack and call frame for executing a function call. If the
- * function is a C function, the function to call is returned. Otherwise the
- * function to call is a Lua function which is read to be executed.
- */
-static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs)
-{
-
-    // Adjust the number of arguments if a variable number was supplied.
-    if (numArgs == -1)
-    {
-        numArgs = static_cast<int>(L->stackTop - value) - 1;
-    }
-
-    PrepareValueForCall(L, value, numArgs);
-
-    ASSERT( Value_GetIsFunction(value) );
-    Closure* closure = value->closure;
-
-    // Push into the call stack.
-    if (L->callStackTop - L->callStackBase >= LUAI_MAXCCALLS)
-    {
-        Vm_Error(L, "call stack overflow");
-    }
-    CallFrame* frame = L->callStackTop;
-    ++L->callStackTop;
-
-    frame->function = value;
-
-    int result = 0;
-
-    if (closure->c)
-    {
-    
-        // Adjust the stack to begin with the first function argument and include
-        // all of the arguments.
-
-        L->stackBase = value + 1;
-        L->stackTop  = L->stackBase + numArgs;
-
-        // Store the stack information for debugging.
-        frame->stackBase = L->stackBase;
-        frame->stackTop  = L->stackTop;
-        frame->ip        = NULL;
-
-        return closure->cclosure.function;
-
-    }
-    else
-    {
-
-        // The Lua stack is setup like this when the function accepts a variable
-        // number of arguments:
-
-        //  +------------+
-        //  |  function  |
-        //  +------------+
-        //  |            |
-        //  . fixed args .
-        //  |            |
-        //  +------------+
-        //  |            |
-        //  .  var args  .
-        //  |            |
-        //  +------------+ <--- base
-        //  |            |
-        //  . fixed args .
-        //  |            |
-        //  +------------+
-        //  |            |
-        //  .   locals   .
-        //  |            |
-        //  +------------+
-
-        // The fixed arguments are duplicated when we have a vararg function
-        // so that the register locations used by the arguments are deterministic
-        // regardless of the number of arguments. The varargs are not accessed
-        // directly by register, but through the VARARG instruction which will
-        // copy them from before the stack location before the base pointer to
-        // the target registers.
-
-        Prototype* prototype = closure->lclosure.prototype;
-
-        // Start location for initializing stack locations to nil.
-        Value* initBase = NULL;
-
-        if (prototype->varArg)
-        {
-            // Duplicate the fixed arguments.
-            Value* arg = value + 1;
-            Value* dst = value + 1 + numArgs;
-            L->stackBase = dst;
-            for (int i = 0; i < prototype->numParams; ++i)
-            {
-                *dst = *arg;
-                ++dst;
-                ++arg;
-            }
-            initBase = dst;
-        }
-        else
-        {
-            L->stackBase = value + 1;
-            if (numArgs < prototype->numParams)
-            {
-                // If we recieved fewer parameters than we expected, we'll need
-                // to initialize the stack locations for the other parameters to
-                // nil.
-                initBase = L->stackBase + numArgs;
-            }
-            else
-            {
-                initBase = L->stackBase + prototype->numParams;
-            }
-            numArgs = prototype->numParams;
-        }
-
-        L->stackTop = L->stackBase + prototype->maxStackSize;
-
-        // Store the stack information for debugging.
-        frame->stackBase = L->stackBase;
-        frame->stackTop  = L->stackTop;
-
-        SetRangeNil(initBase, L->stackTop);
-        return NULL;
-
-    }
-
-}
-
-/**
- * The cFunction template parameter should be true if this is a return from a C
- * function call. This is implemented as a template instead of an ordinary
- * parameter so that the branch can be eliminated at compile-time.
- */
-template <bool cFunction>
-static void ReturnFromCall(lua_State* L, int result, int numResults)
-{
-
-    Value* firstValue = (L->callStackTop - 1)->function;
-
-    if (cFunction)
-    {
-        result = MoveResults(L, firstValue, L->stackTop - result, result);
-    }
-
-    if (result >= 0)
-    {
-        if (numResults != -1)
-        {
-            // If we want more results than were provided, fill in nil values.
-            //Value* firstResult = L->stackBase - 1;
-            SetRangeNil(firstValue + result, firstValue + numResults);
-            result = numResults;
-        }
-        L->stackTop = firstValue + result;
-    }
-
-    --L->callStackTop;
-    L->stackBase = (L->callStackTop - 1)->stackBase;
+    return Vm_RunProtected(L, Call, value, &callArgs, errorFunc);
 
 }
 
 void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 {
-
+  
     lua_CFunction function = PrepareCall(L, value, numArgs);
 
     if (function != NULL)
     {
         int result = function(L);
-        ReturnFromCall<true>(L, result, numResults);    
+        ReturnFromCall<true>(L, result, numResults);
     }
     else
     {
         int result = Execute(L, numArgs);
         ReturnFromCall<false>(L, result, numResults);    
     }
-   
+
 }
 
 int Vm_GetCallStackSize(lua_State* L)

@@ -338,7 +338,7 @@ LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char
     args.userdata   = userdata;
     args.name       = name;
 
-    int result = Vm_ProtectedCall(L, Parse, L->stackTop, &args, NULL);
+    int result = Vm_RunProtected(L, Parse, L->stackTop, &args, NULL);
 
     if (result == LUA_ERRRUN)
     {
@@ -348,7 +348,7 @@ LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char
 
 }
 
-LUA_API int lua_dump(lua_State *L, lua_Writer writer, void* data)
+LUA_API int lua_dump(lua_State* L, lua_Writer writer, void* data)
 {
     const Value* value = GetValueForIndex(L, -1);
     if (!Value_GetIsFunction(value) || value->closure->c)
@@ -364,10 +364,10 @@ LUA_API int lua_error(lua_State* L)
     return 0;
 }
 
-LUA_API void lua_call(lua_State* L, int nargs, int nresults)
+LUA_API void lua_call(lua_State* L, int nargs, int numResults)
 {
     Value* value = L->stackTop - (nargs + 1);
-    Vm_Call(L, value, nargs, nresults);
+    Vm_Call(L, value, nargs, numResults);
 }
 
 LUA_API int lua_pcall(lua_State* L, int numArgs, int numResults, int errFunc)
