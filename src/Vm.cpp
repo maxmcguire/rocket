@@ -342,19 +342,6 @@ void Vm_SetGlobal(lua_State* L, Closure* closure, Value* key, Value* value)
     Vm_SetTable(L, &table, key, value);
 }
 
-// Overwrites the value of an element on the stack.
-static inline void SetValue(lua_State* L, int index, const Value* value)
-{
-    if (value == NULL)
-    {
-        SetNil(L->stackBase + index);
-    }
-    else
-    {
-        L->stackBase[index] = *value;
-    }
-}
-
 /**
  * Moves the results for a return operation to the base of the stack. Returns the
  * actual number of results that were returned.
@@ -405,7 +392,7 @@ static int ComparisionTagMethod(lua_State* L, const Value* arg1, const Value* ar
 
 }
 
-void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
+FORCE_INLINE void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
 {
     lua_Number a;
     if (Vm_GetNumber(arg, &a))
@@ -423,7 +410,7 @@ void Vm_UnaryMinus(lua_State* L, const Value* arg, Value* dst)
     }
 }
 
-int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2)
+FORCE_INLINE int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2)
 {
     if ((Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2)) || arg1->tag == arg2->tag)
     {
@@ -440,7 +427,7 @@ int Vm_Equal(lua_State* L, const Value* arg1, const Value* arg2)
     return 0;
 }
 
-int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
+FORCE_INLINE int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
 {
     if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
     {
@@ -462,7 +449,7 @@ int Vm_Less(lua_State* L, const Value* arg1, const Value* arg2)
     return 0;
 }
 
-int Vm_LessEqual(lua_State* L, const Value* arg1, const Value* arg2)
+FORCE_INLINE int Vm_LessEqual(lua_State* L, const Value* arg1, const Value* arg2)
 {
     if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
     {
@@ -902,7 +889,7 @@ Start:
         case Opcode_Move:
             {
                 int b = GET_B(inst);
-                stackBase[a] = L->stackBase[b];
+                stackBase[a] = stackBase[b];
             }
             break;
         case Opcode_LoadK:
@@ -962,7 +949,7 @@ Start:
                     int bx = GET_Bx(inst);
                     ASSERT(bx >= 0 && bx < prototype->numConstants);
                     const Value* key = &constant[bx];
-                    Value* dst = &L->stackBase[a];
+                    Value* dst = &stackBase[a];
                     Vm_GetGlobal(L, closure, key, dst);
                 )
             }
@@ -976,7 +963,7 @@ Start:
         case Opcode_GetUpVal:
             {
                 const Value* value = GetUpValue(lclosure, GET_B(inst));
-                SetValue(L, a, value);                    
+                stackBase[a] = *value;
             }
             break;
         case Opcode_GetTable:
@@ -985,7 +972,7 @@ Start:
                     int b = GET_B(inst);
                     const Value* table = &stackBase[b];
                     const Value* key   = RESOLVE_RK( GET_C(inst) );
-                    Vm_GetTable(L, table, key, &L->stackBase[a], false);
+                    Vm_GetTable(L, table, key, &stackBase[a], false);
                 )
             }
             break;
@@ -995,7 +982,7 @@ Start:
                     int b = GET_B(inst);
                     const Value* table = &stackBase[b];
                     const Value* key   = RESOLVE_RK( GET_C(inst) );
-                    Vm_GetTable(L, table, key, &L->stackBase[a], true);
+                    Vm_GetTable(L, table, key, &stackBase[a], true);
                 )
             }
             break;

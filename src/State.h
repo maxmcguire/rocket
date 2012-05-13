@@ -37,9 +37,9 @@ struct ErrorHandler
 struct CallFrame
 {
     Value*              function; 
-    Value*              stackBase;
-    Value*              stackTop;
     const Instruction*  ip;
+    Value*              stackTop;
+    Value*              stackBase;
     int                 numResults; // Expected number of results from the call.
 };
 

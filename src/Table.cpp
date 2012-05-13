@@ -280,6 +280,10 @@ static TableNode* Table_GetNodeIncludeDead(Table* table, const Value* key)
 
 }
 
+/**
+ * Returns the node in the table that has the specified key, or NULL if the key
+ * does not appear in the table.
+ */
 static TableNode* Table_GetNode(Table* table, const Value* key)
 {
 
@@ -300,7 +304,12 @@ static TableNode* Table_GetNode(Table* table, const Value* key)
 
 }
 
-static TableNode* Table_GetNode(Table* table, const Value* key, TableNode** prevNode)
+/**
+ * Returns the node in the table that has the specified key, or NULL if the key
+ * does not appear in the table. The node before that node in the linked chain
+ * is stored in prevNode.
+ */
+static TableNode* Table_GetNode(Table* table, const Value* key, TableNode*& prevNode)
 {
 
     if (table->numNodes == 0)
@@ -318,7 +327,7 @@ static TableNode* Table_GetNode(Table* table, const Value* key, TableNode** prev
         node = node->next;
     }
 
-    *prevNode = prev;
+    prevNode = prev;
     return node;
 
 }
@@ -327,7 +336,7 @@ static bool Table_Remove(Table* table, const Value* key)
 {
 
     TableNode* prev = NULL;
-    TableNode* node = Table_GetNode(table, key, &prev);
+    TableNode* node = Table_GetNode(table, key, prev);
 
     if (node == NULL)
     {
