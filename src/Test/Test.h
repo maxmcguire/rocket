@@ -24,19 +24,27 @@ public:
 };
 
 #define _TEST_BODY(name)                                \
+    {                                                   \
+    public:                                             \
+        void Run();                                     \
+    };                                                  \
+    class _Test_##name : public Test {                  \
     public:                                             \
         _Test_##name() : Test(#name) { }                \
-        virtual void Run();                             \
+        virtual void Run() {                            \
+            _Test_impl_##name test;                     \
+            test.Run();                                 \
+        }                                               \
     } _Test_instance_##name;                            \
     static TestRegisterer _Test_register_##name(&_Test_instance_##name); \
-    void _Test_##name::Run()
+    void _Test_impl_##name::Run()
 
 #define TEST(name)                                      \
-    class _Test_##name : public Test {                  \
+    class _Test_impl_##name                             \
     _TEST_BODY(name)
 
 #define TEST_FIXTURE(name, fixture)                     \
-    class _Test_##name : public Test, public fixture {  \
+    class _Test_impl_##name : public fixture            \
     _TEST_BODY(name)
 
 /**
