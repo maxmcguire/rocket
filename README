@@ -36,6 +36,5 @@ TODO
 - Constant folding for logic operations and conditionals
 - Debug functions
 - Array optimization for tables
-- Non-recursive inner loop for the VM
-- Proper tail recursive
+- Proper tail recursion
 - Garbage collection
