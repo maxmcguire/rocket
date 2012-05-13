@@ -16,12 +16,17 @@ extern "C"
 #include "State.h"
 
 /**
- * Type of a C function that can be run in a protected environment. by the
- * ProtectedCall function.
+ * Type of a C function that can be run in a protected environment by the
+ * Vm_RunProtected function.
  */
 typedef void (*ProtectedFunction)(lua_State *L, void* userData);
 
-int Vm_ProtectedCall(lua_State* L, ProtectedFunction function, Value* restoreTop, void* userData, Value* errorHandler);
+/**
+ * Calls the specified function with the userData value as a parameter in a
+ * protected environment.
+ */
+int Vm_RunProtected(lua_State* L, ProtectedFunction function, Value* stackTop, void* userData, Value* errorHandler);
+
 int Vm_ProtectedCall(lua_State* L, Value* value, int numArgs, int numResults, Value* errorHandler);
 
 /**

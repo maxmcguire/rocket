@@ -87,32 +87,32 @@ STATIC_ASSERT( offsetof(Value, tag) == 4, TagMustBeMSW );
 
 /** Returns true if the value represents a number type. This function must be
  used in lieu of directly comparing the tag to the TAG_NUMBER value */
-inline bool Value_GetIsNumber(const Value* value)
+FORCE_INLINE bool Value_GetIsNumber(const Value* value)
     { return value->tag <= 0xfff80000; }
 
 /** Returns true if the value is a number representing the value NaN. */
-inline bool Value_GetIsNaN(const Value* value)
+FORCE_INLINE bool Value_GetIsNaN(const Value* value)
     { return value->tag == 0xfff80000; }
 
-inline bool Value_GetIsTable(const Value* value)
+FORCE_INLINE bool Value_GetIsTable(const Value* value)
     { return value->tag == Tag_Table; }
 
-inline bool Value_GetIsNil(const Value* value)
+FORCE_INLINE bool Value_GetIsNil(const Value* value)
     { return value->tag == Tag_Nil; }
 
-inline bool Value_GetIsString(const Value* value)
+FORCE_INLINE bool Value_GetIsString(const Value* value)
     { return value->tag == Tag_String; }
 
-inline bool Value_GetIsBoolean(const Value* value)
+FORCE_INLINE bool Value_GetIsBoolean(const Value* value)
     { return value->tag == Tag_Boolean; }
 
-inline bool Value_GetIsFunction(const Value* value)
+FORCE_INLINE bool Value_GetIsFunction(const Value* value)
     { return value->tag == Tag_Function; }
 
-inline bool Value_GetIsUserData(const Value* value)
+FORCE_INLINE bool Value_GetIsUserData(const Value* value)
     { return value->tag == Tag_Userdata; }
 
-inline bool Value_GetIsObject(const Value* value)
+FORCE_INLINE bool Value_GetIsObject(const Value* value)
     { return Value_GetIsString(value) || Value_GetIsTable(value) || Value_GetIsFunction(value); }
 
 /** Returns the Lua type (LUA_NIL, LUA_TNUMBER, etc.) for the value */
@@ -168,7 +168,7 @@ inline int Value_Equal(const Value* arg1, const Value* arg2)
 {
     if (Value_GetIsNumber(arg1) && Value_GetIsNumber(arg2))
     {
-        return arg1->number == arg2->number;
+        return luai_numeq(arg1->number, arg2->number);
     }
     else if (arg1->tag != arg2->tag)
     {

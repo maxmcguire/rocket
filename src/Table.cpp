@@ -70,7 +70,7 @@ static inline unsigned int Hash(void* key)
     return a;
 }
 
-static inline unsigned int Hash(const Value* key)
+FORCE_INLINE static unsigned int Hash(const Value* key)
 {
     if (Value_GetIsNumber(key))
     {
@@ -87,7 +87,7 @@ static inline unsigned int Hash(const Value* key)
     return Hash(key->object);
 }
 
-static inline bool KeysEqual(const Value* key1, const Value* key2)
+FORCE_INLINE static bool KeysEqual(const Value* key1, const Value* key2)
 {
     if (key1->tag != key2->tag)
     {
@@ -96,12 +96,12 @@ static inline bool KeysEqual(const Value* key1, const Value* key2)
     return key1->object == key2->object;
 }
 
-static inline size_t Table_GetMainIndex(const Table* table, const Value* key)
+FORCE_INLINE static size_t Table_GetMainIndex(const Table* table, const Value* key)
 {
     return Hash(key) & (table->numNodes - 1);
 }
 
-static inline bool Table_NodeIsEmpty(const TableNode* node)
+FORCE_INLINE static bool Table_NodeIsEmpty(const TableNode* node)
 {
     return node->dead;
 }
@@ -280,7 +280,36 @@ static TableNode* Table_GetNodeIncludeDead(Table* table, const Value* key)
 
 }
 
-static TableNode* Table_GetNode(Table* table, const Value* key, TableNode** prevNode = NULL)
+/**
+ * Returns the node in the table that has the specified key, or NULL if the key
+ * does not appear in the table.
+ */
+static TableNode* Table_GetNode(Table* table, const Value* key)
+{
+
+    if (table->numNodes == 0)
+    {
+        return NULL;
+    }
+  
+    size_t index = Table_GetMainIndex(table, key);
+    TableNode* node = &table->nodes[index];
+
+    while ( node != NULL && (node->dead || !KeysEqual(&node->key, key)) )
+    {
+        node = node->next;
+    }
+
+    return node;
+
+}
+
+/**
+ * Returns the node in the table that has the specified key, or NULL if the key
+ * does not appear in the table. The node before that node in the linked chain
+ * is stored in prevNode.
+ */
+static TableNode* Table_GetNode(Table* table, const Value* key, TableNode*& prevNode)
 {
 
     if (table->numNodes == 0)
@@ -298,11 +327,7 @@ static TableNode* Table_GetNode(Table* table, const Value* key, TableNode** prev
         node = node->next;
     }
 
-    if (prevNode)
-    {
-        *prevNode = prev;
-    }
-
+    prevNode = prev;
     return node;
 
 }
@@ -311,7 +336,7 @@ static bool Table_Remove(Table* table, const Value* key)
 {
 
     TableNode* prev = NULL;
-    TableNode* node = Table_GetNode(table, key, &prev);
+    TableNode* node = Table_GetNode(table, key, prev);
 
     if (node == NULL)
     {
@@ -464,8 +489,6 @@ Start:
             }
         }
         freeNode = Table_UnlinkDeadNode(table, freeNode);
-        //ASSERT(freeNode != node);
-
 
         if (freeNode == node)
         {

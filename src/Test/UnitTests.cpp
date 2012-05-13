@@ -2562,6 +2562,25 @@ TEST_FIXTURE(ShadowLocalUpValue, LuaFixture)
 
 }
 
+TEST_FIXTURE(CloseUpValueOnReturn, LuaFixture)
+{
+
+    const char* code =
+        "function f()\n"
+	    "  local x = 'one'\n"
+	    "  local g = function() return x end\n"
+	    "  return g, 'two'\n" // second value will overwrite over x
+        "end\n"
+        "local g = f()\n"
+        "n = g()";
+
+    CHECK( DoString(L, code ) );
+
+    lua_getglobal(L, "n");
+    CHECK_EQ( lua_tostring(L, -1), "one" );
+
+}
+
 TEST_FIXTURE(EmptyStatement, LuaFixture)
 {
 
