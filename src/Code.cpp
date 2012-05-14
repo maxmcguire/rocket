@@ -452,7 +452,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
     }
     while (hasSep || !Parser_Accept(parser, '}'));
 
-    Instruction inst = Parser_EncodeABC(Opcode_NewTable, dst->index, listSize, hashSize);
+    Instruction inst = Opcode_EncodeABC(Opcode_NewTable, dst->index, listSize, hashSize);
     Parser_UpdateInstruction( parser, start, inst );
 
     if (numFields > 0 || varArg)
@@ -1552,7 +1552,7 @@ static bool Parser_TryFor(Parser* parser)
         // Close the loop and update the forprep instruction with the correct
         // skip amount.
         int skipAmount = static_cast<int>(Parser_GetInstructionCount(parser) - loop - 1);
-        Parser_UpdateInstruction( parser, loop, Parser_EncodeAsBx(Opcode_ForPrep, internalIndexReg, skipAmount) );
+        Parser_UpdateInstruction( parser, loop, Opcode_EncodeAsBx(Opcode_ForPrep, internalIndexReg, skipAmount) );
         Parser_EmitAsBx(parser, Opcode_ForLoop, internalIndexReg, -skipAmount - 1);
     
     }
@@ -1586,7 +1586,7 @@ static bool Parser_TryFor(Parser* parser)
         // Close the loop and update the forprep instruction with the correct
         // skip amount.
         int skipAmount = static_cast<int>(loop - Parser_GetInstructionCount(parser) - 1);
-        Parser_UpdateInstruction( parser, loop, Parser_EncodeAsBx(Opcode_Jmp, 0, -skipAmount - 2) );
+        Parser_UpdateInstruction( parser, loop, Opcode_EncodeAsBx(Opcode_Jmp, 0, -skipAmount - 2) );
         Parser_EmitABC(parser, Opcode_TForLoop, internalIndexReg, 0, numArgs);
         Parser_EmitAsBx(parser, Opcode_Jmp, 0, skipAmount);
 

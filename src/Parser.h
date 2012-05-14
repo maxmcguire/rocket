@@ -344,16 +344,6 @@ void Parser_EmitAsBx(Parser* parser, Opcode opcode, int a, int sbx);
 int Parser_EncodeRK(Parser* parser, Expression* location);
 
 /**
- * Encodes a 2 argument instruction with args A sBx.
- */
-Instruction Parser_EncodeAsBx(Opcode opcode, int a, int sbx);
-
-/**
- * Encodes a 3 argument instruction with args A B C.
- */
-Instruction Parser_EncodeABC(Opcode opcode, int a, int b, int c);
-
-/**
  * Begin/EndSkip are used to delininate a set of instructions which will
  * be skipped over such as:
  *     jmp  end

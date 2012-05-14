@@ -20,6 +20,8 @@
 #define GET_sBx(inst)       ( GET_Bx(inst) - 131071 )
 #define GET_C(inst)         static_cast<int>( ((inst) >> 14) & 0x1FF )
 
+typedef int Instruction;
+
 enum Opcode
 {
     Opcode_Move         = 0,
@@ -64,5 +66,15 @@ enum Opcode
 };
 
 const char* Opcode_GetAsText(Opcode opcode);
+
+/**
+ * Encodes a 2 argument instruction with args A sBx.
+ */
+Instruction Opcode_EncodeAsBx(Opcode opcode, int a, int sbx);
+
+/**
+ * Encodes a 3 argument instruction with args A B C.
+ */
+Instruction Opcode_EncodeABC(Opcode opcode, int a, int b, int c);
 
 #endif

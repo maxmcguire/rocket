@@ -15,6 +15,7 @@ extern "C"
 
 #include "String.h"
 #include "Value.h"
+#include "Opcode.h"
 
 #include <setjmp.h>
 
@@ -26,8 +27,6 @@ struct UserData;
 struct UpValue;
 
 #define LUAI_MAXCCALLS      200
-
-typedef int Instruction;
 
 struct ErrorHandler
 {

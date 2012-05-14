@@ -53,3 +53,13 @@ const char* Opcode_GetAsText(Opcode opcode)
     default:                    return "<unknown>";
     }
 }
+
+Instruction Opcode_EncodeAsBx(Opcode opcode, int a, int sbx)
+{
+    return opcode | (a << 6) | ((sbx + 131071) << 14);
+}
+
+Instruction Opcode_EncodeABC(Opcode opcode, int a, int b, int c)
+{
+    return opcode | (a << 6) | (b << 23) | (c << 14);
+}
