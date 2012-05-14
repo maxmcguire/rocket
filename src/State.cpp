@@ -111,9 +111,11 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
 
     StringPool_Initialize(L, &L->stringPool);
 
+    SetNil(&L->dummyObject);
+
     // Always include one call frame which will represent calling into the Lua
     // API from C.
-    L->callStackTop->function   = NULL;
+    L->callStackTop->function   = &L->dummyObject;
     L->callStackTop->ip         = NULL;
     L->callStackTop->stackBase  = L->stackTop;
     L->callStackTop->stackTop   = L->stackTop;
@@ -122,8 +124,6 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     memset(L->tagMethodName, 0, sizeof(L->tagMethodName));
 
     Gc_Initialize(&L->gc);
-
-    SetNil(&L->dummyObject);
 
     SetValue( &L->globals, Table_Create(L) );
     SetValue( &L->registry, Table_Create(L) );
