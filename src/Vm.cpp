@@ -869,13 +869,12 @@ Start:
 
     Prototype* prototype = lclosure->prototype;
 
-    const Instruction* ip  = frame->ip;
-    const Instruction* end = prototype->code + prototype->codeSize;
+    register const Instruction* ip  = frame->ip;
 
     register Value* stackBase = L->stackBase;
     register Value* constant  = prototype->constant;
 
-    while (ip < end)
+    while (1)
     {
 
         Instruction inst = *ip;
