@@ -51,6 +51,11 @@ struct Gc
 void Gc_Initialize(Gc* gc);
 
 /**
+ * Frees all of the objects in the garbage collector.
+ */
+void Gc_Shutdown(lua_State* L, Gc* gc);
+
+/**
  * Runs a full garbage collection cycle.
  */
 void Gc_Collect(lua_State* L, Gc* gc);

@@ -12,6 +12,7 @@ extern "C"
 
 #include "Global.h"
 #include "UserData.h"
+#include "State.h"
 
 #include <stdlib.h>
 
@@ -25,4 +26,9 @@ UserData* UserData_Create(lua_State* L, size_t size, Table* env)
     userData->env       = env;
 
     return userData;
+}
+
+void UserData_Destroy(lua_State* L, UserData* userData)
+{
+    Free(L, userData, sizeof(UserData) + userData->size);
 }

@@ -11,19 +11,17 @@
 #include "Table.h"
 #include "UserData.h"
 #include "Parser.h"
+#include "UpValue.h"
 
 #define GCSTEPSIZE	1024u
-
-//#define GCDISABLE
 
 /**
  * Checks if the garbage collector needs to be run.
  */
 static void Gc_Check(lua_State* L, Gc* gc)
 {
-#ifdef GCDISABLE
+    // Disabled.
     return;
-#endif
     if (L->totalBytes > gc->threshold)
     {
         if (gc->state == Gc_State_Paused)
@@ -34,12 +32,59 @@ static void Gc_Check(lua_State* L, Gc* gc)
     }
 }
 
+/**
+ * Reclaims the memory for an object.
+ */
+static void Gc_FreeObject(lua_State* L, Gc_Object* object)
+{
+    switch (object->type)
+    {
+    case LUA_TTABLE:
+        Table_Destroy( L, static_cast<Table*>(object) );
+        break;
+    case LUA_TFUNCTION:
+        Closure_Destroy(L, static_cast<Closure*>(object) );
+        break;
+    case LUA_TPROTOTYPE:
+        Prototype_Destroy(L, static_cast<Prototype*>(object) );
+        break;
+    case LUA_TFUNCTIONP:
+        Function_Destroy(L, static_cast<Function*>(object) );
+        break;
+    case LUA_TUPVALUE:
+        UpValue_Destroy(L, static_cast<UpValue*>(object));
+        break;
+    case LUA_TUSERDATA:
+        UserData_Destroy(L, static_cast<UserData*>(object));
+        break;
+    default:
+        ASSERT(0);
+    }
+}
+
 void Gc_Initialize(Gc* gc)
 {
     gc->first       = NULL;
     gc->firstGrey   = NULL;
     gc->state       = Gc_State_Paused;
     gc->threshold   = GCSTEPSIZE;
+}
+
+void Gc_Shutdown(lua_State* L, Gc* gc)
+{
+
+    // Free all of the objects.
+    Gc_Object* object =  gc->first;
+    while (object != NULL)
+    {
+        Gc_Object* nextObject = object->next;
+        Gc_FreeObject(L, object);
+        object = nextObject;
+    }
+
+    gc->first = NULL;
+    gc->firstGrey = NULL;
+
 }
 
 void* Gc_AllocateObject(lua_State* L, int type, size_t size, bool link)
@@ -238,7 +283,10 @@ static bool Gc_Propagate(Gc* gc)
         Prototype** endChild = child + prototype->numPrototypes;
         while (child < endChild)
         {
-            Gc_MarkObject(gc, *child);
+            if (*child != NULL)
+            {
+                Gc_MarkObject(gc, *child);
+            }
             ++child;
         }
 
@@ -256,7 +304,10 @@ static bool Gc_Propagate(Gc* gc)
         String** endUpValue = upValue + prototype->numUpValues;
         while (upValue < endUpValue)
         {
-            Gc_MarkObject(gc, *upValue);
+            if (*upValue != NULL)
+            {
+                Gc_MarkObject(gc, *upValue);
+            }
             ++upValue;
         }
 
@@ -344,20 +395,7 @@ static void Gc_Sweep(lua_State* L, Gc* gc)
             }
 
             Gc_Object* nextObject = object->next;
-
-            if (object->type == LUA_TTABLE)
-            {
-                Table_Destroy( L, static_cast<Table*>(object) );
-            }
-            else if (object->type == LUA_TFUNCTION)
-            {
-                Closure_Destroy(L, static_cast<Closure*>(object) );
-            }
-            else if (object->type == LUA_TFUNCTIONP)
-            {
-                Function_Destroy(L, static_cast<Function*>(object) );
-            }
-
+            Gc_FreeObject(L, object);
             object = nextObject;
 
         }
@@ -441,11 +479,7 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
 void Gc_Collect(lua_State* L, Gc* gc)
 {
-
-#ifdef GCDISABLE
-   return;
-#endif
-
+    return;
     // Finish up any propagation stage.
     while (gc->state != Gc_State_Paused)
     {

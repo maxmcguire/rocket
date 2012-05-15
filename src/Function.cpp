@@ -64,6 +64,17 @@ void Prototype_GetName(Prototype* prototype, char *out, size_t bufflen)
     }
 }
 
+static size_t Prototype_GetSize(Prototype* prototype)
+{
+    size_t size = sizeof(Prototype);
+    size += prototype->codeSize      * sizeof(Instruction);
+    size += prototype->numConstants  * sizeof(Value);
+    size += prototype->numPrototypes * sizeof(Prototype*);
+    size += prototype->numUpValues   * sizeof(String*);  
+    size += prototype->codeSize      * sizeof(int);
+    return size;
+}
+
 Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int numPrototypes, int numUpValues)
 {
 
@@ -80,6 +91,13 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
     {
         return NULL;
     }
+    
+    prototype->varArg           = 0;
+    prototype->numParams        = 0;
+    prototype->maxStackSize     = 0;
+    prototype->lineDefined      = 0;
+    prototype->lastLineDefined  = 0;
+    prototype->source           = NULL;
 
     // Code is stored immediately after the prototype structure in memory.
     prototype->code      = reinterpret_cast<Instruction*>(prototype + 1);
@@ -96,6 +114,7 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
     // Prototypes are stored after the constants.
     prototype->numPrototypes = numPrototypes;
     prototype->prototype     = reinterpret_cast<Prototype**>(prototype->constant + numConstants);
+    memset(prototype->prototype, 0, sizeof(Prototype*) * numPrototypes);
 
     // Up values are is stored after the prototypes.
     prototype->numUpValues   = numUpValues;
@@ -105,6 +124,8 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
     // Debug info is stored after the up values.
     prototype->sourceLine = reinterpret_cast<int*>(prototype->upValue + numUpValues);
     memset(prototype->sourceLine, 0, sizeof(int) * codeSize);
+
+    ASSERT( size == Prototype_GetSize(prototype) );
 
     return prototype;
 
@@ -294,16 +315,6 @@ Prototype* Prototype_Create(lua_State* L, const char* data, size_t length, const
     return prototype;
 }
 
-static size_t Prototype_GetSize(Prototype* prototype)
-{
-    size_t size = sizeof(Prototype);
-    size += prototype->codeSize      * sizeof(Instruction);
-    size += prototype->numConstants  * sizeof(Value);
-    size += prototype->numPrototypes * sizeof(Prototype*);
-    size += prototype->codeSize      * sizeof(int);
-    return size;
-}
-
 void Prototype_Destroy(lua_State* L, Prototype* prototype)
 {
     size_t size = Prototype_GetSize(prototype);
@@ -371,74 +382,3 @@ void Closure_Destroy(lua_State* L, Closure* closure)
     Free(L, closure, size);
 }
 
-UpValue* NewUpValue(lua_State* L)
-{
-    UpValue* upValue = static_cast<UpValue*>( Gc_AllocateObject( L, LUA_TUPVALUE, sizeof(UpValue) ) );
-    upValue->value = &upValue->storage;
-    SetNil(upValue->value);
-    return upValue;
-}
-
-UpValue* NewUpValue(lua_State* L, Value* value)
-{
-
-    // TODO: Insert in reverse sorted order for efficient closing.
-    
-    // Check to see if we already have an open up value for this address.
-    UpValue* upValue = L->openUpValue;
-    while (upValue != NULL && upValue->value != value)
-    {
-        upValue = upValue->nextUpValue;
-    }
-
-    // Create a new up value if necessary.
-    if (upValue == NULL)
-    {
-        upValue = static_cast<UpValue*>( Gc_AllocateObject( L, LUA_TUPVALUE, sizeof(UpValue) ) );
-        upValue->value = value;
-        upValue->nextUpValue = L->openUpValue;
-        upValue->prevUpValue = NULL;
-        if (upValue->nextUpValue != NULL)
-        {
-            upValue->nextUpValue->prevUpValue = upValue;
-        }
-        L->openUpValue = upValue;
-    }
-
-    return upValue;
-
-}
-
-void CloseUpValue(lua_State* L, UpValue* upValue)
-{
-    // Remove from the global list.
-    if (upValue->nextUpValue != NULL)
-    {
-        upValue->nextUpValue->prevUpValue = upValue->prevUpValue;
-    }
-    if (upValue->prevUpValue != NULL)
-    {
-        upValue->prevUpValue->nextUpValue = upValue->nextUpValue;
-    }
-    else
-    {
-        L->openUpValue = upValue->nextUpValue;
-    }
-    // Copy over the value so we have our own storage.
-    upValue->storage = *upValue->value;
-    upValue->value   = &upValue->storage;
-}
-
-void CloseUpValues(lua_State* L, Value* value)
-{
-    UpValue* upValue = L->openUpValue;
-    while (upValue != NULL)
-    {
-        UpValue* nextUpValue = upValue->nextUpValue;
-        if (upValue->value >= value)
-        {
-            CloseUpValue(L, upValue);
-        }
-        upValue = nextUpValue;
-    }
-}

@@ -62,7 +62,9 @@ Function* Function_Create(lua_State* L)
 
 void Function_Destroy(lua_State* L, Function* function)
 {
-    Free(L, function->code, function->maxCodeSize * sizeof(Instruction));
+    FreeArray(L, function->function, function->maxFunctions);
+    FreeArray(L, function->code, function->maxCodeSize);
+    FreeArray(L, function->sourceLine, function->maxSourceLines);
     Free(L, function, sizeof(Function));
 }
 
@@ -1058,6 +1060,8 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
         function->numFunctions,
         function->numUpValues);
 
+    PushPrototype(L, prototype);
+
     // Store the up values.
     memcpy(prototype->upValue, function->upValue, sizeof(String*) * function->numUpValues);
 
@@ -1108,7 +1112,10 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    //PrintFunction(prototype);
+    PrintFunction(prototype);
+
+    ASSERT( (L->stackTop - 1)->object == prototype );
+    Pop(L, 1);
 
     return prototype;
 

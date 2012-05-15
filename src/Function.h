@@ -36,20 +36,6 @@ struct Prototype : public Gc_Object
 
 };
 
-struct UpValue : public Gc_Object
-{
-    Value*         value;          // Value in the stack.
-    union
-    {
-        Value      storage;        // Storage for a closed up value.
-        struct
-        {
-        UpValue*    nextUpValue;    // Next open up value in the global list.
-        UpValue*    prevUpValue;    // Previous open up value in the global list.
-        };
-    };
-};
-
 /** C function closure */
 struct CClosure
 {
@@ -95,33 +81,12 @@ Prototype* Prototype_Create(lua_State* L, const char* data, size_t length, const
  */
 void Prototype_Destroy(lua_State* L, Prototype* prototype);
 
+// Copies the short name of the source of a function prototype into the buffer.
+void Prototype_GetName(Prototype* prototype, char* buffer, size_t bufferLength);
+
 extern "C" Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env);
 Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues, Table* env);
 
 void Closure_Destroy(lua_State* L, Closure* closure);
-
-/**
- * Creates a new closed up value with the value set to nil.
- */
-UpValue* NewUpValue(lua_State* L);
-
-// Creates a new open up value, or returns an existing one matching the
-// address of the value.
-UpValue* NewUpValue(lua_State* L, Value* value);
-
-// "Closes" the up value so that it has its own storage.
-void CloseUpValue(lua_State* L, UpValue* upValue);
-
-// Closes all up values that refer to values >= value.
-void CloseUpValues(lua_State* L, Value* value);
-
-// Copies the short name of the source of a function prototype into the buffer.
-void Prototype_GetName(Prototype* prototype, char* buffer, size_t bufferLength);
-
-inline const Value* GetUpValue(LClosure* closure, int index)
-    { return closure->upValue[index]->value; }
-
-inline void SetUpValue(LClosure* closure, int index, const Value* value)
-    { *closure->upValue[index]->value = *value; }
 
 #endif

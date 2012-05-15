@@ -15,11 +15,6 @@
 #include <string.h>
 #include <stdio.h>
 
-int AlignOffset(void* p, int align)
-{
-    return static_cast<int>((align - reinterpret_cast<ptrdiff_t>(p) % align) % align);
-}
-
 void* Allocate(lua_State* L, size_t size)
 {
     return Reallocate(L, NULL, 0, size);
@@ -184,6 +179,8 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
 
 void State_Destroy(lua_State* L)
 {
+    StringPool_Shutdown(L, &L->stringPool);
+    Gc_Shutdown(L, &L->gc);
     L->alloc( L->userdata, L, 0, 0 );
 }
 

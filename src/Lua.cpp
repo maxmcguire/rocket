@@ -18,6 +18,7 @@ extern "C"
 #include "Vm.h"
 #include "Input.h"
 #include "Code.h"
+#include "UpValue.h"
 
 #include <string.h>
 
@@ -328,7 +329,7 @@ static void Parse(lua_State* L, void* userData)
     // it may. These up values will cease to function once the chunk is loaded.
     for (int i = 0; i < closure->lclosure.numUpValues; ++i)
     {
-        closure->lclosure.upValue[i] = NewUpValue(L);
+        closure->lclosure.upValue[i] = UpValue_Create(L);
     }
 
     // Remove the prototype from the stack.
@@ -337,7 +338,7 @@ static void Parse(lua_State* L, void* userData)
 
 }
 
-LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char* name)
+int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char* name)
 {
 
     ParseArgs args;
@@ -355,7 +356,7 @@ LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char
 
 }
 
-LUA_API int lua_dump(lua_State* L, lua_Writer writer, void* data)
+int lua_dump(lua_State* L, lua_Writer writer, void* data)
 {
     const Value* value = GetValueForIndex(L, -1);
     if (!Value_GetIsClosure(value) || value->closure->c)
@@ -365,19 +366,19 @@ LUA_API int lua_dump(lua_State* L, lua_Writer writer, void* data)
     return DumpBinary( L, value->closure->lclosure.prototype, writer, data );
 }
 
-LUA_API int lua_error(lua_State* L)
+int lua_error(lua_State* L)
 {
     State_Error(L);
     return 0;
 }
 
-LUA_API void lua_call(lua_State* L, int nargs, int numResults)
+void lua_call(lua_State* L, int nargs, int numResults)
 {
     Value* value = L->stackTop - (nargs + 1);
     Vm_Call(L, value, nargs, numResults);
 }
 
-LUA_API int lua_pcall(lua_State* L, int numArgs, int numResults, int errFunc)
+int lua_pcall(lua_State* L, int numArgs, int numResults, int errFunc)
 {
     Value* value = L->stackTop - (numArgs + 1);
     Value* errHandler = NULL;
@@ -388,28 +389,28 @@ LUA_API int lua_pcall(lua_State* L, int numArgs, int numResults, int errFunc)
     return Vm_ProtectedCall(L, value, numArgs, numResults, errHandler);
 }
 
-LUA_API void lua_pushnil(lua_State* L)
+void lua_pushnil(lua_State* L)
 {
     PushNil(L);
 }
 
-LUA_API void lua_pushnumber(lua_State *L, lua_Number n)
+void lua_pushnumber(lua_State *L, lua_Number n)
 {
     PushNumber(L, n);
 }
 
-LUA_API void lua_pushinteger (lua_State *L, lua_Integer n)
+void lua_pushinteger (lua_State *L, lua_Integer n)
 {
     PushNumber( L, static_cast<lua_Number>(n) );
 }
 
-LUA_API void lua_pushlstring(lua_State *L, const char* data, size_t length)
+void lua_pushlstring(lua_State *L, const char* data, size_t length)
 {
     String* string = String_Create(L, data, length);
     PushString(L, string);
 }
 
-LUA_API void lua_pushstring(lua_State* L, const char* data)
+void lua_pushstring(lua_State* L, const char* data)
 {
     if (data == NULL)
     {
@@ -419,7 +420,7 @@ LUA_API void lua_pushstring(lua_State* L, const char* data)
     lua_pushlstring(L, data, strlen(data)); 
 }
 
-LUA_API const char* lua_pushfstring(lua_State* L, const char* fmt, ...)
+const char* lua_pushfstring(lua_State* L, const char* fmt, ...)
 {
     va_list argp;
     va_start(argp, fmt);
@@ -428,13 +429,13 @@ LUA_API const char* lua_pushfstring(lua_State* L, const char* fmt, ...)
     return result;
 }
 
-LUA_API const char* lua_pushvfstring(lua_State *L, const char *fmt, va_list argp)
+const char* lua_pushvfstring(lua_State *L, const char *fmt, va_list argp)
 {
     PushVFString(L, fmt, argp);
     return GetString(L->stackTop - 1);
 }
 
-LUA_API void lua_pushcclosure(lua_State *L, lua_CFunction f, int n)
+void lua_pushcclosure(lua_State *L, lua_CFunction f, int n)
 {
     Table* env = GetCurrentEnvironment(L);
     Closure* closure = Closure_Create(L, f, L->stackTop - n, n, env);
@@ -442,29 +443,29 @@ LUA_API void lua_pushcclosure(lua_State *L, lua_CFunction f, int n)
     PushClosure(L, closure);
 }
 
-LUA_API void lua_pushboolean(lua_State* L, int b)
+void lua_pushboolean(lua_State* L, int b)
 {
     PushBoolean(L, b != 0);
 }
 
-LUA_API void lua_pushlightuserdata (lua_State *L, void *p)
+void lua_pushlightuserdata (lua_State *L, void *p)
 {
     PushLightUserdata(L, p);
 }
 
-LUA_API void lua_pushtypename(lua_State* L, int type)
+void lua_pushtypename(lua_State* L, int type)
 {
     String* typeName = State_TypeName(L, type);
     PushString(L, typeName);
 }
 
-LUA_API void lua_pushvalue(lua_State* L, int index)
+void lua_pushvalue(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
     PushValue(L, value);
 }
 
-LUA_API void lua_remove(lua_State *L, int index)
+void lua_remove(lua_State *L, int index)
 {
     Value* p = GetValueForIndex(L, index);
     State_Remove(L, p);
@@ -520,7 +521,7 @@ int lua_isuserdata(lua_State* L, int index)
     return lua_type(L, index) == LUA_TUSERDATA;
 }
 
-LUA_API lua_Number lua_tonumber(lua_State *L, int index)
+lua_Number lua_tonumber(lua_State *L, int index)
 {
     lua_Number result;
     const Value* value = GetValueForIndex(L, index);
@@ -531,7 +532,7 @@ LUA_API lua_Number lua_tonumber(lua_State *L, int index)
     return 0.0;
 }
 
-LUA_API lua_Integer lua_tointeger(lua_State *L, int index)
+lua_Integer lua_tointeger(lua_State *L, int index)
 {
     lua_Number  d = lua_tonumber(L, index);
     lua_Integer i;
@@ -539,13 +540,13 @@ LUA_API lua_Integer lua_tointeger(lua_State *L, int index)
     return i;
 }
 
-LUA_API int lua_toboolean(lua_State* L, int index)
+int lua_toboolean(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
     return Vm_GetBoolean(value);
 }
 
-LUA_API const char* lua_tolstring(lua_State *L, int index, size_t* length )
+const char* lua_tolstring(lua_State *L, int index, size_t* length )
 {
     Value* value = GetValueForIndex(L, index);
     if (ToString(L, value))
@@ -560,7 +561,7 @@ LUA_API const char* lua_tolstring(lua_State *L, int index, size_t* length )
     return NULL;
 }
 
-LUA_API lua_CFunction lua_tocfunction(lua_State* L, int index)
+lua_CFunction lua_tocfunction(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
     if (Value_GetIsClosure(value))
@@ -574,7 +575,7 @@ LUA_API lua_CFunction lua_tocfunction(lua_State* L, int index)
     return NULL;
 }
 
-LUA_API const void* lua_topointer(lua_State* L, int index)
+const void* lua_topointer(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
     switch (value->tag)
@@ -591,7 +592,7 @@ LUA_API const void* lua_topointer(lua_State* L, int index)
     return NULL;
 }
 
-LUA_API void* lua_touserdata(lua_State* L, int index)
+void* lua_touserdata(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
     if (value->tag == Tag_LightUserdata)
@@ -605,7 +606,7 @@ LUA_API void* lua_touserdata(lua_State* L, int index)
     return NULL;
 }
 
-LUA_API size_t lua_objlen(lua_State* L, int index)
+size_t lua_objlen(lua_State* L, int index)
 {
     Value* value = GetValueForIndex(L, index);
     if (Value_GetIsTable(value))
@@ -623,7 +624,7 @@ LUA_API size_t lua_objlen(lua_State* L, int index)
     return 0;
 }
 
-LUA_API void lua_rawget(lua_State* L, int index)
+void lua_rawget(lua_State* L, int index)
 {
 
     Value* table = GetValueForIndex( L, index );
@@ -643,7 +644,7 @@ LUA_API void lua_rawget(lua_State* L, int index)
 
 }
 
-LUA_API void lua_rawgeti(lua_State *L, int index, int n)
+void lua_rawgeti(lua_State *L, int index, int n)
 {
 
     Value* table = GetValueForIndex(L, index);
@@ -661,7 +662,7 @@ LUA_API void lua_rawgeti(lua_State *L, int index, int n)
 
 }
 
-LUA_API void lua_rawset(lua_State *L, int index)
+void lua_rawset(lua_State *L, int index)
 {
 
     Value* key   = GetValueForIndex(L, -2);
@@ -674,7 +675,7 @@ LUA_API void lua_rawset(lua_State *L, int index)
 
 }
 
-LUA_API void lua_rawseti(lua_State* L, int index, int n)
+void lua_rawseti(lua_State* L, int index, int n)
 {
 
     Value* table = GetValueForIndex(L, index);
@@ -686,7 +687,7 @@ LUA_API void lua_rawseti(lua_State* L, int index, int n)
 
 }
 
-LUA_API void lua_settable(lua_State* L, int index)
+void lua_settable(lua_State* L, int index)
 {
     Value* key   = GetValueForIndex(L, -2);
     Value* value = GetValueForIndex(L, -1);
@@ -695,7 +696,7 @@ LUA_API void lua_settable(lua_State* L, int index)
     Pop(L, 2);
 }
 
-LUA_API int lua_type(lua_State* L, int index)
+int lua_type(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
     if (value == &L->dummyObject)
@@ -705,7 +706,7 @@ LUA_API int lua_type(lua_State* L, int index)
     return Value_GetType(value);
 }
 
-LUA_API const char* lua_typename(lua_State* L, int type)
+const char* lua_typename(lua_State* L, int type)
 {
     return String_GetData( State_TypeName(L, type) );
 }
@@ -724,12 +725,12 @@ int lua_lessthan(lua_State *L, int index1, int index2)
     return Vm_Less(L, value1, value2);
 }
 
-LUA_API int lua_gettop(lua_State* L)
+int lua_gettop(lua_State* L)
 {
     return static_cast<int>(L->stackTop - L->stackBase);
 }
 
-LUA_API void lua_settop(lua_State *L, int index)
+void lua_settop(lua_State *L, int index)
 {
     if (index < 0)
     {
@@ -749,7 +750,7 @@ LUA_API void lua_settop(lua_State *L, int index)
     }
 }
 
-LUA_API void lua_insert(lua_State *L, int index)
+void lua_insert(lua_State *L, int index)
 {
     Value* p = GetValueForIndex(L, index);
     for (Value* q = L->stackTop; q > p; q--)
@@ -1107,7 +1108,7 @@ int lua_gethookcount(lua_State* L)
     return L->hookCount;
 }
 
-LUA_API lua_CFunction lua_atpanic(lua_State* L, lua_CFunction panic)
+lua_CFunction lua_atpanic(lua_State* L, lua_CFunction panic)
 {
     lua_CFunction old;
     old = L->panic;
@@ -1115,67 +1116,67 @@ LUA_API lua_CFunction lua_atpanic(lua_State* L, lua_CFunction panic)
     return old;
 }
 
-LUA_API int lua_pushthread(lua_State* L)
+int lua_pushthread(lua_State* L)
 {
     // Not yet implemented.
     ASSERT(0);
     return 0;
 }
 
-LUA_API lua_State* lua_tothread(lua_State* L, int index)
+lua_State* lua_tothread(lua_State* L, int index)
 {
     // Not yet implemented.
     ASSERT(0);
     return 0;
 }
 
-LUA_API lua_State* lua_newthread(lua_State* L)
+lua_State* lua_newthread(lua_State* L)
 {
     // Not yet implemented.
     ASSERT(0);
     return 0;
 }
 
-LUA_API int lua_yield(lua_State* L, int nresults)
+int lua_yield(lua_State* L, int nresults)
 {
     // Not yet implemented.
     ASSERT(0);
     return 0;
 }
 
-LUA_API int lua_resume(lua_State *L, int narg)
+int lua_resume(lua_State *L, int narg)
 {
     // Not yet implemented.
     ASSERT(0);
     return 0;
 }
 
-LUA_API int lua_status(lua_State *L)
+int lua_status(lua_State *L)
 {
     // Not yet implemented.
     ASSERT(0);
     return 0;
 }
 
-LUA_API void lua_setlevel(lua_State* from, lua_State* to)
+void lua_setlevel(lua_State* from, lua_State* to)
 {
     // Not yet implemented.
     ASSERT(0);
 }
 
-LUA_API void lua_xmove(lua_State* from, lua_State* to, int n)
+void lua_xmove(lua_State* from, lua_State* to, int n)
 {
     // Not yet implemented.
     ASSERT(0);
 }
 
-LUA_API const char* lua_getlocal(lua_State* L, const lua_Debug* ar, int n)
+const char* lua_getlocal(lua_State* L, const lua_Debug* ar, int n)
 {
     // Not yet implemented.
     return 0;
 }
 
-LUA_API const char* lua_setlocal (lua_State *L, const lua_Debug* ar, int n)
+const char* lua_setlocal (lua_State *L, const lua_Debug* ar, int n)
 {
     // Not yet implemented.
     ASSERT(0);(0);
@@ -1218,7 +1219,7 @@ static const char* GetUpValue(Value* value, int n, Value** upValue)
   
 }
 
-LUA_API const char* lua_setupvalue(lua_State* L, int funcindex, int n)
+const char* lua_setupvalue(lua_State* L, int funcindex, int n)
 {
 
     Value* closure = GetValueForIndex(L, funcindex);

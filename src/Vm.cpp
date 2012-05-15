@@ -18,6 +18,7 @@ extern "C"
 #include "String.h"
 #include "Table.h"
 #include "Function.h"
+#include "UpValue.h"
 
 #include <memory.h>
 
@@ -496,11 +497,13 @@ void Vm_Concat(lua_State* L, Value* dst, Value* arg1, Value* arg2)
         size_t length1 = arg1->string->length;
         size_t length2 = arg2->string->length;
 
+        // TODO: Create a reusable buffer for all concatenation operations.
         char* buffer = static_cast<char*>( Allocate(L, length1 + length2) );
         memcpy(buffer, String_GetData(arg1->string), length1);
         memcpy(buffer + length1, String_GetData(arg2->string), length2);
 
         SetValue( dst, String_Create(L, buffer, length1 + length2) );
+        Free(L, buffer, length1 + length2);
 
     }
 
@@ -877,6 +880,11 @@ Start:
     while (1)
     {
 
+    #ifdef DEBUG
+        const char* _file = String_GetData(prototype->source);
+        int         _line = prototype->sourceLine[ip - prototype->code];
+    #endif
+
         Instruction inst = *ip;
         ++ip;
 
@@ -956,12 +964,12 @@ Start:
         case Opcode_SetUpVal:
             {
                 const Value* value = &stackBase[a];
-                SetUpValue(lclosure, GET_B(inst), value);                    
+                UpValue_SetValue(lclosure, GET_B(inst), value);                    
             }
             break;
         case Opcode_GetUpVal:
             {
-                const Value* value = GetUpValue(lclosure, GET_B(inst));
+                const Value* value = UpValue_GetValue(lclosure, GET_B(inst));
                 stackBase[a] = *value;
             }
             break;
@@ -1198,7 +1206,8 @@ Start:
                     int b = GET_B(inst);
                     if ( GET_OPCODE(inst) == Opcode_Move )
                     {
-                        c->lclosure.upValue[i] = NewUpValue(L, &stackBase[b]);
+                        c->lclosure.upValue[i] = UpValue_Create(L, &stackBase[b]);
+                        Gc_WriteBarrier(L, c, c->lclosure.upValue[i]);
                     }
                     else
                     {

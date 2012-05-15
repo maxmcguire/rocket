@@ -51,6 +51,18 @@ void StringPool_Initialize(lua_State* L, StringPool* stringPool)
 
 void StringPool_Shutdown(lua_State* L, StringPool* stringPool)
 {
+
+    for (int i = 0; i < stringPool->numNodes; ++i)
+    {
+        String* string = stringPool->node[i];
+        while (string != NULL)
+        {
+            String* next = string->nextString;
+            String_Destroy(L, string);
+            string = next;
+        }
+    }
+
     FreeNodeArray(L, stringPool->node, stringPool->numNodes);
 }
 
