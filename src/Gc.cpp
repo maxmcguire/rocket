@@ -324,7 +324,10 @@ static bool Gc_Propagate(Gc* gc)
     {
 
         UserData* userData = static_cast<UserData*>(object);
-        Gc_MarkObject(gc, userData->metatable);
+        if (userData->metatable != NULL)
+        {
+            Gc_MarkObject(gc, userData->metatable);
+        }
         Gc_MarkObject(gc, userData->env);
 
     }
