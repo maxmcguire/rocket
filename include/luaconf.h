@@ -18,7 +18,10 @@
 ** ===================================================================
 */
 
+#if defined(_WIN32)
 #define LUA_BUILD_AS_DLL
+#endif
+
 #define LUA_USE_APICHECK
 
 /*
