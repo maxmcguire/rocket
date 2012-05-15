@@ -374,7 +374,7 @@ LUA_API int lua_pcall(lua_State* L, int numArgs, int numResults, int errFunc)
 {
     Value* value = L->stackTop - (numArgs + 1);
     Value* errHandler = NULL;
-    if (errFunc != NULL)
+    if (errFunc != 0)
     {        
         errHandler = GetValueForIndex(L, errFunc);
     }
