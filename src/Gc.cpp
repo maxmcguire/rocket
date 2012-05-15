@@ -14,13 +14,16 @@
 
 #define GCSTEPSIZE	1024u
 
+//#define GCDISABLE
+
 /**
  * Checks if the garbage collector needs to be run.
  */
 static void Gc_Check(lua_State* L, Gc* gc)
 {
-    // Garbage collection is currently disabled.
+#ifdef GCDISABLE
     return;
+#endif
     if (L->totalBytes > gc->threshold)
     {
         if (gc->state == Gc_State_Paused)
@@ -438,8 +441,11 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
 void Gc_Collect(lua_State* L, Gc* gc)
 {
-    // Disabled.
-    return;
+
+#ifdef GCDISABLE
+   return;
+#endif
+
     // Finish up any propagation stage.
     while (gc->state != Gc_State_Paused)
     {

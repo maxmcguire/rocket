@@ -17,8 +17,6 @@ static size_t GetTotalBytes(lua_State* L)
     return lua_gc(L, LUA_GCCOUNT, 0) * 1024 + lua_gc(L, LUA_GCCOUNTB, 0);
 }
 
-// Currently disabled while the GC is being developed.
-/*
 TEST(GcTest)
 {
     
@@ -44,7 +42,6 @@ TEST(GcTest)
     lua_close(L);
 
 }
-*/
 
 TEST_FIXTURE(ToCFunction, LuaFixture)
 {
