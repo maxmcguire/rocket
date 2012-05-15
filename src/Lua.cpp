@@ -534,9 +534,14 @@ LUA_API lua_Number lua_tonumber(lua_State *L, int index)
 LUA_API lua_Integer lua_tointeger(lua_State *L, int index)
 {
     lua_Number  d = lua_tonumber(L, index);
+        
+    #if defined(_MSC_VER)
     lua_Integer i;
     lua_number2integer(i, d);
     return i;
+    #else
+    return (lua_Integer) d;
+    #endif
 }
 
 LUA_API int lua_toboolean(lua_State* L, int index)
