@@ -161,9 +161,9 @@ bool Test_Equal(double x, double y)
 
 bool Test_Equal(const char* x, const char* y)
 {
-    if (x == NULL && x != y)
+    if (x == NULL || y == NULL)
     {
-        return false;
+        return x == y;
     }
     return strcmp(x, y) == 0;
 }
