@@ -32,9 +32,11 @@ premake4 is available from http://industriousone.com/premake.
 TODO
 -------------------------------------------------------------------------------
 
+- Weak tables
+- __gc metamethod
+- Garbage collector controls
 - Coroutines
 - Constant folding for logic operations and conditionals
 - Debug functions
 - Array optimization for tables
 - Proper tail recursion
-- Garbage collection
