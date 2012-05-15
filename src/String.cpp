@@ -107,10 +107,10 @@ String* StringPool_Insert(lua_State* L, StringPool* stringPool, const char* data
 		// Not already in the pool, so create a new object. To improve memory locality,
 		// we store the data for the string immediately after the String structure.
 		string = static_cast<String*>( Gc_AllocateObject(L, LUA_TSTRING, sizeof(String) + length + 1, false) );
-		
+
 		string->hash 		= hash;
 		string->length		= length;
-		string->nextString  = firstString;
+		string->nextString  = stringPool->node[index];
 
         char* stringData = reinterpret_cast<char*>(string + 1);
 
@@ -148,20 +148,31 @@ void StringPool_SweepStrings(lua_State* L, StringPool* stringPool)
     for (int i = 0; i < stringPool->numNodes; ++i)
     {
         String* string = node[i];
+        String* prev   = NULL;
+        int j = 0;
         while (string != NULL)
         {
             String* next = string->nextString;
             if (string->color == Color_White)
             {
-                node[i] = next;
+                if (prev == NULL)
+                {
+                    node[i] = next;
+                }
+                else
+                {
+                    prev->nextString = next;
+                }
                 String_Destroy(L, string);
                 --stringPool->numStrings;
             }
             else
             {
                 string->color = Color_White;
+                prev = string;
             }
             string = next;
+            ++j;
         }
     }
                     
