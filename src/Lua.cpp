@@ -535,11 +535,7 @@ LUA_API lua_Integer lua_tointeger(lua_State *L, int index)
 {
     lua_Number  d = lua_tonumber(L, index);
     lua_Integer i;
-    __asm
-    {
-        fld     d
-        fistp   i
-    }
+    lua_number2integer(i, d);
     return i;
 }
 
