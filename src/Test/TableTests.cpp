@@ -100,3 +100,29 @@ TEST_FIXTURE(LocalTable, LuaFixture)
     lua_pop(L, 1);
 
 }
+
+/*
+TEST_FIXTURE(WeakKeys, LuaFixture)
+{
+
+    lua_newtable(L);
+    int table = lua_gettop(L);
+
+    lua_newtable(L);
+    lua_pushstring(L, "k");
+    lua_setfield(L, -2, "__mode");
+
+    lua_setmetatable(L, table);
+
+    void* p = lua_newuserdata(L, 10);
+    lua_pushstring(L, "value");
+    lua_settable(L, table);
+
+    lua_gc(L, LUA_GCCOLLECT, 0);
+
+    // There shouldn't be anything left in the table after GC.
+    lua_pushnil(L);
+    CHECK( lua_next(L, table) == 0 );
+
+}
+*/
