@@ -61,7 +61,7 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table)
 {
     switch (value->tag)
     {
-    case Tag_Function:
+    case Tag_Closure:
         value->closure->env = table;
         Gc_WriteBarrier(L, value->closure, table);
         return 1;
@@ -81,7 +81,7 @@ Table* Value_GetEnv(const Value* value)
 {
     switch (value->tag)
     {
-    case Tag_Function:
+    case Tag_Closure:
         return value->closure->env;
     case Tag_Thread:
         // TODO: implement.

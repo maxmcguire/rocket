@@ -159,6 +159,18 @@ inline void PushNil(lua_State* L)
     ++L->stackTop;
 }
 
+inline void PushFunction(lua_State* L, Function* function)
+{
+    SetValue( L->stackTop, function );
+    ++L->stackTop;
+}
+
+inline void PushPrototype(lua_State* L, Prototype* prototype)
+{
+    SetValue( L->stackTop, prototype );
+    ++L->stackTop;
+}
+
 inline void PushValue(lua_State* L, const Value* value)
 {
     *L->stackTop = *value;
@@ -168,6 +180,19 @@ inline void PushValue(lua_State* L, const Value* value)
 inline void Pop(lua_State* L, int num)
 {
     L->stackTop -= num;
+}
+
+/**
+ * Removes the element pointed to by value from the stack.
+ */
+inline void State_Remove(lua_State* L, Value* value)
+{
+    Value* stackTop = L->stackTop;
+    while (++value < stackTop)
+    {
+        *(value - 1) = *value;
+    }
+    --L->stackTop;
 }
 
 // Replaces the n values on the top of the stack with their concatenation.

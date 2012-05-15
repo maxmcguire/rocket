@@ -16,18 +16,13 @@
 
 #include <memory.h>
 
-void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* parent)
+Function* Function_Create(lua_State* L)
 {
-    
-    parser->L                   = L;
-    parser->lexer               = lexer;
-    parser->numBlocks           = 0;
-    parser->lineNumber          = lexer->lineNumber;
 
-    Function* function = static_cast<Function*>( Allocate( L, sizeof(Function) ) );
+    Function* function = static_cast<Function*>( Gc_AllocateObject( L, LUA_TFUNCTIONP, sizeof(Function) ) );
 
-    function->parent            = parent;
-    function->parser            = parser;
+    function->parent            = NULL;
+    function->parser            = NULL;
 
     function->numRegisters      = 0;
     function->maxStackSize      = 0;
@@ -35,7 +30,7 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
     function->varArg            = false;
 
     function->numConstants      = 0;
-    function->constants         = Table_Create(parser->L);
+    function->constants         = NULL;
 
     function->code              = NULL;
     function->codeSize          = 0;
@@ -51,9 +46,37 @@ void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* par
     function->function          = NULL;
     function->numFunctions      = 0;
     function->maxFunctions      = 0;
-        
-    parser->function            = function;
 
+    // It's possible for creating the table to trigger garbage collection, so
+    // make sure there's a reference to our function on the stack before we do
+    // that.
+
+    PushFunction(L, function);
+    function->constants = Table_Create(L);
+    Gc_WriteBarrier(L, function, function->constants);
+    Pop(L, 1);
+
+    return function;
+
+}
+
+void Function_Destroy(lua_State* L, Function* function)
+{
+    Free(L, function->code, function->maxCodeSize * sizeof(Instruction));
+    Free(L, function, sizeof(Function));
+}
+
+void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer)
+{
+    parser->L           = L;
+    parser->lexer       = lexer;
+    parser->numBlocks   = 0;
+    parser->lineNumber  = lexer->lineNumber;
+    parser->function    = NULL;
+}
+
+void Parser_Destroy(Parser* parser)
+{
 }
 
 void Parser_Error(Parser* parser, const char* fmt, ...)
@@ -237,6 +260,7 @@ int Parser_AddLocal(Parser* parser, String* name)
     }
 
     function->local[function->numLocals] = name;
+    Gc_WriteBarrier(parser->L, function, name);
     ++function->numLocals;
 
     return function->numLocals - 1;
@@ -1024,17 +1048,6 @@ int Parser_AddFunction(Parser* parser, Function* f)
 
 }
 
-static void Function_Destroy(lua_State* L, Function* function)
-{
-    Free(L, function->code, function->maxCodeSize * sizeof(Instruction));
-    Free(L, function, sizeof(Function));
-}
-
-void Parser_Destroy(Parser* parser)
-{
-    Function_Destroy(parser->L, parser->function);
-}
-
 Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* source)
 {
 
@@ -1059,6 +1072,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     for (int i = 0; i < function->numFunctions; ++i)
     {
         prototype->prototype[i] = Function_CreatePrototype(L, function->function[i], source);
+        Gc_WriteBarrier(L, prototype, prototype->prototype[i]);
     }
 
     // Store the constants.
@@ -1083,6 +1097,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
         {
             prototype->constant[i] = key;
         }
+        Gc_WriteBarrier(L, prototype, &prototype->constant[i]);
     }
     
     prototype->varArg       = function->varArg;

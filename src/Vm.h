@@ -64,7 +64,6 @@ int Vm_GetBoolean(const Value* value);
 // type.
 const char* GetString(const Value* value);
 
-static void ArithmeticError(lua_State* L, const Value* arg1, const Value* arg2);
 void MoveResults(lua_State* L, int start, int numResults);
 
 /**

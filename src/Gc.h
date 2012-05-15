@@ -51,11 +51,6 @@ struct Gc
 void Gc_Initialize(Gc* gc);
 
 /**
- * Checks if the garbage collector needs to be run.
- */
-void Gc_Check(lua_State* L, Gc* gc);
-
-/**
  * Runs a full garbage collection cycle.
  */
 void Gc_Collect(lua_State* L, Gc* gc);
@@ -78,5 +73,8 @@ void* Gc_AllocateObject(lua_State* L, int type, size_t size, bool link = true);
  */
 void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, Gc_Object* child);
 void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, Value* child);
+
+
+void Gc_MarkObject(Gc* gc, Gc_Object* object);
 
 #endif

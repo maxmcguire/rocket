@@ -8,6 +8,7 @@
 #include "Function.h"
 #include "String.h"
 #include "Compiler.h"
+#include "Table.h"
 
 #include <string.h>
 
@@ -87,6 +88,10 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
     // Constants are stored after the code.
     prototype->constant = reinterpret_cast<Value*>(prototype->code + codeSize);
     prototype->numConstants = numConstants;
+    for (int i = 0; i < numConstants; ++i)
+    {
+        SetNil(&prototype->constant[i]);
+    }
 
     // Prototypes are stored after the constants.
     prototype->numPrototypes = numPrototypes;
@@ -182,6 +187,9 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
         return NULL;
     }
 
+    // Store on the stack to prevent garbage collection.
+    PushPrototype(L, prototype);
+
     prototype->lineDefined      = lineDefined;
     prototype->lastLineDefined  = lastLineDefined;
 
@@ -223,6 +231,8 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
             SetValue( &prototype->constant[i], constants[0] != 0 );
             ++constants;
         }
+            
+        Gc_WriteBarrier(L, prototype, &prototype->constant[i]);
 
     }
 
@@ -271,6 +281,9 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
 
     length = data - start;
 
+    ASSERT( (L->stackTop - 1)->object == prototype );
+    Pop(L, 1);
+
     return prototype;
 
 }
@@ -306,10 +319,13 @@ Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env)
     size += prototype->numUpValues * sizeof(UpValue*);
 
     Closure* closure = static_cast<Closure*>(Gc_AllocateObject(L, LUA_TFUNCTION, size));
+    closure->c = false;
     
     closure->env = env;
-    closure->c = false;
+    Gc_WriteBarrier(L, closure, env);
+
     closure->lclosure.prototype = prototype;
+    Gc_WriteBarrier(L, closure, prototype);
 
     closure->lclosure.upValue   = reinterpret_cast<UpValue**>(closure + 1);
     closure->lclosure.numUpValues = prototype->numUpValues;

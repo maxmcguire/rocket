@@ -54,6 +54,12 @@ int String_Compare(String* string1, String* string2);
 void StringPool_Initialize(lua_State* L, StringPool* stringPool);
 void StringPool_Shutdown(lua_State* L, StringPool* stringPool);
 
+/**
+ * Removes strings for the string pool that are marked as white. Strings are
+ * handled differently than other types of garbage collected objects, since the
+ * string pool has weak references to the strings -- when a string no longer has
+ * any references outside the pool we need to remove it from the pool.
+ */
 void StringPool_SweepStrings(lua_State* L, StringPool* stringPool);
 
 #endif

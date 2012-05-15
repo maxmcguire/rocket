@@ -274,7 +274,7 @@ void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
         }
 
         // If __newindex is a function, call it.
-        if (Value_GetIsFunction(method))
+        if (Value_GetIsClosure(method))
         {
             CallTagMethod3(L, method, dst, key, value);       
             return;
@@ -312,7 +312,7 @@ void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst,
             }
             break;
         }
-        if (Value_GetIsFunction(method))
+        if (Value_GetIsClosure(method))
         {
             Value refValue;
             SetValue(&refValue, ref);
@@ -638,11 +638,11 @@ static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs, int n
     // Prepares a value to be called as a function. If the value isn't a function,
     // it's call metamethod (if there is one) will replace the value on the stack.
   
-    if (!Value_GetIsFunction(value))
+    if (!Value_GetIsClosure(value))
     {
         // Try the "call" tag method.
         const Value* method = GetTagMethod(L, value, TagMethod_Call);
-        if (method == NULL || !Value_GetIsFunction(method))
+        if (method == NULL || !Value_GetIsClosure(method))
         {
             TypeError(L, (method ? method : value), "call");
         }

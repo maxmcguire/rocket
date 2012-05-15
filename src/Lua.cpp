@@ -296,6 +296,9 @@ static int DumpBinary(lua_State* L, Prototype* prototype, lua_Writer writer, voi
 static void Parse(lua_State* L, void* userData)
 {
 
+    // We currently can't run the GC while parsing because some objects used by
+    // the parser are not properly stored in a root location.
+
     ParseArgs* args = static_cast<ParseArgs*>(userData);
 
     Input input;
@@ -314,9 +317,11 @@ static void Parse(lua_State* L, void* userData)
     }
 
     ASSERT(prototype != NULL);
+    PushPrototype(L, prototype);
 
     Table* env = L->globals.table;
     Closure* closure = Closure_Create(L, prototype, env);
+    PushClosure(L, closure);
 
     // Initialize the up values. Typically a top level check won't have any up
     // values, but if the chunk was created using string.dump or a similar method
@@ -326,7 +331,9 @@ static void Parse(lua_State* L, void* userData)
         closure->lclosure.upValue[i] = NewUpValue(L);
     }
 
-    PushClosure(L, closure);
+    // Remove the prototype from the stack.
+    ASSERT( (L->stackTop - 2)->object == prototype );
+    State_Remove(L, L->stackTop - 2);
 
 }
 
@@ -351,7 +358,7 @@ LUA_API int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char
 LUA_API int lua_dump(lua_State* L, lua_Writer writer, void* data)
 {
     const Value* value = GetValueForIndex(L, -1);
-    if (!Value_GetIsFunction(value) || value->closure->c)
+    if (!Value_GetIsClosure(value) || value->closure->c)
     {
         return 1;
     }
@@ -460,12 +467,7 @@ LUA_API void lua_pushvalue(lua_State* L, int index)
 LUA_API void lua_remove(lua_State *L, int index)
 {
     Value* p = GetValueForIndex(L, index);
-    Value* stackTop = L->stackTop;
-    while (++p < stackTop)
-    {
-        *(p - 1) = *p;
-    }
-    --L->stackTop;
+    State_Remove(L, p);
 }
 
 void lua_setfield(lua_State* L, int index, const char* name)
@@ -510,7 +512,7 @@ int lua_isstring(lua_State* L, int index)
 int lua_iscfunction(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
-    return Value_GetIsFunction(value) && value->closure->c;
+    return Value_GetIsClosure(value) && value->closure->c;
 }
 
 int lua_isuserdata(lua_State* L, int index)
@@ -565,7 +567,7 @@ LUA_API const char* lua_tolstring(lua_State *L, int index, size_t* length )
 LUA_API lua_CFunction lua_tocfunction(lua_State* L, int index)
 {
     const Value* value = GetValueForIndex(L, index);
-    if (Value_GetIsFunction(value))
+    if (Value_GetIsClosure(value))
     {
         Closure* closure = value->closure;
         if (closure->c)
@@ -582,7 +584,7 @@ LUA_API const void* lua_topointer(lua_State* L, int index)
     switch (value->tag)
     {
     case Tag_Table:
-    case Tag_Function:
+    case Tag_Closure:
     case Tag_Thread:
         return value->object;
     case Tag_LightUserdata:
@@ -826,7 +828,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
     if (what[0] == '>')
     {
         const Value* value = L->stackTop - 1;
-        luai_apicheck(L, Value_GetIsFunction(value) );
+        luai_apicheck(L, Value_GetIsClosure(value) );
         function = value->closure;
         ++what;
     }
@@ -836,7 +838,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
         frame = L->callStackBase + ar->activeFunction;
         if (frame->function != NULL)
         {
-            ASSERT( Value_GetIsFunction(frame->function) );
+            ASSERT( Value_GetIsClosure(frame->function) );
             function = frame->function->closure;
         }
     }
@@ -924,7 +926,7 @@ const char* lua_getupvalue(lua_State *L, int funcIndex, int n)
 {
 
     const Value* func = GetValueForIndex(L, funcIndex);
-    luai_apicheck(L, Value_GetIsFunction(func) );
+    luai_apicheck(L, Value_GetIsClosure(func) );
 
     Closure* closure = func->closure;
 
@@ -1054,6 +1056,14 @@ int lua_gc(lua_State* L, int what, int data)
             return 1;
         }
     }
+    /*
+    else if (what == LUA_GCSETPAUSE)
+    {
+        // TODO: Implement this!
+        assert(0);
+        return 0;
+    }
+    */
     else if (what == LUA_GCCOUNT)
     {
         return static_cast<int>(L->totalBytes / 1024);
@@ -1183,7 +1193,7 @@ LUA_API const char* lua_setlocal (lua_State *L, const lua_Debug* ar, int n)
 static const char* GetUpValue(Value* value, int n, Value** upValue)
 {
 
-    if (!Value_GetIsFunction(value))
+    if (!Value_GetIsClosure(value))
     {
         return NULL;
     }

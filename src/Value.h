@@ -23,6 +23,8 @@ struct String;
 struct Table;
 struct Closure;
 struct UserData;
+struct Function;
+struct Prototype;
 struct Gc_Object;
 
 /** Tag used to identify the type of a value. */
@@ -34,17 +36,19 @@ enum Tag
     Tag_LightUserdata   = ~3u,
     Tag_String          = ~4u,
     Tag_Table           = ~5u,
-    Tag_Function        = ~6u,
+    Tag_Closure         = ~6u,
     Tag_Userdata        = ~7u,
     Tag_Thread          = ~8u,
-    Tag_Number          = ~9u,
+    Tag_Prototype       = ~9u,
+    Tag_FunctionP       = ~10u,
 };
 STATIC_ASSERT( sizeof(Tag) == 4, TagMustBe32Bits );
 
 #define LUA_TPROTOTYPE      9
 #define LUA_TUPVALUE        10
+#define LUA_TFUNCTIONP      11  // Used during parsing.
 
-#define NUM_TYPES           10        
+#define NUM_TYPES           12        
 
 enum TagMethod
 {
@@ -78,7 +82,9 @@ union Value
             Table*      table;
             Closure*    closure;
             UserData*   userData;
-            Gc_Object*  object;         // Alias for string, table, closure.
+            Function*   function;
+            Prototype*  prototype;
+            Gc_Object*  object;     // Alias for string, table, closure, etc.
         };
         Tag             tag;
     };
@@ -106,14 +112,24 @@ FORCE_INLINE bool Value_GetIsString(const Value* value)
 FORCE_INLINE bool Value_GetIsBoolean(const Value* value)
     { return value->tag == Tag_Boolean; }
 
-FORCE_INLINE bool Value_GetIsFunction(const Value* value)
-    { return value->tag == Tag_Function; }
+FORCE_INLINE bool Value_GetIsClosure(const Value* value)
+    { return value->tag == Tag_Closure; }
+
+FORCE_INLINE bool Value_GetIsLightUserData(const Value* value)
+    { return value->tag == Tag_LightUserdata; }
 
 FORCE_INLINE bool Value_GetIsUserData(const Value* value)
     { return value->tag == Tag_Userdata; }
 
+/** Returns true if the value is a type that is garbage collected. */
 FORCE_INLINE bool Value_GetIsObject(const Value* value)
-    { return Value_GetIsString(value) || Value_GetIsTable(value) || Value_GetIsFunction(value); }
+    { 
+        return !Value_GetIsNumber(value)  &&
+               !Value_GetIsNil(value)     &&
+               !Value_GetIsBoolean(value) &&
+               !Value_GetIsLightUserData(value);
+    }
+
 
 /** Returns the Lua type (LUA_NIL, LUA_TNUMBER, etc.) for the value */
 inline int Value_GetType(const Value* value)
@@ -126,7 +142,7 @@ inline int Value_GetType(const Value* value)
     case Tag_LightUserdata: return LUA_TLIGHTUSERDATA;
     case Tag_String:        return LUA_TSTRING;
     case Tag_Table:         return LUA_TTABLE;
-    case Tag_Function:      return LUA_TFUNCTION;
+    case Tag_Closure:       return LUA_TFUNCTION;
     case Tag_Userdata:      return LUA_TUSERDATA;
     case Tag_Thread:        return LUA_TTHREAD;
     }
@@ -155,11 +171,17 @@ inline void SetValue(Value* value, String* string)
 inline void SetValue(Value* value, Table* table)
     { value->tag = Tag_Table; value->table = table; }
 inline void SetValue(Value* value, Closure* closure)
-    { value->tag = Tag_Function; value->closure = closure; }
+    { value->tag = Tag_Closure; value->closure = closure; }
 inline void SetValue(Value* value, void* userdata)
     { value->tag = Tag_LightUserdata; value->lightUserdata = userdata; }
 inline void SetValue(Value* value, UserData* userData)
     { value->tag = Tag_Userdata; value->userData = userData; }
+inline void SetValue(Value* value, Function* function)
+    { value->tag = Tag_FunctionP; value->function = function; }
+
+inline void SetValue(Value* value, Prototype* prototype)
+    { value->tag = Tag_Prototype; value->prototype = prototype; }
+
 
 /**
  * Tests if two values are equal using a raw test (no metamethods).

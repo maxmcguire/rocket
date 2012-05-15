@@ -18,7 +18,7 @@ struct Prototype;
 struct Lexer;
 enum   Opcode;
 
-struct Function
+struct Function : public Gc_Object
 {
 
     Parser*         parser;         // Only valid while the function is being parsed.
@@ -144,8 +144,16 @@ struct Expression
     };
 };
 
-void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer, Function* parent);
+Function* Function_Create(lua_State* L);
+void Function_Destroy(lua_State* L, Function* function);
+
+void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer);
 void Parser_Destroy(Parser* parser);
+
+/**
+ * Disengages the function from the parser.
+ */
+Function* Parser_ReleaseFunction(Parser* parser);
 
 /** Reports a formatted error. The error message will include information about
 the location of the error in the chunk being parsed. This function raises a VM
