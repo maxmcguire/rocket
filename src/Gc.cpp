@@ -20,8 +20,6 @@
  */
 static void Gc_Check(lua_State* L, Gc* gc)
 {
-    // Disabled.
-    return;
     if (L->totalBytes > gc->threshold)
     {
         if (gc->state == Gc_State_Paused)
@@ -479,7 +477,6 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
 void Gc_Collect(lua_State* L, Gc* gc)
 {
-    return;
     // Finish up any propagation stage.
     while (gc->state != Gc_State_Paused)
     {
