@@ -20,8 +20,6 @@
  */
 static void Gc_Check(lua_State* L, Gc* gc)
 {
-    // Disabled.
-    return;
     if (L->totalBytes > gc->threshold)
     {
         if (gc->state == Gc_State_Paused)
@@ -326,7 +324,10 @@ static bool Gc_Propagate(Gc* gc)
     {
 
         UserData* userData = static_cast<UserData*>(object);
-        Gc_MarkObject(gc, userData->metatable);
+        if (userData->metatable != NULL)
+        {
+            Gc_MarkObject(gc, userData->metatable);
+        }
         Gc_MarkObject(gc, userData->env);
 
     }
@@ -479,7 +480,6 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
 void Gc_Collect(lua_State* L, Gc* gc)
 {
-    return;
     // Finish up any propagation stage.
     while (gc->state != Gc_State_Paused)
     {
