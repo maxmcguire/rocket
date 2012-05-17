@@ -93,36 +93,36 @@ STATIC_ASSERT( offsetof(Value, tag) == 4, TagMustBeMSW );
 
 /** Returns true if the value represents a number type. This function must be
  used in lieu of directly comparing the tag to the TAG_NUMBER value */
-FORCE_INLINE bool Value_GetIsNumber(const Value* value)
+static FORCE_INLINE bool Value_GetIsNumber(const Value* value)
     { return value->tag <= 0xfff80000; }
 
 /** Returns true if the value is a number representing the value NaN. */
-FORCE_INLINE bool Value_GetIsNaN(const Value* value)
+static FORCE_INLINE bool Value_GetIsNaN(const Value* value)
     { return value->tag == 0xfff80000; }
 
-FORCE_INLINE bool Value_GetIsTable(const Value* value)
+static FORCE_INLINE bool Value_GetIsTable(const Value* value)
     { return value->tag == Tag_Table; }
 
-FORCE_INLINE bool Value_GetIsNil(const Value* value)
+static FORCE_INLINE bool Value_GetIsNil(const Value* value)
     { return value->tag == Tag_Nil; }
 
-FORCE_INLINE bool Value_GetIsString(const Value* value)
+static FORCE_INLINE bool Value_GetIsString(const Value* value)
     { return value->tag == Tag_String; }
 
-FORCE_INLINE bool Value_GetIsBoolean(const Value* value)
+static FORCE_INLINE bool Value_GetIsBoolean(const Value* value)
     { return value->tag == Tag_Boolean; }
 
-FORCE_INLINE bool Value_GetIsClosure(const Value* value)
+static FORCE_INLINE bool Value_GetIsClosure(const Value* value)
     { return value->tag == Tag_Closure; }
 
-FORCE_INLINE bool Value_GetIsLightUserData(const Value* value)
+static FORCE_INLINE bool Value_GetIsLightUserData(const Value* value)
     { return value->tag == Tag_LightUserdata; }
 
-FORCE_INLINE bool Value_GetIsUserData(const Value* value)
+static FORCE_INLINE bool Value_GetIsUserData(const Value* value)
     { return value->tag == Tag_Userdata; }
 
 /** Returns true if the value is a type that is garbage collected. */
-FORCE_INLINE bool Value_GetIsObject(const Value* value)
+static FORCE_INLINE bool Value_GetIsObject(const Value* value)
     { 
         return !Value_GetIsNumber(value)  &&
                !Value_GetIsNil(value)     &&
