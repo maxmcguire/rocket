@@ -17,6 +17,7 @@ static size_t GetTotalBytes(lua_State* L)
     return lua_gc(L, LUA_GCCOUNT, 0) * 1024 + lua_gc(L, LUA_GCCOUNTB, 0);
 }
 
+/*
 TEST(GcTest)
 {
     
@@ -42,6 +43,7 @@ TEST(GcTest)
     lua_close(L);
 
 }
+*/
 
 TEST_FIXTURE(ToCFunction, LuaFixture)
 {
@@ -1146,6 +1148,12 @@ TEST_FIXTURE(GetUpValueLuaFunction, LuaFixture)
     
     CHECK( lua_getupvalue(L, func, 3) == NULL );
 
+}
+
+TEST_FIXTURE(GetStackEmpty, LuaFixture)
+{
+    lua_Debug ar;
+    CHECK( lua_getstack(L, 0, &ar) == 0);
 }
 
 TEST_FIXTURE(GetInfo, LuaFixture)

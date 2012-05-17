@@ -1518,5 +1518,6 @@ void Vm_Call(lua_State* L, Value* value, int numArgs, int numResults)
 
 int Vm_GetCallStackSize(lua_State* L)
 {
-    return static_cast<int>(L->callStackTop - L->callStackBase);
+    // Remove 1 element since the bottom of the call stack isn't a valid entry.
+    return static_cast<int>(L->callStackTop - L->callStackBase) - 1;
 }
