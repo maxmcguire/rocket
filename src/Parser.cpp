@@ -607,11 +607,27 @@ static void Parser_FinalizeExitJumps(Parser* parser, Expression* value, int reg,
     value->exitJump[0] = -1;
 }
 
-bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults)
+static bool GetHasExitJumps(Expression* value)
+{
+    return value->exitJump[0] != -1 || value->exitJump[1] != -1;
+}
+
+bool Parser_ResolveCall(Parser* parser, Expression* value, bool tail, int numResults)
 {
     if (value->type == EXPRESSION_CALL)
     {
-        Parser_EmitABC(parser, Opcode_Call, value->index, value->numArgs + 1, numResults + 1);
+
+        if (tail && !GetHasExitJumps(value))
+        {
+            // Tail calls always produce a variable number of results.
+            ASSERT(numResults == -1);
+            Parser_EmitABC(parser, Opcode_TailCall, value->index, value->numArgs + 1, 0);
+        }
+        else
+        {
+            Parser_EmitABC(parser, Opcode_Call, value->index, value->numArgs + 1, numResults + 1);
+        }
+        
         value->type = EXPRESSION_REGISTER;
         if (numResults != -1)
         {
@@ -801,11 +817,6 @@ void Parser_ResolveName(Parser* parser, Expression* dst, String* name)
    }
 }
 
-static bool GetHasExitJumps(Expression* value)
-{
-    return value->exitJump[0] != -1 || value->exitJump[1] != -1;
-}
-
 static void Parser_UpdateTempLocation(Parser* parser, Expression* value, int reg)
 {
     ASSERT(value->type == EXPRESSION_TEMP);
@@ -830,7 +841,7 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
         Parser_SetLastRegister(parser, reg);
     }
 
-    Parser_ResolveCall(parser, value, 1);
+    Parser_ResolveCall(parser, value, false, 1);
     Parser_ConvertToRegister(parser, value);
 
     if (value->type == EXPRESSION_REGISTER)

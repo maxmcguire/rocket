@@ -217,9 +217,10 @@ void Parser_FreeRegisters(Parser* parser);
 void Parser_FreeRegisters(Parser* parser, int num);
 
 /**
- * Converts a function call (if value specifies one) into a register.
+ * Converts a function call (if value specifies one) into a register. The tail
+ * parameter should be true if this an be a tail call.
  */
-bool Parser_ResolveCall(Parser* parser, Expression* value, int numResults);
+bool Parser_ResolveCall(Parser* parser, Expression* value, bool tail, int numResults);
 
 /**
  * Converts a vararg call (if value specifies one) into a register.

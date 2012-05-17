@@ -79,7 +79,7 @@ static void Parser_ResolveJumpToEnd(Parser* parser, Expression* value)
 
 static void Parser_PrepareForRK(Parser* parser, Expression* value)
 {
-    Parser_ResolveCall(parser, value, 1);
+    Parser_ResolveCall(parser, value, false, 1);
     Parser_ResolveJumpToEnd(parser, value);
     if (value->type == EXPRESSION_NOT || value->type == EXPRESSION_TEMP)
     {
@@ -199,7 +199,7 @@ static int Parser_Arguments(Parser* parser, bool single = false)
             Parser_Unaccept(parser);
             // Allow variable number of arguments for a function call which
             // is the last argument.
-            if (Parser_ResolveCall(parser, &arg, -1) ||
+            if (Parser_ResolveCall(parser, &arg, false, -1) ||
                 Parser_ResolveVarArg(parser, &arg, -1, reg))
             {
                 varArg = true;
@@ -430,7 +430,7 @@ static bool Parser_TryTable(Parser* parser, Expression* dst, int regHint)
                 if (Parser_Accept(parser, '}'))
                 {
                     Parser_Unaccept(parser);
-                    if ( Parser_ResolveCall(parser, &exp, -1) ||
+                    if ( Parser_ResolveCall(parser, &exp, false, -1) ||
                          Parser_ResolveVarArg(parser, &exp, -1, reg))
                     {
                         varArg = true;
@@ -527,7 +527,7 @@ static bool Parser_Terminal(Parser* parser, Expression* dst, int regHint)
 		Parser_Expression0(parser, dst, regHint);
         // Placing a function call inside parentheses will adjust the number of
         // return values to 1.
-        Parser_ResolveCall(parser, dst, 1);
+        Parser_ResolveCall(parser, dst, false, 1);
 		Parser_Expect(parser, ')');
         return true;
 	}
@@ -947,7 +947,7 @@ static void Parser_ExpressionAnd(Parser* parser, Expression* dst, int regHint)
 
         // If the second argument in a logic expression is a function call, we
         // adjust the number of return values to 1.
-        Parser_ResolveCall(parser, &arg2, 1);
+        Parser_ResolveCall(parser, &arg2, false, 1);
         *dst = arg2;
 
     }
@@ -971,7 +971,7 @@ static void Parser_ExpressionOr(Parser* parser, Expression* dst, int regHint)
 
         // If the second argument in a logic expression is a function call, we
         // adjust the number of return values to 1.
-        Parser_ResolveCall(parser, &arg2, 1);
+        Parser_ResolveCall(parser, &arg2, false, 1);
         *dst = arg2;
 
     }
@@ -1143,7 +1143,7 @@ static bool Parser_TryReturn(Parser* parser)
         numValues = Parser_ExpressionList(parser, &arg);
 
         // The final expression can result in a variable number of values.
-        if (Parser_ResolveCall(parser,   &arg, -1) ||
+        if (Parser_ResolveCall(parser,   &arg, true, -1) ||
             Parser_ResolveVarArg(parser, &arg, -1))
         {
             if (numValues == 1)
@@ -1279,7 +1279,7 @@ static void Parser_AssignExpressionList(Parser* parser, const Expression dst[], 
             // If the final expression is a function call or vararg, adjust the number
             // of return values to match the remaining number of variables.
             int numResults = numVars - numValues;
-            if (Parser_ResolveCall(parser, &value, numResults) ||
+            if (Parser_ResolveCall(parser, &value, false, numResults) ||
                 Parser_ResolveVarArg(parser, &value, numResults, regHint))
             {
                 ASSERT(value.type == EXPRESSION_REGISTER);
@@ -1644,7 +1644,7 @@ static int Parser_AssignmentList(Parser* parser, int numExps = 1)
     Parser_Expression0(parser, &dst, -1);
 
     // If this is a function call, then it's a complete expression.
-    if (numExps == 1 && Parser_ResolveCall(parser, &dst, 0))
+    if (numExps == 1 && Parser_ResolveCall(parser, &dst, false,  0))
     {
         return -1;
     }
@@ -1687,7 +1687,7 @@ static int Parser_AssignmentList(Parser* parser, int numExps = 1)
         {
             numResults = 0;
         }
-        if (Parser_ResolveCall(parser, &exp, numResults) ||
+        if (Parser_ResolveCall(parser, &exp, false, numResults) ||
             Parser_ResolveVarArg(parser, &exp, numResults))
         {
             if (numValues == 1)
