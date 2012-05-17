@@ -824,7 +824,7 @@ static void ReturnFromLuaCall(lua_State* L, int result, int numResults)
 /**
  * Executes the function on the top of the call stack.
  */
-static int Execute(lua_State* L /*, int numArgs*/)
+static int Execute(lua_State* L)
 {
 
     // Assembly language VM.
@@ -1010,7 +1010,7 @@ Start:
 
                 int numArgs     = GET_B(inst) - 1;
                 int numResults  = GET_C(inst) - 1;
-                Value* value   = &stackBase[a];
+                Value* value    = &stackBase[a];
                 
                 lua_CFunction function = PrepareCall(L, value, numArgs, numResults);
 
@@ -1040,23 +1040,60 @@ Start:
             break;
         case Opcode_TailCall:
             {
-                PROTECT(
-                    // TODO: Implement as an actual tail call (more efficient).
-                    int numArgs     = GET_B(inst) - 1;
-                    Value* value   = &stackBase[a];
-                    if (numArgs == -1)
-                    {
-                        // Use all of the values on the stack as arguments.
-                        numArgs = static_cast<int>(L->stackTop - value) - 1;
-                    }
-                    Vm_Call(L, value, numArgs, -1);
-                    int numResults = static_cast<int>(L->stackTop - value);
-                    numResults = MoveResults(L, frame->function, &stackBase[a], numResults);
+
+                int numArgs     = GET_B(inst) - 1;
+                Value* value    = &stackBase[a];
+                
+                lua_CFunction function = PrepareCall(L, value, numArgs, -1);
+
+                if (function != NULL)
+                {
+                    // Call the C function immediately.
+                    int result = function(L);
+                    ReturnFromCCall(L, result, -1);
+                }
+                else
+                {
+                    // Since we're effectively returning from the current function
+                    // with the tail call, we need to close the up values.
                     if (L->openUpValue != NULL)
                     {
                         CloseUpValues(L, stackBase);
                     }
-                )
+
+                    CallFrame* newFrame = frame + 1;
+
+                    // Reuse the stack from the previous call.
+                    Value* dst = frame->function;
+                    Value* src = newFrame->function;
+                    while (src < newFrame->stackTop)
+                    {
+                        *dst = *src;
+                        ++dst;
+                        ++src;
+                    }
+                    frame->stackBase = frame->function + (newFrame->stackBase - newFrame->function);
+                    frame->stackTop  = dst;
+
+                    // Reuse the frame from the previous call. We preserve the
+                    // number of results that the current call is expected to
+                    // return since the return from the tail call will return
+                    // from the current function as well.
+
+                    // Note that we copied thenew function into the location of
+                    // the old function, so we don't need to update the previous
+                    // call frame.
+
+                    frame->ip = newFrame->ip;
+                    --L->callStackTop;
+
+                    // "Re-enter" the function to start execution in the new Lua
+                    // function.
+                    L->stackBase = frame->stackBase;
+                    L->stackTop  = frame->stackTop;
+                    goto Start;
+                }
+             
             }
             break;
         case Opcode_Return:

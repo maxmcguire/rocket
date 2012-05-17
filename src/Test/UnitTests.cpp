@@ -17,7 +17,6 @@ static size_t GetTotalBytes(lua_State* L)
     return lua_gc(L, LUA_GCCOUNT, 0) * 1024 + lua_gc(L, LUA_GCCOUNTB, 0);
 }
 
-/*
 TEST(GcTest)
 {
     
@@ -43,7 +42,6 @@ TEST(GcTest)
     lua_close(L);
 
 }
-*/
 
 TEST_FIXTURE(ToCFunction, LuaFixture)
 {
@@ -3746,5 +3744,24 @@ TEST_FIXTURE(Objlen, LuaFixture)
     CHECK( lua_objlen(L, -1) == 2 );
     CHECK( lua_isstring(L, -1) );
     lua_pop(L, 1);
+
+}
+
+TEST_FIXTURE(TailCall, LuaFixture)
+{
+
+    const char* code =
+        "function g(x)\n"
+        "  return x\n"
+        "end\n"
+        "function f(x)\n"
+	    "  return g(x)\n"
+        "end\n"
+        "x = f(5)";
+
+    CHECK( DoString(L, code) );
+
+    lua_getglobal(L, "x");
+    CHECK_EQ( lua_tonumber(L, -1), 5.0 );
 
 }

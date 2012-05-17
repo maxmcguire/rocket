@@ -39,4 +39,3 @@ TODO
 - Constant folding for logic operations and conditionals
 - Debug functions
 - Array optimization for tables
-- Proper tail recursion

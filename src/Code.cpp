@@ -1142,8 +1142,10 @@ static bool Parser_TryReturn(Parser* parser)
         Expression arg;
         numValues = Parser_ExpressionList(parser, &arg);
 
+        bool tail = (numValues == 1);
+
         // The final expression can result in a variable number of values.
-        if (Parser_ResolveCall(parser,   &arg, true, -1) ||
+        if (Parser_ResolveCall(parser,   &arg, tail, -1) ||
             Parser_ResolveVarArg(parser, &arg, -1))
         {
             if (numValues == 1)
