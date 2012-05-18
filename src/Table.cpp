@@ -649,12 +649,13 @@ const Value* Table_Next(Table* table, Value* key)
         index = static_cast<int>(node - table->nodes) + 1;
     }
 
-    while (index < table->numNodes && table->nodes[index].dead)
+    int numNodes = table->numNodes;
+    while (index < numNodes && table->nodes[index].dead)
     {
         ++index;
     }
 
-    if (index < table->numNodes)
+    if (index < numNodes)
     {
         TableNode* node = &table->nodes[index];
         *key = node->key;

@@ -13,6 +13,8 @@
 #include "Parser.h"
 #include "UpValue.h"
 
+#include <stdio.h>
+
 #define GCSTEPSIZE	1024u
 
 /**
@@ -505,7 +507,7 @@ void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, Gc_Object* child)
     }
 }
 
-void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, Value* child)
+void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, const Value* child)
 {
     if (Value_GetIsObject(child))
     {

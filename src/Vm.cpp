@@ -964,7 +964,7 @@ Start:
         case Opcode_SetUpVal:
             {
                 const Value* value = &stackBase[a];
-                UpValue_SetValue(lclosure, GET_B(inst), value);                    
+                UpValue_SetValue(L, lclosure, GET_B(inst), value);    
             }
             break;
         case Opcode_GetUpVal:
