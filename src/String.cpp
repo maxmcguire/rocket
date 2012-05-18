@@ -17,11 +17,15 @@ static unsigned int HashString(const char* data, size_t length)
     // TODO: If a string is very long, don't hash all of the characters.
 	// FNV-1a hash: http://isthe.com/chongo/tech/comp/fnv/
     unsigned long hash = 2166136261;
-    for (size_t i = 0; i < length; ++i)
+
+    // For long strings, don't hash all of the characters.
+    size_t step = (length >> 5) + 1;
+    for (size_t i = 0; i < length; i += step)
 	{
     	hash ^= data[i];
     	hash *= 16777619;
     }
+
     return hash;
 }
 
