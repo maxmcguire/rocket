@@ -1123,7 +1123,8 @@ Start:
                     // instruction will restore it).
                     if (frame->numResults >= 0)
                     {
-                        L->stackTop = frame->stackTop;
+                        CallFrame* prevFrame = frame - 1;
+                        L->stackTop = prevFrame->stackTop;
                     }
                     goto Start;
                 }

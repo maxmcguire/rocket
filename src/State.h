@@ -64,7 +64,7 @@ struct lua_State
     Gc              gc;
     size_t          totalBytes;
     Table*          metatable[NUM_TYPES];   // Metatables for basic types.
-    String*         typeName[NUM_TYPES];
+    String*         typeName[NUM_TYPES + 1];
     String*         tagMethodName[TagMethod_NumMethods];
     CallFrame       callStackBase[LUAI_MAXCCALLS];
     StringPool      stringPool;
