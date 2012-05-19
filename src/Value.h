@@ -41,8 +41,9 @@ enum Tag
     Tag_Thread          = ~8u,
     Tag_Prototype       = ~9u,
     Tag_FunctionP       = ~10u,
+    
+    Tag_Filler          = INT_MAX //Used to force 32bit enums with gcc
 };
-STATIC_ASSERT( sizeof(Tag) == 4, TagMustBe32Bits );
 
 #define LUA_TPROTOTYPE      9
 #define LUA_TUPVALUE        10
@@ -67,6 +68,8 @@ enum TagMethod
     TagMethod_Eq        = 12,
     TagMethod_Concat    = 13,
     TagMethod_NumMethods,
+    
+    TagMethod_Filler          = INT_MAX //Used to force 32bit enums with gcc
 };
 
 union Value
@@ -89,7 +92,6 @@ union Value
         Tag             tag;
     };
 };
-STATIC_ASSERT( offsetof(Value, tag) == 4, TagMustBeMSW );
 
 /** Returns true if the value represents a number type. This function must be
  used in lieu of directly comparing the tag to the TAG_NUMBER value */
