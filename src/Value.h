@@ -151,7 +151,13 @@ inline int Value_GetType(const Value* value)
 
 inline int Value_GetInteger(const Value* value)
     { 
-        if (Value_GetIsNumber(value)) return static_cast<int>(value->number);
+        if (Value_GetIsNumber(value))
+        {
+            lua_Number  d = value->number;
+            lua_Integer i;
+            lua_number2integer(i, d);
+            return static_cast<int>(i);
+        }
         return 0;
     }
 
