@@ -27,20 +27,28 @@ struct Function;
 struct Prototype;
 struct Gc_Object;
 
-/** Tag used to identify the type of a value. */
+/**
+ * Tag used to identify the type of a value. The ordering and the specific
+ * values are significant to allow it to overlap with the least significant
+ * word of a double type and to allow quick determination if it's a object
+ * type.
+ */
 enum Tag
 {
-    Tag_Nil             = ~0u,
-    Tag_None            = ~1u,
-    Tag_Boolean         = ~2u,
-    Tag_LightUserdata   = ~3u,
-    Tag_String          = ~4u,
-    Tag_Table           = ~5u,
-    Tag_Closure         = ~6u,
-    Tag_Userdata        = ~7u,
-    Tag_Thread          = ~8u,
-    Tag_Prototype       = ~9u,
-    Tag_FunctionP       = ~10u,
+    // Gc_Object derived types:
+    Tag_String          = ~0u,
+    Tag_Table           = ~1u,
+    Tag_Closure         = ~2u,
+    Tag_Userdata        = ~3u,
+    Tag_Thread          = ~4u,
+    Tag_Prototype       = ~5u,
+    Tag_FunctionP       = ~6u,
+    // Non-Gc_Object types:
+    Tag_Nil             = ~7u,
+    Tag_None            = ~8u,
+    Tag_Boolean         = ~9u,
+    Tag_LightUserdata   = ~10u,
+
 };
 STATIC_ASSERT( sizeof(Tag) == 4, TagMustBe32Bits );
 
@@ -124,10 +132,7 @@ static FORCE_INLINE bool Value_GetIsUserData(const Value* value)
 /** Returns true if the value is a type that is garbage collected. */
 static FORCE_INLINE bool Value_GetIsObject(const Value* value)
     { 
-        return !Value_GetIsNumber(value)  &&
-               !Value_GetIsNil(value)     &&
-               !Value_GetIsBoolean(value) &&
-               !Value_GetIsLightUserData(value);
+        return value->tag > static_cast<unsigned long>(Tag_Nil);
     }
 
 
@@ -153,15 +158,31 @@ inline int Value_GetInteger(const Value* value)
     { 
         if (Value_GetIsNumber(value))
         {
-            lua_Number  d = value->number;
-            lua_Integer i;
-            lua_number2integer(i, d);
-            return static_cast<int>(i);
+            int i;
+            lua_Number d = value->number;
+            lua_number2int(i, d);
+            return i;
         }
         return 0;
     }
 
-inline void Value_Copy(Value* dst, Value* src)
+inline bool Value_GetIsInteger(const Value* value, int* integer)
+    {
+        if (Value_GetIsNumber(value))
+        {
+            int i;
+            lua_Number d = value->number;
+            lua_number2int(i, d);
+            if (luai_numeq(static_cast<lua_Number>(i), d))
+            {
+                *integer = i;
+                return true;
+            }
+        }
+        return false;
+    }
+
+inline void Value_Copy(Value* dst, const Value* src)
     { *dst = *src; }
 
 inline void SetNil(Value* value)
