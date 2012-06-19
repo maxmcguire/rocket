@@ -22,8 +22,9 @@ namespace
 // modification. It's helpful for debugging, but it's very slow.
 //#define TABLE_CHECK_CONSISTENCY
 
-// Currently disabled until fully debugged.
-//#define TABLE_ARRAY
+// Enables array optimization for tables. Can be useful to disable to isolate
+// problems.
+#define TABLE_ARRAY
 
 static void Table_InsertHash(lua_State* L, Table* table, Value* key, Value* value);
 static bool Table_WriteDot(const Table* table, const char* fileName);
@@ -47,6 +48,7 @@ Table* Table_Create(lua_State* L, int numArray, int numHash)
     table->element          = NULL;
     table->minHashKey       = INT_MAX;
     table->metatable        = NULL;
+    table->size             = 0;
     // TODO: Initialize the array and hash parts based on the parameters.
     return table;
 }
@@ -240,6 +242,42 @@ static bool Table_CheckConsistency(const Table* table)
 
         }
 
+    }
+
+    // Check the array.
+
+    int numElementsSet = 0;
+    for (int i = 0; i < table->numElements; ++i)
+    {
+        if (!Value_GetIsNil(&table->element[i]))
+        {
+            ++numElementsSet;
+        }
+    }
+    if (numElementsSet != table->numElementsSet)
+    {
+        ASSERT(0);
+        return false;
+    }
+
+    // Check the size
+    if (table->size < 0 || table->size > table->numElements)
+    {
+        ASSERT(0);
+        return false;
+    }
+    if (table->size > 0)
+    {
+        if (Value_GetIsNil(&table->element[table->size - 1]))
+        {
+            ASSERT(0);
+            return false;
+        }
+        if (table->size < table->numElements && !Value_GetIsNil(&table->element[table->size]))
+        {
+            ASSERT(0);
+            return false;
+        }
     }
 
     return true;
@@ -447,7 +485,13 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
         {
             if (key <= maxElements)
             {
-                table->element[key - 1] = node->value;
+                Value* dst = &table->element[key - 1];
+                ASSERT( Value_GetIsNil(dst) );
+                *dst = node->value;
+                if (key > table->size)
+                {
+                    table->size = key;
+                }
                 // Note, just setting the node to dead will leave the table in an
                 // invalid state, but that's ok because we're going to immediately
                 // rehash it which doesn't rely on it being in a valid state.
@@ -473,7 +517,7 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
     Table_ResizeHash(L, table, numNodes, true);
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    ASSERT( Table_CheckConsistency(table) );
+    Table_CheckConsistency(table);
 #endif
 
 }
@@ -594,7 +638,7 @@ static bool Table_RemoveHash(Table* table, const Value* key)
     node->prev = prev;
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    ASSERT( Table_CheckConsistency(table) );
+    Table_CheckConsistency(table);
 #endif
 
     return true;
@@ -606,13 +650,31 @@ static bool Table_Remove(Table* table, int key)
 
     if (key > 0 && key <= table->maxElements)
     {
+
         Value* dst = table->element + key - 1;
-        if (Value_GetIsNil(dst))
+        if (key > table->numElements || Value_GetIsNil(dst))
         {
             return false;
         }
         SetNil(dst);
         --table->numElementsSet;
+
+        // If we removed the last non-nil element in the array, we need to
+        // update the size.
+        if (key == table->size)
+        {
+            int size = table->size;
+            while (size > 0 && Value_GetIsNil(&table->element[size - 1]))
+            {
+                --size;
+            }
+            table->size = size;
+        }
+
+    #ifdef TABLE_CHECK_CONSISTENCY
+        Table_CheckConsistency(table);
+    #endif
+
         return true;
     }
 
@@ -889,7 +951,7 @@ Start:
     }
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    ASSERT( Table_CheckConsistency(table) );
+    Table_CheckConsistency(table);
 #endif
 
 }
@@ -912,10 +974,19 @@ FORCE_INLINE static void Table_AssignArray(lua_State* L, Table* table, int index
         Table_InitializeArrayElements(table, index + 1);
     }
 
+    if (index >= table->size)
+    {
+        table->size = index + 1;
+    }
+
     element[index] = *value;
     Gc_WriteBarrier(&L->gc, table, value);
 
     ++table->numElementsSet;
+
+#ifdef TABLE_CHECK_CONSISTENCY
+    Table_CheckConsistency(table);
+#endif
 
 }
 
@@ -950,7 +1021,7 @@ void Table_Insert(lua_State* L, Table* table, int key, Value* value)
     SetValue(&temp, key);
     Table_InsertHash(L, table, &temp, value);
 
-    if (key < table->minHashKey)
+    if ((key > 0) && (key < table->minHashKey))
     {
         table->minHashKey = key;
     }
@@ -1040,7 +1111,7 @@ int Table_GetSize(lua_State* L, Table* table)
     if (table->numElements > 0)
     {
         // If we have an array part, just use the size of that.
-        return table->numElements;
+        return table->size;
     }
 
     // Find min, max such that min is non-nil and max is nil. These will

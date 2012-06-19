@@ -37,9 +37,10 @@ struct Table : public Gc_Object
     TableNode*      nodes;          // Hash nodes.
     Value*          element;        // Array elements.
     int             minHashKey;     // Mimumum integer key that appears in the hash.
-    int             maxElements;
-    int             numElements;
+    int             maxElements;    // Number of array slots allocated.
+    int             numElements;    // Number of array slots initialized to valid values.
     int             numElementsSet; // Number of non-nil slots in the array.
+    int             size;           // Size of the array (using Lua definition).
     Table*          metatable;
 };
 
