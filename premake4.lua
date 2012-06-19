@@ -25,7 +25,7 @@ project "Rocket"
     kind "SharedLib"
     location "build"
     language "C++"
-    files { "src/*.h", "src/*.c", "src/*.cpp", "src/*.asm", "include/*.h" }
+    files { "src/*.h", "src/*.c", "src/*.cpp", "src/*.inl", "src/*.asm", "include/*.h" }
     includedirs { "include" }
     links { "AuxLib" }
 	if os.is("windows") then

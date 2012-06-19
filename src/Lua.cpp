@@ -55,6 +55,17 @@ struct Header
 };
 
 /**
+ * Returns a value relative to the top of the stack. The index parameter should
+ * be a negative value which is -1 for the top of the stack, -2 for the element
+ * before that, etc.
+ */
+static Value* GetValueRelativeToStackTop(lua_State* L, int index)
+{
+    luai_apicheck(L, index != 0 && -index <= L->stackTop - L->stackBase);
+    return L->stackTop + index;
+}
+
+/**
  * Accepts negative and pseudo indices.
  */
 static Value* GetValueForIndex(lua_State* L, int index)
@@ -72,8 +83,7 @@ static Value* GetValueForIndex(lua_State* L, int index)
     else if (index > LUA_REGISTRYINDEX)
     {
         // Stack index relative to the top of the stack.
-        luai_apicheck(L, index != 0 && -index <= L->stackTop - L->stackBase);
-        result = L->stackTop + index;
+        result = GetValueRelativeToStackTop(L, index);
     }
     else if (index == LUA_GLOBALSINDEX)
     {
@@ -363,7 +373,7 @@ int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char* name)
 
 int lua_dump(lua_State* L, lua_Writer writer, void* data)
 {
-    const Value* value = GetValueForIndex(L, -1);
+    const Value* value = GetValueRelativeToStackTop(L, -1);
     if (!Value_GetIsClosure(value) || value->closure->c)
     {
         return 1;
@@ -488,7 +498,7 @@ void lua_setfield(lua_State* L, int index, const char* name)
 
 void lua_gettable(lua_State *L, int index)
 {
-    Value* key   = GetValueForIndex( L, -1 );
+    Value* key   = GetValueRelativeToStackTop( L, -1 );
     Value* table = GetValueForIndex( L, index );
     Vm_GetTable(L, table, key, L->stackTop - 1, false);
 }
@@ -635,17 +645,10 @@ void lua_rawget(lua_State* L, int index)
     Value* table = GetValueForIndex( L, index );
     luai_apicheck(L, Value_GetIsTable(table) );
 
-    const Value* key = GetValueForIndex(L, -1);
+    const Value* key = GetValueRelativeToStackTop(L, -1);
     const Value* value = Table_GetTable(L, table->table, key);
-
-    if (value != NULL)
-    {
-        *(L->stackTop - 1) = *value;
-    }
-    else
-    {
-        SetNil(L->stackTop - 1);
-    }
+    
+    Value_Copy(L->stackTop - 1, value);
 
 }
 
@@ -656,22 +659,15 @@ void lua_rawgeti(lua_State *L, int index, int n)
     luai_apicheck(L, Value_GetIsTable(table) );    
 
     const Value* value = Table_GetTable(L, table->table, n);
-    if (value == NULL)
-    {
-        PushNil(L);
-    }
-    else
-    {
-        PushValue(L, value);
-    }
+    PushValue(L, value);
 
 }
 
 void lua_rawset(lua_State *L, int index)
 {
 
-    Value* key   = GetValueForIndex(L, -2);
-    Value* value = GetValueForIndex(L, -1);
+    Value* key   = GetValueRelativeToStackTop(L, -2);
+    Value* value = GetValueRelativeToStackTop(L, -1);
     Value* table = GetValueForIndex(L, index);
 
     luai_apicheck(L, Value_GetIsTable(table) );
@@ -686,7 +682,7 @@ void lua_rawseti(lua_State* L, int index, int n)
     Value* table = GetValueForIndex(L, index);
     luai_apicheck(L, Value_GetIsTable(table) );    
 
-    Value* value = GetValueForIndex(L, -1);
+    Value* value = GetValueRelativeToStackTop(L, -1);
     Table_SetTable(L, table->table, n, value);
     Pop(L, 1);
 
@@ -694,8 +690,8 @@ void lua_rawseti(lua_State* L, int index, int n)
 
 void lua_settable(lua_State* L, int index)
 {
-    Value* key   = GetValueForIndex(L, -2);
-    Value* value = GetValueForIndex(L, -1);
+    Value* key   = GetValueRelativeToStackTop(L, -2);
+    Value* value = GetValueRelativeToStackTop(L, -1);
     Value* table = GetValueForIndex(L, index);
     Vm_SetTable( L, table, key, value );
     Pop(L, 2);
@@ -799,7 +795,7 @@ int lua_checkstack(lua_State *L, int size)
 void lua_createtable(lua_State *L, int narr, int nrec)
 {
     Value value;
-    SetValue( &value, Table_Create(L) );
+    SetValue( &value, Table_Create(L, narr, nrec) );
     PushValue( L, &value );
 }
 
@@ -961,9 +957,9 @@ int lua_next(lua_State* L, int index)
     Value* table = GetValueForIndex(L, index);
     luai_apicheck(L, Value_GetIsTable(table) );
     
-    Value* key = GetValueForIndex(L, -1);
+    Value* key = GetValueRelativeToStackTop(L, -1);
 
-    const Value* value = Table_Next(table->table, key);
+    const Value* value = Table_Next(L, table->table, key);
     if (value == NULL)
     {
         Pop(L, 1);
@@ -988,7 +984,7 @@ int lua_setmetatable(lua_State* L, int index)
     luai_apicheck(L, GetStackSize(L) >= 1);
 
     Value* object    = GetValueForIndex(L, index);
-    Value* metatable = GetValueForIndex(L, -1);
+    Value* metatable = GetValueRelativeToStackTop(L, -1);
 
     Table* table = NULL;
     if (!Value_GetIsNil(metatable))
@@ -1023,7 +1019,7 @@ int lua_getmetatable(lua_State* L, int index)
 int lua_setfenv(lua_State *L, int index)
 {
     Value* object = GetValueForIndex(L, index);
-    Value* env = GetValueForIndex(L, -1);
+    Value* env = GetValueRelativeToStackTop(L, -1);
     
     luai_apicheck(L, Value_GetIsTable(env) );
 

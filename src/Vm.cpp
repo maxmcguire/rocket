@@ -5,12 +5,6 @@
  * See copyright notice in COPYRIGHT
  */
 
-extern "C"
-{
-#include "lua.h"
-#include "lualib.h"
-}
-
 #include "Opcode.h"
 #include "Vm.h"
 #include "State.h"
@@ -19,6 +13,12 @@ extern "C"
 #include "Table.h"
 #include "Function.h"
 #include "UpValue.h"
+
+extern "C"
+{
+#include "lua.h"
+#include "lualib.h"
+}
 
 #include <memory.h>
 
@@ -166,11 +166,16 @@ static void ConcatError(lua_State* L, const Value* arg1, const Value* arg2)
 static Value* GetTagMethod(lua_State* L, const Value* value, TagMethod method)
 {
     Table* metatable = Value_GetMetatable(L, value);
+    Value* result = NULL;
     if (metatable != NULL)
     {
-        return Table_GetTable(L, metatable, L->tagMethodName[method]);
+        result = Table_GetTable(L, metatable, L->tagMethodName[method]);
+        if (Value_GetIsNil(result))
+        {
+            result = NULL;
+        }
     }
-    return NULL;
+    return result;
 }
 
 /** Selects the tag method to used based on the two arguments to a binary operation. */
@@ -247,6 +252,7 @@ void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
         {
 
             Table* table = dst->table;
+
             if (Table_Update(L, table, key, value))
             {
                 return;
@@ -297,7 +303,7 @@ void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst,
         if (Value_GetIsTable(value))
         {
             const Value* result = Table_GetTable(L, value->table, key);
-            if (result != NULL)
+            if (!Value_GetIsNil(result))
             {
                 *dst = *result;
                 return;
@@ -636,6 +642,7 @@ static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs, int n
     if (numArgs == -1)
     {
         numArgs = static_cast<int>(L->stackTop - value) - 1;
+        ASSERT(numArgs >= 0);
     }
 
     // Prepares a value to be called as a function. If the value isn't a function,
@@ -732,10 +739,20 @@ static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs, int n
 
         if (prototype->varArg)
         {
+
+            // If we received fewer than the expected number of fixed arguments
+            // we'll have problems, so pad with nil values.
+            if (numArgs < prototype->numParams)
+            {
+                Value_SetRangeNil(value + 1 + numArgs, value + 1 + prototype->numParams);
+                numArgs = prototype->numParams;
+            }
+
             // Duplicate the fixed arguments.
             Value* arg = value + 1;
             Value* dst = value + 1 + numArgs;
             L->stackBase = dst;
+
             for (int i = 0; i < prototype->numParams; ++i)
             {
                 *dst = *arg;
@@ -768,7 +785,7 @@ static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs, int n
         frame->stackTop  = L->stackTop;
         frame->ip        = prototype->code;
 
-        SetRangeNil(initBase, L->stackTop);
+        Value_SetRangeNil(initBase, L->stackTop);
         return NULL;
 
     }
@@ -788,7 +805,7 @@ static void ReturnFromCCall(lua_State* L, int result, int numResults)
         if (numResults != -1)
         {
             // If we want more results than were provided, fill in nil values.
-            SetRangeNil(firstValue + result, firstValue + numResults);
+            Value_SetRangeNil(firstValue + result, firstValue + numResults);
             result = numResults;
         }
         L->stackTop = firstValue + result;
@@ -810,7 +827,7 @@ static void ReturnFromLuaCall(lua_State* L, int result, int numResults)
         if (numResults != -1)
         {
             // If we want more results than were provided, fill in nil values.
-            SetRangeNil(firstValue + result, firstValue + numResults);
+            Value_SetRangeNil(firstValue + result, firstValue + numResults);
             result = numResults;
         }
         L->stackTop = firstValue + result;
@@ -864,7 +881,7 @@ static int Execute(lua_State* L)
 
 Start:
 
-    CallFrame* frame = State_GetCallFrame(L );
+    CallFrame* frame = State_GetCallFrame(L);
     Closure* closure = frame->function->closure;
 
     ASSERT( !closure->c );
@@ -1226,7 +1243,10 @@ Start:
             break;
         case Opcode_NewTable:
             {
-                SetValue( &stackBase[a], Table_Create(L) );
+                // TODO: Get the sizes from the instruction.
+                int numArray = 0;
+                int numHash  = 0;
+                SetValue( &stackBase[a], Table_Create(L, numArray, numHash) );
             }
             break;
         case Opcode_Closure:
@@ -1245,7 +1265,7 @@ Start:
                     if ( GET_OPCODE(inst) == Opcode_Move )
                     {
                         c->lclosure.upValue[i] = UpValue_Create(L, &stackBase[b]);
-                        Gc_WriteBarrier(L, c, c->lclosure.upValue[i]);
+                        Gc_WriteBarrier(&L->gc, c, c->lclosure.upValue[i]);
                     }
                     else
                     {
@@ -1421,6 +1441,8 @@ Start:
             {
                 int numArgs    = static_cast<int>(frame->stackBase - frame->function) - 1;
                 int numVarArgs = numArgs - prototype->numParams;
+                ASSERT(numVarArgs >= 0);
+
                 int num = GET_B(inst) - 1;
                 if (num < 0)
                 {
@@ -1431,9 +1453,16 @@ Start:
                 Value* src = stackBase - numVarArgs;
                 for (int i = 0; i < num; ++i)
                 {
-                    *dst = *src;
+                    if (i < numVarArgs)
+                    {
+                        *dst = *src;
+                        ++src;
+                    }
+                    else
+                    {
+                        SetNil(dst);
+                    }
                     ++dst;
-                    ++src;
                 }
             }
             break;

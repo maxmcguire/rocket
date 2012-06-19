@@ -8,6 +8,91 @@
 #include "Test.h"
 #include "LuaTest.h"
 
+TEST_FIXTURE(ArrayAppend, LuaFixture)
+{
+
+    lua_newtable(L);
+    int table = lua_gettop(L);
+
+    lua_pushstring(L, "one");
+    lua_rawseti(L, table, 1);
+
+    lua_pushstring(L, "two");
+    lua_rawseti(L, table, 2);
+
+    lua_pushstring(L, "three");
+    lua_rawseti(L, table, 3);
+
+    lua_pushstring(L, "four");
+    lua_rawseti(L, table, 4);
+
+    lua_rawgeti(L, table, 1);
+    CHECK_EQ( lua_tostring(L, -1), "one" );
+
+    lua_rawgeti(L, table, 2);
+    CHECK_EQ( lua_tostring(L, -1), "two" );
+
+    lua_rawgeti(L, table, 3);
+    CHECK_EQ( lua_tostring(L, -1), "three" );
+
+    lua_rawgeti(L, table, 4);
+    CHECK_EQ( lua_tostring(L, -1), "four" );
+
+}
+
+TEST_FIXTURE(ArrayConvertFromHash, LuaFixture)
+{
+
+    lua_newtable(L);
+    int table = lua_gettop(L);
+
+    lua_pushstring(L, "four");
+    lua_rawseti(L, table, 4);
+
+    lua_pushstring(L, "five");
+    lua_rawseti(L, table, 5);
+
+    lua_pushstring(L, "six");
+    lua_rawseti(L, table, 6);
+
+    lua_pushstring(L, "seven");
+    lua_rawseti(L, table, 7);
+
+    lua_pushstring(L, "one");
+    lua_rawseti(L, table, 1);
+
+    lua_pushstring(L, "two");
+    lua_rawseti(L, table, 2);
+
+    lua_pushstring(L, "three");
+    lua_rawseti(L, table, 3);
+
+    lua_rawgeti(L, table, 1);
+    CHECK_EQ( lua_tostring(L, -1), "one" );
+
+    lua_rawgeti(L, table, 2);
+    CHECK_EQ( lua_tostring(L, -1), "two" );
+
+    lua_rawgeti(L, table, 3);
+    CHECK_EQ( lua_tostring(L, -1), "three" );
+
+    lua_rawgeti(L, table, 4);
+    CHECK_EQ( lua_tostring(L, -1), "four" );
+
+    lua_rawgeti(L, table, 5);
+    CHECK_EQ( lua_tostring(L, -1), "five" );
+
+    lua_rawgeti(L, table, 6);
+    CHECK_EQ( lua_tostring(L, -1), "six" );
+
+    lua_rawgeti(L, table, 7);
+    CHECK_EQ( lua_tostring(L, -1), "seven" );
+
+    lua_rawgeti(L, table, 8);
+    CHECK( lua_isnil(L, -1) );
+
+}
+
 TEST_FIXTURE(ArrayRemove, LuaFixture)
 {
 
@@ -37,7 +122,45 @@ TEST_FIXTURE(ArrayRemove, LuaFixture)
 
 }
 
-TEST_FIXTURE(LargeArray, LuaFixture)
+TEST_FIXTURE(ArrayNext, LuaFixture)
+{
+
+    lua_newtable(L);
+    int table = lua_gettop(L);
+
+    lua_pushinteger(L, 1);
+    lua_rawseti(L, table, 1);
+
+    lua_pushinteger(L, 2);
+    lua_rawseti(L, table, 2);
+
+    lua_pushinteger(L, 3);
+    lua_rawseti(L, table, 3);
+
+    lua_pushinteger(L, 4);
+    lua_rawseti(L, table, 4);
+
+    int count[4] = { 0 };
+
+    lua_pushnil(L);
+    while (lua_next(L, table))
+    {
+        lua_Integer key   = lua_tointeger(L, -2);
+        lua_Integer value = lua_tointeger(L, -1);
+        CHECK_EQ( key, value );
+        CHECK( key >= 1 && key <= 4 );
+        ++count[key - 1];
+        lua_pop(L, 1);
+    }
+
+    for (int i = 0; i < 4; ++i)
+    {
+        CHECK_EQ( count[i], 1 );
+    }
+
+}
+
+TEST_FIXTURE(ArrayLarge, LuaFixture)
 {
 
     const char* code = 

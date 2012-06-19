@@ -52,8 +52,8 @@ Function* Function_Create(lua_State* L)
     // that.
 
     PushFunction(L, function);
-    function->constants = Table_Create(L);
-    Gc_WriteBarrier(L, function, function->constants);
+    function->constants = Table_Create(L, 0, 0);
+    Gc_WriteBarrier(&L->gc, function, function->constants);
     Pop(L, 1);
 
     return function;
@@ -195,6 +195,8 @@ static void Parser_MarkUpValue(Function* function, int local)
 static int Parser_AddUpValue(Parser* parser, Function* function, String* name)
 {
 
+    lua_State* L = parser->L;
+
     // Check to see if it's already an up value in our function.
     int index = Parser_GetUpValueIndex(function, name);
     if (index != -1)
@@ -226,6 +228,8 @@ static int Parser_AddUpValue(Parser* parser, Function* function, String* name)
 
             int n =  function->numUpValues;
             function->upValue[n] = name;
+
+            Gc_WriteBarrier(&L->gc, function, name);
 
             ++function->numUpValues;
             return n;
@@ -262,7 +266,7 @@ int Parser_AddLocal(Parser* parser, String* name)
     }
 
     function->local[function->numLocals] = name;
-    Gc_WriteBarrier(parser->L, function, name);
+    Gc_WriteBarrier(&parser->L->gc, function, name);
     ++function->numLocals;
 
     return function->numLocals - 1;
@@ -303,7 +307,7 @@ int Parser_AddConstant(Parser* parser, Value* value)
     }
 
     const Value* result = Table_GetTable(parser->L, function->constants, value);
-    if (result != NULL)
+    if (!Value_GetIsNil(result))
     {
         return Value_GetInteger(result);
     }
@@ -1049,13 +1053,17 @@ void Parser_FreeRegisters(Parser* parser, int num)
 int Parser_AddFunction(Parser* parser, Function* f)
 {
 
+    lua_State* L = parser->L;
+
     Function* function = parser->function;
-    GrowArray(parser->L, function->function, function->numFunctions, function->maxFunctions);
+    GrowArray(L, function->function, function->numFunctions, function->maxFunctions);
 
     int index = function->numFunctions;
 
     function->function[index] = f;
     ++function->numFunctions;
+
+    Gc_WriteBarrier(&L->gc, function, f);
 
     return index;
 
@@ -1087,7 +1095,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     for (int i = 0; i < function->numFunctions; ++i)
     {
         prototype->prototype[i] = Function_CreatePrototype(L, function->function[i], source);
-        Gc_WriteBarrier(L, prototype, prototype->prototype[i]);
+        Gc_WriteBarrier(&L->gc, prototype, prototype->prototype[i]);
     }
 
     // Store the constants.
@@ -1098,10 +1106,13 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     Table* constants = function->constants;
     const Value* value;
 
-    while (value = Table_Next(constants, &key))
+    while (value = Table_Next(L, constants, &key))
     {
-        ASSERT(Value_GetIsNumber(value));
-        int i = static_cast<int>(value->number);
+        int i;
+        if (!Value_GetIsInteger(value, &i))
+        {
+            ASSERT(0);
+        }
         if (Value_GetIsTable(&key) && key.table == constants)
         {
             // The table itself is used to indicate nil values since nil values
@@ -1112,7 +1123,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
         {
             prototype->constant[i] = key;
         }
-        Gc_WriteBarrier(L, prototype, &prototype->constant[i]);
+        Gc_WriteBarrier(&L->gc, prototype, &prototype->constant[i]);
     }
     
     prototype->varArg       = function->varArg;

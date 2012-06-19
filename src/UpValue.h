@@ -48,7 +48,7 @@ inline void UpValue_SetValue(lua_State* L, LClosure* closure, int index, const V
     { 
         UpValue* upValue = closure->upValue[index];
         *upValue->value = *value;
-        Gc_WriteBarrier(L, upValue, value);
+        Gc_WriteBarrier(&L->gc, upValue, value);
     }
 
 /**

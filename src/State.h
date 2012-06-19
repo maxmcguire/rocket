@@ -16,6 +16,7 @@ extern "C"
 #include "String.h"
 #include "Value.h"
 #include "Opcode.h"
+#include "Gc.h"
 
 #include <setjmp.h>
 
@@ -206,20 +207,12 @@ void Concat(lua_State* L, Value* dst, Value* start, Value* end);
 bool ToString(lua_State* L, Value* value);
 
 void State_Error(lua_State* L);
+void State_Error(lua_State* L, const char* format, ...);
 
 // Returns a human readable type name.
 String* State_TypeName(lua_State* L, int type);
 
 inline CallFrame* State_GetCallFrame(lua_State* L)
     { return L->callStackTop - 1; }
-
-// Sets the range of values between base and top to nil (doesn't set top).
-inline void SetRangeNil(Value* base, Value* top)
-{
-    for (Value* dst = base; dst < top; ++dst)
-    {
-        SetNil(dst);
-    }
-}
 
 #endif

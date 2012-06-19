@@ -28,14 +28,22 @@ struct TableNode
     };
 };
 
+/**
+ * A table is implemented as a union of an array and a hash table.
+ */
 struct Table : public Gc_Object
 {
     int             numNodes;
-    TableNode*      nodes;
+    TableNode*      nodes;          // Hash nodes.
+    Value*          element;        // Array elements.
+    int             minHashKey;     // Mimumum integer key that appears in the hash.
+    int             maxElements;
+    int             numElements;
+    int             numElementsSet; // Number of non-nil slots in the array.
     Table*          metatable;
 };
 
-extern "C" Table* Table_Create(lua_State* L);
+extern "C" Table* Table_Create(lua_State* L, int numArray, int numHash);
 void   Table_Destroy(lua_State* L, Table* table);
 
 /**
@@ -49,12 +57,17 @@ bool Table_Update(lua_State* L, Table* table, Value* key, Value* value);
  * Inserts a new key, value pair into the table. The key is assumed to not
  * exist in the table already.
  */
+void Table_Insert(lua_State* L, Table* table, int key, Value* value);
 void Table_Insert(lua_State* L, Table* table, Value* key, Value* value);
 
 void Table_SetTable(lua_State* L, Table* table, int key, Value* value);
 void Table_SetTable(lua_State* L, Table* table, const char* key, Value* value);
 void Table_SetTable(lua_State* L, Table* table, Value* key, Value* value);
 
+/**
+ * Returns the value for the key in the table. If the value is not in the table,
+ * the function will return a nil value.
+ */
 Value* Table_GetTable(lua_State* L, Table* table, const Value* key);
 Value* Table_GetTable(lua_State* L, Table* table, int key);
 Value* Table_GetTable(lua_State* L, Table* table, String* key);
@@ -64,7 +77,11 @@ Value* Table_GetTable(lua_State* L, Table* table, String* key);
  */
 int Table_GetSize(lua_State* L, Table* table);
 
-// The key will be updated to the next key.
-const Value* Table_Next(Table* table, Value* key);
+/**
+ * Returns the next value in the table after the specified key. The key will be
+ * updated to the next key. The key can have previously been deleted from the
+ * table as long as the table was not resized.
+ */
+const Value* Table_Next(lua_State* L, Table* table, Value* key);
 
 #endif

@@ -218,6 +218,13 @@ static bool Gc_Propagate(Gc* gc)
 
         Table* table = static_cast<Table*>(object);
 
+        Value* element = table->element;
+        for (int i = 0; i < table->numElements; ++i)
+        {
+            Gc_MarkValue(gc, element);
+            ++element;
+        }
+
         // Mark the key and values in the table.
         TableNode* node = table->nodes;
         TableNode* end  = node + table->numNodes;
@@ -335,7 +342,7 @@ static bool Gc_Propagate(Gc* gc)
     }
     else if (object->type == LUA_TFUNCTIONP)
     {
-    
+
         Function* function = static_cast<Function*>(object);
 
         if (function->parent != NULL)
@@ -482,6 +489,7 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
 void Gc_Collect(lua_State* L, Gc* gc)
 {
+
     // Finish up any propagation stage.
     while (gc->state != Gc_State_Paused)
     {
@@ -494,20 +502,5 @@ void Gc_Collect(lua_State* L, Gc* gc)
     {
         Gc_Step(L, gc);
     }
-}
 
-void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, Gc_Object* child)
-{
-    if (parent->color == Color_Black && child->color == Color_White)
-    {
-        Gc_MarkObject(&L->gc, child);
-    }
-}
-
-void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, const Value* child)
-{
-    if (Value_GetIsObject(child))
-    {
-        Gc_WriteBarrier(L, parent, child->object);
-    }
 }

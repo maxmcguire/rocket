@@ -8,11 +8,6 @@
 #ifndef ROCKETVM_VM_H
 #define ROCKETVM_VM_H
 
-extern "C"
-{
-#include "lua.h"
-}
-
 #include "State.h"
 
 /**

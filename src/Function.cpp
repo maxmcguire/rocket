@@ -253,7 +253,7 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
             ++constants;
         }
             
-        Gc_WriteBarrier(L, prototype, &prototype->constant[i]);
+        Gc_WriteBarrier(&L->gc, prototype, &prototype->constant[i]);
 
     }
 
@@ -333,10 +333,10 @@ Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env)
     closure->c = false;
     
     closure->env = env;
-    Gc_WriteBarrier(L, closure, env);
+    Gc_WriteBarrier(&L->gc, closure, env);
 
     closure->lclosure.prototype = prototype;
-    Gc_WriteBarrier(L, closure, prototype);
+    Gc_WriteBarrier(&L->gc, closure, prototype);
 
     closure->lclosure.upValue   = reinterpret_cast<UpValue**>(closure + 1);
     closure->lclosure.numUpValues = prototype->numUpValues;

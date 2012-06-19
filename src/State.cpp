@@ -14,6 +14,7 @@
 #include <memory.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 void* Allocate(lua_State* L, size_t size)
 {
@@ -124,8 +125,8 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
 
     Gc_Initialize(&L->gc);
 
-    SetValue( &L->globals, Table_Create(L) );
-    SetValue( &L->registry, Table_Create(L) );
+    SetValue( &L->globals, Table_Create(L, 0, 0) );
+    SetValue( &L->registry, Table_Create(L, 0, 0) );
 
     // Store the names for the different types, so we don't have to create new
     // strings when we want to return them.
@@ -323,6 +324,15 @@ void State_Error(lua_State* L)
         }
         exit(EXIT_FAILURE);
     }
+}
+
+void State_Error(lua_State* L, const char* format, ...)
+{
+    va_list argp;
+    va_start(argp, format);
+    PushVFString(L, format, argp);
+    va_end(argp);
+    State_Error(L);
 }
 
 String* State_TypeName(lua_State* L, int type)

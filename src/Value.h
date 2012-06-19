@@ -209,6 +209,16 @@ inline void SetValue(Value* value, Function* function)
 inline void SetValue(Value* value, Prototype* prototype)
     { value->tag = Tag_Prototype; value->prototype = prototype; }
 
+/**
+ * Sets the range of values between base and top to nil (doesn't set top).
+ */
+inline void Value_SetRangeNil(Value* base, Value* top)
+{
+    for (Value* dst = base; dst < top; ++dst)
+    {
+        SetNil(dst);
+    }
+}
 
 /**
  * Tests if two values are equal using a raw test (no metamethods).

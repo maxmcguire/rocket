@@ -10,8 +10,7 @@
 
 #include <stdlib.h>
 
-struct lua_State;
-union  Value;
+#include "Value.h"
 
 enum Gc_State
 {
@@ -76,10 +75,12 @@ void* Gc_AllocateObject(lua_State* L, int type, size_t size, bool link = true);
 /** 
  * Should be called when parent becomes an owner of child.
  */
-void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, Gc_Object* child);
-void Gc_WriteBarrier(lua_State* L, Gc_Object* parent, const Value* child);
+void Gc_WriteBarrier(Gc* gc, Gc_Object* parent, Gc_Object* child);
+void Gc_WriteBarrier(Gc* gc, Gc_Object* parent, const Value* child);
 
 
 void Gc_MarkObject(Gc* gc, Gc_Object* object);
+
+#include "Gc.inl"
 
 #endif

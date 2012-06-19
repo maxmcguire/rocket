@@ -20,14 +20,14 @@ void Value_SetMetatable(lua_State* L, Value* value, Table* table)
         value->table->metatable = table;
         if (table != NULL)
         {
-            Gc_WriteBarrier(L, value->table, table);
+            Gc_WriteBarrier(&L->gc, value->table, table);
         }
         break;
     case Tag_Userdata:
         value->userData->metatable = table;
         if (table != NULL)
         {
-            Gc_WriteBarrier(L, value->userData, table);
+            Gc_WriteBarrier(&L->gc, value->userData, table);
         }
         break;
     default:
@@ -63,7 +63,7 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table)
     {
     case Tag_Closure:
         value->closure->env = table;
-        Gc_WriteBarrier(L, value->closure, table);
+        Gc_WriteBarrier(&L->gc, value->closure, table);
         return 1;
     case Tag_Thread:
         // TODO: implement.
@@ -71,7 +71,7 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table)
         return 1;
     case Tag_Userdata:
         value->userData->env = table;
-        Gc_WriteBarrier(L, value->userData, table);
+        Gc_WriteBarrier(&L->gc, value->userData, table);
         return 1;
     }
     return 0;
