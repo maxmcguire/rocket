@@ -25,6 +25,7 @@ namespace
 // Currently disabled until fully debugged.
 //#define TABLE_ARRAY
 
+static void Table_InsertHash(lua_State* L, Table* table, Value* key, Value* value);
 static bool Table_WriteDot(const Table* table, const char* fileName);
 
 template <class T>
@@ -288,10 +289,14 @@ static void Table_AllocateArray(lua_State* L, Table* table, int maxElements)
     table->maxElements = maxElements;
 }
 
-static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes)
+/**
+ * If force is true, the hash will be rebuilt regardless of whether or not the
+ * number of nodes has changed. This can be used to clear out dead nodes.
+ */
+static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool force)
 {
 
-    if (table->numNodes == numNodes)
+    if (table->numNodes == numNodes &&!force)
     {
         return true;
     }
@@ -323,7 +328,7 @@ static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes)
         {
             if ( !Table_NodeIsEmpty(&nodes[i]) )
             {
-                Table_Insert(L, table, &nodes[i].key, &nodes[i].value);
+                Table_InsertHash(L, table, &nodes[i].key, &nodes[i].value);
             }
         }
     }
@@ -383,6 +388,7 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
     }
 
     TableNode* node = table->nodes;
+    int numNodes = 0;
     for (int i = 0; i < table->numNodes; ++i)
     {
         int key;
@@ -398,6 +404,7 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
             {
                 nodeKey[i] = -1;
             }
+            ++numNodes;
         }
         else
         {
@@ -429,8 +436,8 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
     // key for the elements that don't.
 
     table->minHashKey = INT_MAX;
-
     node = table->nodes;
+
     int numNodesMoved = 0;
 
     for (int i = 0; i < table->numNodes; ++i)
@@ -462,9 +469,8 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
         Free(L, nodeKey, table->numNodes * sizeof(int));
     }
 
-    int numNodes = table->numNodes - numNodesMoved;
-    numNodes = RoundUp2(numNodes);
-    Table_ResizeHash(L, table, numNodes);
+    numNodes = RoundUp2(numNodes - numNodesMoved);
+    Table_ResizeHash(L, table, numNodes, true);
 
 #ifdef TABLE_CHECK_CONSISTENCY
     ASSERT( Table_CheckConsistency(table) );
@@ -777,7 +783,7 @@ static void Table_InsertHash(lua_State* L, Table* table, Value* key, Value* valu
 
     if (table->numNodes == 0)
     {
-        Table_ResizeHash(L, table, 2);
+        Table_ResizeHash(L, table, 2, false);
     }
 
 Start:
@@ -815,7 +821,7 @@ Start:
         if (freeNode == NULL)
         {
             // Table is full, so resize.
-            if (Table_ResizeHash(L, table, table->numNodes * 2))
+            if (Table_ResizeHash(L, table, table->numNodes * 2, false))
             {
                 goto Start;
             }
