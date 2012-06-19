@@ -840,7 +840,7 @@ static void Parser_UpdateTempLocation(Parser* parser, Expression* value, int reg
 int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
 {
 
-    if (reg != -1 && reg > Parser_GetNumRegisters(parser))
+    if (reg != -1 && reg >= Parser_GetNumRegisters(parser))
     {
         Parser_SetLastRegister(parser, reg);
     }
@@ -999,7 +999,7 @@ void Parser_MoveToStackTop(Parser* parser, Expression* value, int regHint)
     Function* function = parser->function;
 
     int reg = -1;
-    if (regHint != -1 && regHint == function->numRegisters - 1)
+    if (regHint != -1 && regHint >= function->numRegisters - 1)
     {
         reg = regHint;
     }
