@@ -49,6 +49,7 @@ Table* Table_Create(lua_State* L, int numArray, int numHash)
     table->minHashKey       = INT_MAX;
     table->metatable        = NULL;
     table->size             = 0;
+    table->lastFreeNode     = NULL;
     // TODO: Initialize the array and hash parts based on the parameters.
     return table;
 }
@@ -334,7 +335,7 @@ static void Table_AllocateArray(lua_State* L, Table* table, int maxElements)
 static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool force)
 {
 
-    if (table->numNodes == numNodes &&!force)
+    if (table->numNodes == numNodes && !force)
     {
         return true;
     }
@@ -362,6 +363,7 @@ static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool forc
 
     if (table->numNodes != 0)
     {
+        table->lastFreeNode = table->nodes + table->numNodes - 1;
         for (int i = 0; i < numNodes; ++i)
         {
             if ( !Table_NodeIsEmpty(&nodes[i]) )
@@ -369,6 +371,10 @@ static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool forc
                 Table_InsertHash(L, table, &nodes[i].key, &nodes[i].value);
             }
         }
+    }
+    else
+    {
+        table->lastFreeNode = NULL;
     }
 
     Free(L, nodes, numNodes * sizeof(TableNode));
@@ -517,7 +523,7 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
     Table_ResizeHash(L, table, numNodes, true);
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    Table_CheckConsistency(table);
+    ASSERT( Table_CheckConsistency(table) );
 #endif
 
 }
@@ -638,7 +644,7 @@ static bool Table_RemoveHash(Table* table, const Value* key)
     node->prev = prev;
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    Table_CheckConsistency(table);
+    ASSERT( Table_CheckConsistency(table) );
 #endif
 
     return true;
@@ -672,7 +678,7 @@ static bool Table_Remove(Table* table, int key)
         }
 
     #ifdef TABLE_CHECK_CONSISTENCY
-        Table_CheckConsistency(table);
+        ASSERT( Table_CheckConsistency(table) );
     #endif
 
         return true;
@@ -696,12 +702,13 @@ static bool Table_Remove(Table* table, const Value* key)
 
 static TableNode* Table_GetFreeNode(Table* table)
 {
-    for (int i = 0; i < table->numNodes; ++i)
+    while (table->lastFreeNode >= table->nodes)
     {
-        if ( Table_NodeIsEmpty(&table->nodes[i]) )
+        if ( Table_NodeIsEmpty(table->lastFreeNode) )
         {
-            return &table->nodes[i];
+            return table->lastFreeNode;
         }
+        --table->lastFreeNode;
     }
     return NULL;
 }
@@ -951,7 +958,7 @@ Start:
     }
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    Table_CheckConsistency(table);
+    ASSERT( Table_CheckConsistency(table) );
 #endif
 
 }
@@ -985,7 +992,7 @@ FORCE_INLINE static void Table_AssignArray(lua_State* L, Table* table, int index
     ++table->numElementsSet;
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    Table_CheckConsistency(table);
+    ASSERT( Table_CheckConsistency(table) );
 #endif
 
 }

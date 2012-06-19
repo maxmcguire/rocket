@@ -41,6 +41,7 @@ struct Table : public Gc_Object
     int             numElements;    // Number of array slots initialized to valid values.
     int             numElementsSet; // Number of non-nil slots in the array.
     int             size;           // Size of the array (using Lua definition).
+    TableNode*      lastFreeNode;
     Table*          metatable;
 };
 
