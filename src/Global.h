@@ -28,10 +28,10 @@
 #endif
 
 #ifdef __GNUC__
-    #define FORCE_INLINE    __attribute__((always_inline))
+    #define FORCE_INLINE    inline __attribute__((always_inline))
     #define DISABLE_INLINE  __attribute__((noinline))
 #else
-    #define FORCE_INLINE    __forceinline
+    #define FORCE_INLINE    inline __forceinline
     #define DISABLE_INLINE  __declspec(noinline)
 #endif
 
