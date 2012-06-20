@@ -66,30 +66,42 @@ static inline void HashCombine(unsigned int& seed, unsigned int value)
     seed ^= value + (seed<<6) + (seed>>2);
 }
 
-static inline unsigned int Hash(double v)
-{
-    unsigned int* ptr = reinterpret_cast<unsigned int*>(&v);
-    unsigned int seed = *ptr++;
-    HashCombine(seed, *ptr);
-    return seed;
-}
-
-static inline unsigned int Hash(void* key)
+static inline unsigned int Hash(UInt32 v)
 {
     // From: http://www.concentric.net/~ttwang/tech/inthash.htm
+    v = (v+0x7ed55d16) + (v<<12);
+    v = (v^0xc761c23c) ^ (v>>19);
+    v = (v+0x165667b1) + (v<<5);
+    v = (v+0xd3a2646c) ^ (v<<9);
+    v = (v+0xfd7046c5) + (v<<3);
+    v = (v^0xb55a4f09) ^ (v>>16);
+    return v;
+}
+
+static inline unsigned int Hash(double v)
+{
+    ASSERT( sizeof(double) == sizeof(UInt32) * 2 );
+    UInt32* p = (UInt32*)&v; 
+
+    // This function does not necessarily hash 0 and -0 to the same value,
+    // however for our use that doesn't matter since we will never pass in -0
+    // (it gets automatically converted to 0 by the double -> int -> double
+    // process it goes through).
+    ASSERT( p[0] != 0x00000000 || p[1] != 0x80000000 );
+
+    unsigned int h = Hash(p[0]);
+    HashCombine(h, Hash(p[1]));
+    return h;
+}
+
+static inline unsigned int Hash(void* v)
+{
     // Disable 64-bit portability warning. This function should be
     // completely changed for 64-bit keys.
 #pragma warning( push )
 #pragma warning( disable : 4311 )
-    unsigned int a = reinterpret_cast<unsigned int>(key);
+    return Hash(reinterpret_cast<UInt32>(v));
 #pragma warning( pop ) 
-    a = (a+0x7ed55d16) + (a<<12);
-    a = (a^0xc761c23c) ^ (a>>19);
-    a = (a+0x165667b1) + (a<<5);
-    a = (a+0xd3a2646c) ^ (a<<9);
-    a = (a+0xfd7046c5) + (a<<3);
-    a = (a^0xb55a4f09) ^ (a>>16);
-    return a;
 }
 
 FORCE_INLINE static unsigned int Hash(const Value* key)

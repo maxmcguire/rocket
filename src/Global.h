@@ -35,5 +35,10 @@
     #define DISABLE_INLINE  __declspec(noinline)
 #endif
 
+typedef unsigned long       UInt32;
+typedef unsigned long long  UInt64;
+
+STATIC_ASSERT( sizeof(UInt32) == 4, UInt32Size );
+STATIC_ASSERT( sizeof(UInt64) == 8, UInt32Size );
 
 #endif

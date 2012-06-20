@@ -8,6 +8,25 @@
 #include "Test.h"
 #include "LuaTest.h"
 
+TEST_FIXTURE(TableNegativeZero, LuaFixture)
+{
+
+    // Check that -0 and 0 are equivalent when using as a table key.
+
+    lua_newtable(L);
+    int table = lua_gettop(L);
+
+    lua_pushnumber(L, -0.0);
+    lua_pushstring(L, "zero");
+    lua_rawset(L, table);
+
+    lua_pushnumber(L, 0.0);
+    lua_rawget(L, table);
+
+    CHECK_EQ( lua_tostring(L, -1), "zero" );
+
+}
+
 TEST_FIXTURE(ArrayAppend, LuaFixture)
 {
 
