@@ -13,12 +13,19 @@
 
 // These macros are used to unpack the opcode and arguments of a
 // 32-bit instruction.
-#define GET_OPCODE(inst)    static_cast<Opcode>((inst) & 0x3F)
-#define GET_A(inst)         static_cast<int>( ((inst) >> 6) & 0xFF )
-#define GET_B(inst)         static_cast<int>( ((inst) >> 23) & 0x1FF )
-#define GET_Bx(inst)        static_cast<int>( ((inst) >> 14) & 0x3FFFF )
-#define GET_sBx(inst)       ( GET_Bx(inst) - 131071 )
-#define GET_C(inst)         static_cast<int>( ((inst) >> 14) & 0x1FF )
+#define LUA_GET_OPCODE(inst)    static_cast<Opcode>((inst) & 0x3F)
+#define LUA_GET_A(inst)         static_cast<int>( ((inst) >> 6) & 0xFF )
+#define LUA_GET_B(inst)         static_cast<int>( ((inst) >> 23) & 0x1FF )
+#define LUA_GET_Bx(inst)        static_cast<int>( ((inst) >> 14) & 0x3FFFF )
+#define LUA_GET_sBx(inst)       ( LUA_GET_Bx(inst) - 131071 )
+#define LUA_GET_C(inst)         static_cast<int>( ((inst) >> 14) & 0x1FF )
+
+#define VM_GET_OPCODE(inst)     static_cast<Opcode>((inst) & 0xFF)
+#define VM_GET_A(inst)          static_cast<int>( ((inst) >> 8)  & 0xFF )
+#define VM_GET_B(inst)          static_cast<int>( ((inst) >> 16) & 0xFF )
+#define VM_GET_C(inst)          static_cast<int>( ((inst) >> 24) & 0xFF )
+#define VM_GET_D(inst)          static_cast<int>( ((inst) >> 16) & 0xFFFF )
+#define VM_GET_sD(inst)         ( VM_GET_D(inst) - 32767 )
 
 typedef int Instruction;
 
@@ -63,6 +70,52 @@ enum Opcode
     Opcode_Closure      = 36,
     Opcode_VarArg       = 37,
     Opcode_GetTableRef  = 38,
+
+    Opcode_GetTableC    = 39,   // Key is a constant.
+    Opcode_SetTableRC   = 40,   // Key is a register, value is constant.
+    Opcode_SetTableCR   = 41,   // Key is a constant, value is register.
+    Opcode_SetTableCC   = 42,   // Key is a constant, value is constant.
+
+    Opcode_SelfC        = 43,   // Key is constant.
+
+    Opcode_AddRC        = 44,
+    Opcode_AddCR        = 45,
+    Opcode_AddCC        = 46,
+
+    Opcode_SubRC        = 47,
+    Opcode_SubCR        = 48,
+    Opcode_SubCC        = 49,
+
+    Opcode_MulRC        = 50,
+    Opcode_MulCR        = 51,
+    Opcode_MulCC        = 52,
+
+    Opcode_DivRC        = 53,
+    Opcode_DivCR        = 54,
+    Opcode_DivCC        = 55,
+
+    Opcode_ModRC        = 56,
+    Opcode_ModCR        = 57,
+    Opcode_ModCC        = 58,
+
+    Opcode_PowRC        = 59,
+    Opcode_PowCR        = 60,
+    Opcode_PowCC        = 61,
+
+    Opcode_EqRC         = 62,
+    Opcode_EqCR         = 63,
+    Opcode_EqCC         = 64,
+
+    Opcode_LtRC         = 65,
+    Opcode_LtCR         = 66,
+    Opcode_LtCC         = 67,
+
+    Opcode_LeRC         = 68,
+    Opcode_LeCR         = 69,
+    Opcode_LeCC         = 70,
+
+    Opcode_GetTableRefC = 71,
+
 };
 
 const char* Opcode_GetAsText(Opcode opcode);

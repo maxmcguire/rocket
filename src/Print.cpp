@@ -167,7 +167,7 @@ void PrintFunction(Prototype* prototype)
         
         Instruction inst = prototype->code[i];
         
-        Opcode opcode = GET_OPCODE(inst);
+        Opcode opcode = LUA_GET_OPCODE(inst);
         int line = i + 1;
 
         const char* op = Opcode_GetAsText(opcode);
@@ -182,25 +182,25 @@ void PrintFunction(Prototype* prototype)
         switch (format[opcode])
         {
         case Format_A:
-            length += printf("%d", GET_A(inst));
+            length += printf("%d", LUA_GET_A(inst));
             break;
         case Format_AB:
-            length += printf("%d %d", GET_A(inst), GET_B(inst));
+            length += printf("%d %d", LUA_GET_A(inst), LUA_GET_B(inst));
             break;
         case Format_ABC:
-            length += printf("%d %d %d", GET_A(inst), GET_B(inst), GET_C(inst));
+            length += printf("%d %d %d", LUA_GET_A(inst), LUA_GET_B(inst), LUA_GET_C(inst));
             break;
         case Format_ABx:
-            length += printf("%d %d", GET_A(inst), GET_Bx(inst));
+            length += printf("%d %d", LUA_GET_A(inst), LUA_GET_Bx(inst));
             break;
         case Format_AsBx:
-            length += printf("%d %d", GET_A(inst), GET_sBx(inst));
+            length += printf("%d %d", LUA_GET_A(inst), LUA_GET_sBx(inst));
             break;
         case Format_AC:
-            length += printf("%d %d", GET_A(inst), GET_C(inst));
+            length += printf("%d %d", LUA_GET_A(inst), LUA_GET_C(inst));
             break;
         case Format_sBx:
-            length += printf("%d", GET_sBx(inst));
+            length += printf("%d", LUA_GET_sBx(inst));
             break;
         }
 
@@ -219,36 +219,36 @@ void PrintFunction(Prototype* prototype)
         switch (opcode)
         {
         case Opcode_GetGlobal:
-            arg1 = FormatK(prototype, buffer1, GET_Bx(inst));
-            printf("; r%d = _G[%s]", GET_A(inst), arg1); 
+            arg1 = FormatK(prototype, buffer1, LUA_GET_Bx(inst));
+            printf("; r%d = _G[%s]", LUA_GET_A(inst), arg1); 
             break;
         case Opcode_Jmp:
-            printf("; goto [%0*d]", lineNumberDigits, line + GET_sBx(inst) + 1); 
+            printf("; goto [%0*d]", lineNumberDigits, line + LUA_GET_sBx(inst) + 1); 
             break;
         case Opcode_Test:
-            if (GET_C(inst))
+            if (LUA_GET_C(inst))
             {
-                printf("; if not r%d then goto [%0*d]", GET_A(inst), lineNumberDigits, line + 2);
+                printf("; if not r%d then goto [%0*d]", LUA_GET_A(inst), lineNumberDigits, line + 2);
             }
             else
             {
-                printf("; if r%d then goto [%0*d]", GET_A(inst), lineNumberDigits, line + 2);
+                printf("; if r%d then goto [%0*d]", LUA_GET_A(inst), lineNumberDigits, line + 2);
             }
             break;
         case Opcode_TestSet:
-            if (GET_C(inst))
+            if (LUA_GET_C(inst))
             {
-                printf("; if r%d then r%d = r%d else goto [%0*d]", GET_B(inst), GET_A(inst), GET_B(inst), lineNumberDigits, line + 2);
+                printf("; if r%d then r%d = r%d else goto [%0*d]", LUA_GET_B(inst), LUA_GET_A(inst), LUA_GET_B(inst), lineNumberDigits, line + 2);
             }
             else
             {
-                printf("; if not r%d then r%d = r%d else goto [%0*d]", GET_B(inst), GET_A(inst), GET_B(inst), lineNumberDigits, line + 2);
+                printf("; if not r%d then r%d = r%d else goto [%0*d]", LUA_GET_B(inst), LUA_GET_A(inst), LUA_GET_B(inst), lineNumberDigits, line + 2);
             }
             break;
         case Opcode_Eq:
-            arg1 = FormatRK( prototype, buffer1, GET_B(inst) );
-            arg2 = FormatRK( prototype, buffer2, GET_C(inst) );
-            if (GET_A(inst))
+            arg1 = FormatRK( prototype, buffer1, LUA_GET_B(inst) );
+            arg2 = FormatRK( prototype, buffer2, LUA_GET_C(inst) );
+            if (LUA_GET_A(inst))
             {
                 printf("; if %s ~= %s then goto [%0*d]", arg1, arg2,
                     lineNumberDigits, line + 2);
@@ -260,9 +260,9 @@ void PrintFunction(Prototype* prototype)
             }
             break;
         case Opcode_Lt:
-            arg1 = FormatRK( prototype, buffer1, GET_B(inst) );
-            arg2 = FormatRK( prototype, buffer2, GET_C(inst) );
-            if (GET_A(inst))
+            arg1 = FormatRK( prototype, buffer1, LUA_GET_B(inst) );
+            arg2 = FormatRK( prototype, buffer2, LUA_GET_C(inst) );
+            if (LUA_GET_A(inst))
             {
                 printf("; if not (%s < %s) then goto [%0*d]", arg1, arg2,
                     lineNumberDigits, line + 2);
@@ -274,9 +274,9 @@ void PrintFunction(Prototype* prototype)
             }
             break;
         case Opcode_Le:
-            arg1 = FormatRK( prototype, buffer1, GET_B(inst) );
-            arg2 = FormatRK( prototype, buffer2, GET_C(inst) );
-            if (GET_A(inst))
+            arg1 = FormatRK( prototype, buffer1, LUA_GET_B(inst) );
+            arg2 = FormatRK( prototype, buffer2, LUA_GET_C(inst) );
+            if (LUA_GET_A(inst))
             {
                 printf("; if not (%s <= %s) then goto [%0*d]", arg1, arg2,
                     lineNumberDigits, line + 2);
@@ -288,24 +288,24 @@ void PrintFunction(Prototype* prototype)
             }
             break;
         case Opcode_LoadK:
-            arg1 = FormatK( prototype, buffer1, GET_Bx(inst) );
-            printf("; r%d = %s", GET_A(inst), arg1);
+            arg1 = FormatK( prototype, buffer1, LUA_GET_Bx(inst) );
+            printf("; r%d = %s", LUA_GET_A(inst), arg1);
             break;
         case Opcode_LoadBool:
-            if (GET_C(inst))
+            if (LUA_GET_C(inst))
             {
-                printf("; r%d = %s; goto [%0*d]", GET_A(inst), GET_B(inst) ? "true" : "false",
+                printf("; r%d = %s; goto [%0*d]", LUA_GET_A(inst), LUA_GET_B(inst) ? "true" : "false",
                     lineNumberDigits, line + 2);
             }
             else
             {
-                printf("; r%d = %s", GET_A(inst), GET_B(inst) ? "true" : "false");
+                printf("; r%d = %s", LUA_GET_A(inst), LUA_GET_B(inst) ? "true" : "false");
             }
             break;
         case Opcode_Call:
             {
-                int numArgs    = GET_B(inst) - 1;
-                int numResults = GET_C(inst) - 1;
+                int numArgs    = LUA_GET_B(inst) - 1;
+                int numResults = LUA_GET_C(inst) - 1;
                 printf("; ");
                 if (numArgs >= 0)
                 {

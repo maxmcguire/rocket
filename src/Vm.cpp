@@ -50,7 +50,7 @@ static int GetCurrentLine(CallFrame* frame)
     Prototype* prototype = closure->lclosure.prototype;
     // Note, ip will be the next instruction we execute, so we need to
     // subtract one.
-    int instruction = static_cast<int>(frame->ip - prototype->code - 1);
+    int instruction = static_cast<int>(frame->ip - prototype->convertedCode - 1);
     return prototype->sourceLine[instruction];
 }
 
@@ -783,7 +783,7 @@ static lua_CFunction PrepareCall(lua_State* L, Value* value, int& numArgs, int n
         // Store the stack information for debugging.
         frame->stackBase = L->stackBase;
         frame->stackTop  = L->stackTop;
-        frame->ip        = prototype->code;
+        frame->ip        = prototype->convertedCode;
 
         Value_SetRangeNil(initBase, L->stackTop);
         return NULL;
@@ -853,10 +853,6 @@ static int Execute(lua_State* L)
     }
     */
 
-    // Resolves a pseudoindex into a constant or a s5tack value.
-    #define RESOLVE_RK(c)   \
-        ((c) & 256) ? &constant[(c) & 255] : &stackBase[(c)]
-
     // Anything inside this function that can generate an error should be
     // wrapped in this macro which synchronizes the cached local variables.
     #define PROTECT(x) \
@@ -876,6 +872,68 @@ static int Execute(lua_State* L)
                 (Arithmetic<op, tag>(L, dst, arg1, arg2));                      \
             )                                                                   \
         }
+
+    #define ARITHMETIC_OPCODE_RR(name)                                          \
+            {                                                                   \
+                Value* dst         = &stackBase[a];                             \
+                const Value* arg1  = &stackBase[ VM_GET_B(inst) ];              \
+                const Value* arg2  = &stackBase[ VM_GET_C(inst) ];              \
+                ARITHMETIC( dst, arg1, arg2, Number_##name, TagMethod_##name ); \
+            }
+    #define ARITHMETIC_OPCODE_RC(name)                                          \
+            {                                                                   \
+                Value* dst         = &stackBase[a];                             \
+                const Value* arg1  = &stackBase[ VM_GET_B(inst) ];              \
+                const Value* arg2  = &constant[ VM_GET_C(inst) ];               \
+                ARITHMETIC( dst, arg1, arg2, Number_##name, TagMethod_##name ); \
+            }
+    #define ARITHMETIC_OPCODE_CR(name)                                          \
+            {                                                                   \
+                Value* dst         = &stackBase[a];                             \
+                const Value* arg1  = &constant[ VM_GET_B(inst) ];               \
+                const Value* arg2  = &stackBase[ VM_GET_C(inst) ];              \
+                ARITHMETIC( dst, arg1, arg2, Number_##name, TagMethod_##name ); \
+            }
+    #define ARITHMETIC_OPCODE_CC(name)                                          \
+            {                                                                   \
+                Value* dst         = &stackBase[a];                             \
+                const Value* arg1  = &constant[ VM_GET_B(inst) ];               \
+                const Value* arg2  = &constant[ VM_GET_C(inst) ];               \
+                ARITHMETIC( dst, arg1, arg2, Number_##name, TagMethod_##name ); \
+            }
+
+    #define LOGIC_OPCODE_RR(test)                                               \
+            {                                                                   \
+                PROTECT(                                                        \
+                    const Value* arg1 = &stackBase[ VM_GET_B(inst) ];           \
+                    const Value* arg2 = &stackBase[ VM_GET_C(inst) ];           \
+                    if (test(L, arg1, arg2) != a) ++ip;                         \
+                )                                                               \
+            }
+    #define LOGIC_OPCODE_RC(test)                                               \
+            {                                                                   \
+                PROTECT(                                                        \
+                    const Value* arg1 = &stackBase[ VM_GET_B(inst) ];           \
+                    const Value* arg2 = &constant[ VM_GET_C(inst) ];            \
+                    if (test(L, arg1, arg2) != a) ++ip;                         \
+                )                                                               \
+            }
+    #define LOGIC_OPCODE_CR(test)                                               \
+            {                                                                   \
+                PROTECT(                                                        \
+                    const Value* arg1 = &constant[ VM_GET_B(inst) ];            \
+                    const Value* arg2 = &stackBase[ VM_GET_C(inst) ];           \
+                    if (test(L, arg1, arg2) != a) ++ip;                         \
+                )                                                               \
+            }
+    #define LOGIC_OPCODE_CC(test)                                               \
+            {                                                                   \
+                PROTECT(                                                        \
+                    const Value* arg1 = &constant[ VM_GET_B(inst) ];            \
+                    const Value* arg2 = &constant[ VM_GET_C(inst) ];            \
+                    if (test(L, arg1, arg2) != a) ++ip;                         \
+                )                                                               \
+            }
 
     int numEntries = 1; // Number of times we've "re-entered" this function.
 
@@ -899,26 +957,26 @@ Start:
 
     #ifdef DEBUG
         const char* _file = String_GetData(prototype->source);
-        int         _line = prototype->sourceLine[ip - prototype->code];
+        int         _line = prototype->sourceLine[ip - prototype->convertedCode];
     #endif
 
         Instruction inst = *ip;
         ++ip;
 
-        Opcode opcode = GET_OPCODE(inst); 
-        int a = GET_A(inst);
+        Opcode opcode = VM_GET_OPCODE(inst); 
+        int a = VM_GET_A(inst);
 
         switch (opcode)
         {
         case Opcode_Move:
             {
-                int b = GET_B(inst);
+                int b = VM_GET_B(inst);
                 stackBase[a] = stackBase[b];
             }
             break;
         case Opcode_LoadK:
             {
-                int bx = GET_Bx(inst);
+                int bx = VM_GET_D(inst);
                 ASSERT(bx >= 0 && bx < prototype->numConstants);
                 const Value* value = &constant[bx];
                 stackBase[a] = *value;
@@ -926,7 +984,7 @@ Start:
             break;
         case Opcode_LoadNil:
             {
-                int b = GET_B(inst);
+                int b = VM_GET_B(inst);
                 for (int i = a; i <= b; ++i)
                 {
                     SetNil(stackBase + i);
@@ -935,15 +993,26 @@ Start:
             break;
         case Opcode_LoadBool:
             {
-                SetValue( &stackBase[a], GET_B(inst) != 0 );
-                ip += GET_C(inst);
+                SetValue( &stackBase[a], VM_GET_B(inst) != 0 );
+                ip += VM_GET_C(inst);
             }
             break;
         case Opcode_Self:
             {
                 PROTECT(
-                    int b = GET_B(inst);
-                    const Value* key = RESOLVE_RK( GET_C(inst) );
+                    int b = VM_GET_B(inst);
+                    const Value* key = &stackBase[ VM_GET_C(inst) ];
+                    ASSERT( key != &stackBase[a + 1] );
+                    stackBase[a + 1] = stackBase[b];
+                    Vm_GetTable(L, &stackBase[b], key, &stackBase[a], false);
+                )
+            }
+            break;
+        case Opcode_SelfC:
+            {
+                PROTECT(
+                    int b = VM_GET_B(inst);
+                    const Value* key = &constant[ VM_GET_C(inst) ];
                     ASSERT( key != &stackBase[a + 1] );
                     stackBase[a + 1] = stackBase[b];
                     Vm_GetTable(L, &stackBase[b], key, &stackBase[a], false);
@@ -952,16 +1021,16 @@ Start:
             break;
         case Opcode_Jmp:
             {
-                int sbx = GET_sBx(inst);
+                int sbx = VM_GET_sD(inst);
                 ip += sbx;
             }
             break;
         case Opcode_SetGlobal:
             {
                 PROTECT(
-                    int bx = GET_Bx(inst);
-                    ASSERT(bx >= 0 && bx < prototype->numConstants);
-                    Value* key = &constant[bx];
+                    int d = VM_GET_D(inst);
+                    ASSERT(d >= 0 && d < prototype->numConstants);
+                    Value* key = &constant[d];
                     Value* value = &stackBase[a];
                     Vm_SetGlobal(L, closure, key, value);
                 )
@@ -970,9 +1039,9 @@ Start:
         case Opcode_GetGlobal:
             {
                 PROTECT(
-                    int bx = GET_Bx(inst);
-                    ASSERT(bx >= 0 && bx < prototype->numConstants);
-                    const Value* key = &constant[bx];
+                    int d = VM_GET_D(inst);
+                    ASSERT(d >= 0 && d < prototype->numConstants);
+                    const Value* key = &constant[d];
                     Value* dst = &stackBase[a];
                     Vm_GetGlobal(L, closure, key, dst);
                 )
@@ -981,21 +1050,31 @@ Start:
         case Opcode_SetUpVal:
             {
                 const Value* value = &stackBase[a];
-                UpValue_SetValue(L, lclosure, GET_B(inst), value);    
+                UpValue_SetValue(L, lclosure, VM_GET_B(inst), value);    
             }
             break;
         case Opcode_GetUpVal:
             {
-                const Value* value = UpValue_GetValue(lclosure, GET_B(inst));
+                const Value* value = UpValue_GetValue(lclosure, VM_GET_B(inst));
                 stackBase[a] = *value;
             }
             break;
         case Opcode_GetTable:
             {
                 PROTECT(
-                    int b = GET_B(inst);
+                    int b = VM_GET_B(inst);
                     const Value* table = &stackBase[b];
-                    const Value* key   = RESOLVE_RK( GET_C(inst) );
+                    const Value* key   = &stackBase[ VM_GET_C(inst) ];
+                    Vm_GetTable(L, table, key, &stackBase[a], false);
+                )
+            }
+            break;
+        case Opcode_GetTableC:
+            {
+                PROTECT(
+                    int b = VM_GET_B(inst);
+                    const Value* table = &stackBase[b];
+                    const Value* key   = &constant[ VM_GET_C(inst) ];
                     Vm_GetTable(L, table, key, &stackBase[a], false);
                 )
             }
@@ -1003,9 +1082,19 @@ Start:
         case Opcode_GetTableRef:
             {
                 PROTECT(
-                    int b = GET_B(inst);
+                    int b = VM_GET_B(inst);
                     const Value* table = &stackBase[b];
-                    const Value* key   = RESOLVE_RK( GET_C(inst) );
+                    const Value* key   = &stackBase[ VM_GET_C(inst) ];
+                    Vm_GetTable(L, table, key, &stackBase[a], true);
+                )
+            }
+            break;
+        case Opcode_GetTableRefC:
+            {
+                PROTECT(
+                    int b = VM_GET_B(inst);
+                    const Value* table = &stackBase[b];
+                    const Value* key   = &constant[ VM_GET_C(inst) ];
                     Vm_GetTable(L, table, key, &stackBase[a], true);
                 )
             }
@@ -1014,8 +1103,38 @@ Start:
             {
                 PROTECT(
                     Value* table = &stackBase[a];
-                    Value* key   = RESOLVE_RK( GET_B(inst) );
-                    Value* value = RESOLVE_RK( GET_C(inst) );
+                    Value* key   = &stackBase[ VM_GET_B(inst) ];
+                    Value* value = &stackBase[ VM_GET_C(inst) ];
+                    Vm_SetTable(L, table, key, value);
+                )
+            }
+            break;
+        case Opcode_SetTableRC:
+            {
+                PROTECT(
+                    Value* table = &stackBase[a];
+                    Value* key   = &stackBase[ VM_GET_B(inst) ];
+                    Value* value = &constant[ VM_GET_C(inst) ];
+                    Vm_SetTable(L, table, key, value);
+                )
+            }
+            break;
+        case Opcode_SetTableCR:
+            {
+                PROTECT(
+                    Value* table = &stackBase[a];
+                    Value* key   = &constant[ VM_GET_B(inst) ];
+                    Value* value = &stackBase[ VM_GET_C(inst) ];
+                    Vm_SetTable(L, table, key, value);
+                )
+            }
+            break;
+        case Opcode_SetTableCC:
+            {
+                PROTECT(
+                    Value* table = &stackBase[a];
+                    Value* key   = &constant[ VM_GET_B(inst) ];
+                    Value* value = &constant[ VM_GET_C(inst) ];
                     Vm_SetTable(L, table, key, value);
                 )
             }
@@ -1025,8 +1144,8 @@ Start:
 
                 frame->ip = ip;
 
-                int numArgs     = GET_B(inst) - 1;
-                int numResults  = GET_C(inst) - 1;
+                int numArgs     = VM_GET_B(inst) - 1;
+                int numResults  = VM_GET_C(inst) - 1;
                 Value* value    = &stackBase[a];
                 
                 lua_CFunction function = PrepareCall(L, value, numArgs, numResults);
@@ -1058,7 +1177,7 @@ Start:
         case Opcode_TailCall:
             {
 
-                int numArgs     = GET_B(inst) - 1;
+                int numArgs     = VM_GET_B(inst) - 1;
                 Value* value    = &stackBase[a];
                 
                 lua_CFunction function = PrepareCall(L, value, numArgs, -1);
@@ -1119,7 +1238,7 @@ Start:
                 {
                     CloseUpValues(L, stackBase);
                 }       
-                int numResults = GET_B(inst) - 1;
+                int numResults = VM_GET_B(inst) - 1;
                 numResults = MoveResults(L, frame->function, &stackBase[a], numResults);
 
                 --numEntries;
@@ -1148,57 +1267,81 @@ Start:
             }
             break;
         case Opcode_Add:
-            {
-                Value* dst         = &stackBase[a];
-                const Value* arg1  = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, Number_Add, TagMethod_Add );
-            }
+            ARITHMETIC_OPCODE_RR(Add)
+            break;
+        case Opcode_AddRC:
+            ARITHMETIC_OPCODE_RC(Add)
+            break;
+        case Opcode_AddCR:
+            ARITHMETIC_OPCODE_CR(Add)
+            break;
+        case Opcode_AddCC:
+            ARITHMETIC_OPCODE_CC(Add)
             break;
         case Opcode_Sub:
-            {
-                Value* dst         = &stackBase[a];
-                const Value* arg1  = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, Number_Sub, TagMethod_Sub );
-            }
+            ARITHMETIC_OPCODE_RR(Sub)
             break;
+        case Opcode_SubRC:
+            ARITHMETIC_OPCODE_RC(Sub)
+            break;
+        case Opcode_SubCR:
+            ARITHMETIC_OPCODE_CR(Sub)
+            break;
+        case Opcode_SubCC:
+            ARITHMETIC_OPCODE_CC(Sub)
+            break;        
         case Opcode_Mul:
-            {
-                Value* dst         = &stackBase[a];
-                const Value* arg1  = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, Number_Mul, TagMethod_Mul );
-            }
+            ARITHMETIC_OPCODE_RR(Mul)
             break;
+        case Opcode_MulRC:
+            ARITHMETIC_OPCODE_RC(Mul)
+            break;
+        case Opcode_MulCR:
+            ARITHMETIC_OPCODE_CR(Mul)
+            break;
+        case Opcode_MulCC:
+            ARITHMETIC_OPCODE_CC(Mul)
+            break;      
         case Opcode_Div:
-            {
-                Value* dst         = &stackBase[a];
-                const Value* arg1  = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, Number_Div, TagMethod_Div );
-            }
+            ARITHMETIC_OPCODE_RR(Div)
             break;
+        case Opcode_DivRC:
+            ARITHMETIC_OPCODE_RC(Div)
+            break;
+        case Opcode_DivCR:
+            ARITHMETIC_OPCODE_CR(Div)
+            break;
+        case Opcode_DivCC:
+            ARITHMETIC_OPCODE_CC(Div)
+            break;      
         case Opcode_Mod:
-            {
-                Value* dst         = &stackBase[a];
-                const Value* arg1  = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, Number_Mod, TagMethod_Mod );
-            }
+            ARITHMETIC_OPCODE_RR(Mod)
             break;
+        case Opcode_ModRC:
+            ARITHMETIC_OPCODE_RC(Mod)
+            break;
+        case Opcode_ModCR:
+            ARITHMETIC_OPCODE_CR(Mod)
+            break;
+        case Opcode_ModCC:
+            ARITHMETIC_OPCODE_CC(Mod)
+            break;    
         case Opcode_Pow:
-            {
-                Value* dst         = &stackBase[a];
-                const Value* arg1  = RESOLVE_RK( GET_B(inst) );
-                const Value* arg2  = RESOLVE_RK( GET_C(inst) );
-                ARITHMETIC( dst, arg1, arg2, Number_Pow, TagMethod_Pow );
-            }
+            ARITHMETIC_OPCODE_RR(Pow)
             break;
+        case Opcode_PowRC:
+            ARITHMETIC_OPCODE_RC(Pow)
+            break;
+        case Opcode_PowCR:
+            ARITHMETIC_OPCODE_CR(Pow)
+            break;
+        case Opcode_PowCC:
+            ARITHMETIC_OPCODE_CC(Pow)
+            break;    
         case Opcode_Unm:
             {
                 PROTECT(
-                    int b = GET_B(inst);
+                    int b = VM_GET_B(inst);
                     Value* dst         = &stackBase[a];
                     const Value* src   = &stackBase[b];
                     Vm_UnaryMinus(L, src, dst);
@@ -1206,40 +1349,40 @@ Start:
             }
             break;
         case Opcode_Eq:
-            {
-                PROTECT(
-                    const Value* arg1 = RESOLVE_RK( GET_B(inst) );
-                    const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                    if (Vm_Equal(L, arg1, arg2) != a)
-                    {
-                        ++ip;
-                    }
-                )
-            }
+            LOGIC_OPCODE_RR(Vm_Equal)
+            break;
+        case Opcode_EqRC:
+            LOGIC_OPCODE_RC(Vm_Equal)
+            break;
+        case Opcode_EqCR:
+            LOGIC_OPCODE_CR(Vm_Equal)
+            break;
+        case Opcode_EqCC:
+            LOGIC_OPCODE_CC(Vm_Equal)
             break;
         case Opcode_Lt:
-            {
-                PROTECT(
-                    const Value* arg1 = RESOLVE_RK( GET_B(inst) );
-                    const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                    if (Vm_Less(L, arg1, arg2) != a)
-                    {
-                        ++ip;
-                    }
-                )
-            }
+            LOGIC_OPCODE_RR(Vm_Less)
+            break;
+        case Opcode_LtRC:
+            LOGIC_OPCODE_RC(Vm_Less)
+            break;
+        case Opcode_LtCR:
+            LOGIC_OPCODE_CR(Vm_Less)
+            break;
+        case Opcode_LtCC:
+            LOGIC_OPCODE_CC(Vm_Less)
             break;
         case Opcode_Le:
-            {
-                PROTECT(
-                    const Value* arg1 = RESOLVE_RK( GET_B(inst) );
-                    const Value* arg2 = RESOLVE_RK( GET_C(inst) );
-                    if (Vm_LessEqual(L, arg1, arg2) != a)
-                    {
-                        ++ip;
-                    }
-                )
-            }
+            LOGIC_OPCODE_RR(Vm_LessEqual)
+            break;
+        case Opcode_LeRC:
+            LOGIC_OPCODE_RC(Vm_LessEqual)
+            break;
+        case Opcode_LeCR:
+            LOGIC_OPCODE_CR(Vm_LessEqual)
+            break;
+        case Opcode_LeCC:
+            LOGIC_OPCODE_CC(Vm_LessEqual)
             break;
         case Opcode_NewTable:
             {
@@ -1252,24 +1395,24 @@ Start:
         case Opcode_Closure:
             {
 
-                int bx = GET_Bx(inst);
+                int d = VM_GET_D(inst);
 
-                Prototype* p = prototype->prototype[bx];
+                Prototype* p = prototype->prototype[d];
                 Closure* c = Closure_Create(L, p, frame->function->closure->env);
 
                 for (int i = 0; i < p->numUpValues; ++i)
                 {
                     int inst = *ip;
                     ++ip;
-                    int b = GET_B(inst);
-                    if ( GET_OPCODE(inst) == Opcode_Move )
+                    int b = VM_GET_B(inst);
+                    if ( VM_GET_OPCODE(inst) == Opcode_Move )
                     {
                         c->lclosure.upValue[i] = UpValue_Create(L, &stackBase[b]);
                         Gc_WriteBarrier(&L->gc, c, c->lclosure.upValue[i]);
                     }
                     else
                     {
-                        ASSERT( GET_OPCODE(inst) == Opcode_GetUpVal );
+                        ASSERT( VM_GET_OPCODE(inst) == Opcode_GetUpVal );
                         c->lclosure.upValue[i] = lclosure->upValue[b];
                     }
                 }
@@ -1298,9 +1441,9 @@ Start:
                 {
                     Vm_Error(L, "step must be a number");
                 }
-                int sbx = GET_sBx(inst);
+                int sd = VM_GET_sD(inst);
                 stackBase[a].number -= stackBase[a + 2].number;
-                ip += sbx;
+                ip += sd;
             }
             break;
         case Opcode_ForLoop:
@@ -1319,8 +1462,8 @@ Start:
                 // is positive or negative.
                 if (luai_numlt(0, step) ? luai_numle(iterator->number, limit) : luai_numle(limit, iterator->number))
                 {
-                    int sbx = GET_sBx(inst);
-                    ip += sbx;
+                    int sd = VM_GET_sD(inst);
+                    ip += sd;
                     Value_Copy( &stackBase[a + 3], iterator );
                 }
             }
@@ -1328,7 +1471,7 @@ Start:
         case Opcode_TForLoop:
             {
                 PROTECT(
-                    int numResults = GET_C(inst);
+                    int numResults = VM_GET_D(inst);
                     Value* base = &stackBase[a + 3];
 
                     // Move the function and parameters into place.
@@ -1355,7 +1498,7 @@ Start:
             break;
         case Opcode_Test:
             {
-                int c = GET_C(inst);
+                int c = VM_GET_D(inst);
                 const Value* value = &stackBase[a];
                 if ( Vm_GetBoolean( value ) != c )
                 {
@@ -1365,8 +1508,8 @@ Start:
             break;
         case Opcode_TestSet:
             {
-                int b = GET_B(inst);
-                int c = GET_C(inst);
+                int b = VM_GET_B(inst);
+                int c = VM_GET_C(inst);
                 const Value* value = &stackBase[b];
                 if ( Vm_GetBoolean( value ) != c )
                 {
@@ -1380,7 +1523,7 @@ Start:
             break;
         case Opcode_Not:
             {
-                int b = GET_B(inst);
+                int b = VM_GET_B(inst);
                 Value* dst         = &stackBase[a];
                 const Value* src   = &stackBase[b];
                 SetValue( dst, Vm_GetBoolean(src) == 0 );
@@ -1389,8 +1532,8 @@ Start:
         case Opcode_Concat:
             {
                 PROTECT(
-                    int b = GET_B(inst);
-                    int c = GET_C(inst);
+                    int b = VM_GET_B(inst);
+                    int c = VM_GET_C(inst);
                     Value* dst     = &stackBase[a];
                     Value* start   = &stackBase[b];
                     Value* end     = &stackBase[c];
@@ -1404,8 +1547,8 @@ Start:
                     Value* dst = &stackBase[a];
                     ASSERT( Value_GetIsTable(dst) );
                     Table* table = dst->table;
-                    int b = GET_B(inst);
-                    int c = GET_C(inst);
+                    int b = VM_GET_B(inst);
+                    int c = VM_GET_C(inst);
                     if (c == 0)
                     {
                         c = *static_cast<const int*>(ip);
@@ -1430,7 +1573,7 @@ Start:
         case Opcode_Len:
             {
                 PROTECT(
-                    int b = GET_B(inst);
+                    int b = VM_GET_B(inst);
                     Value* dst         = &stackBase[a];
                     const Value* arg   = &stackBase[b];
                     SetValue( dst, GetValueLength(L, arg) );
@@ -1443,7 +1586,7 @@ Start:
                 int numVarArgs = numArgs - prototype->numParams;
                 ASSERT(numVarArgs >= 0);
 
-                int num = GET_B(inst) - 1;
+                int num = VM_GET_B(inst) - 1;
                 if (num < 0)
                 {
                     num = numVarArgs;

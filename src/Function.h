@@ -20,6 +20,7 @@ struct Prototype : public Gc_Object
     int                 maxStackSize;
     int                 codeSize;
     Instruction*        code;
+    Instruction*        convertedCode;
     int                 numConstants;
     Value*              constant;
     int                 numUpValues;
@@ -81,8 +82,12 @@ Prototype* Prototype_Create(lua_State* L, const char* data, size_t length, const
  */
 void Prototype_Destroy(lua_State* L, Prototype* prototype);
 
-// Copies the short name of the source of a function prototype into the buffer.
+/** Copies the short name of the source of a function prototype into the buffer. */
 void Prototype_GetName(Prototype* prototype, char* buffer, size_t bufferLength);
+
+/** Translates the code in a prototype from standard Lua opcodes to our own
+ * encoding. */
+void Prototype_ConvertCode(Prototype* prototype);
 
 extern "C" Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env);
 Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues, Table* env);

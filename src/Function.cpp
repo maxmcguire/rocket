@@ -68,6 +68,7 @@ static size_t Prototype_GetSize(Prototype* prototype)
 {
     size_t size = sizeof(Prototype);
     size += prototype->codeSize      * sizeof(Instruction);
+    size += prototype->codeSize      * sizeof(Instruction);
     size += prototype->numConstants  * sizeof(Value);
     size += prototype->numPrototypes * sizeof(Prototype*);
     size += prototype->numUpValues   * sizeof(String*);  
@@ -80,6 +81,7 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
 
     size_t size = sizeof(Prototype);
     size += codeSize      * sizeof(Instruction);
+    size += codeSize      * sizeof(Instruction);
     size += numConstants  * sizeof(Value);
     size += numPrototypes * sizeof(Prototype*);
     size += numUpValues   * sizeof(String*);  
@@ -91,7 +93,7 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
     {
         return NULL;
     }
-    
+
     prototype->varArg           = 0;
     prototype->numParams        = 0;
     prototype->maxStackSize     = 0;
@@ -100,11 +102,13 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
     prototype->source           = NULL;
 
     // Code is stored immediately after the prototype structure in memory.
-    prototype->code      = reinterpret_cast<Instruction*>(prototype + 1);
-    prototype->codeSize  = codeSize;
+    prototype->code          = reinterpret_cast<Instruction*>(prototype + 1);
+    prototype->codeSize      = codeSize;
+    prototype->convertedCode = reinterpret_cast<Instruction*>(prototype->code + codeSize);
+    prototype->codeSize      = codeSize;
 
     // Constants are stored after the code.
-    prototype->constant = reinterpret_cast<Value*>(prototype->code + codeSize);
+    prototype->constant = reinterpret_cast<Value*>(prototype->convertedCode + codeSize);
     prototype->numConstants = numConstants;
     for (int i = 0; i < numConstants; ++i)
     {
@@ -129,6 +133,235 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int nu
 
     return prototype;
 
+}
+
+static Instruction EncodeAB(Opcode opcode, int a, int b)
+{
+    ASSERT( a >= 0 && a < 256 );
+    ASSERT( b >= 0 && b < 256 );
+    return opcode | (a << 8) | (b << 16); 
+}
+
+static Instruction EncodeABC(Opcode opcode, int a, int b, int c)
+{
+    ASSERT( a >= 0 && a < 256 );
+    ASSERT( b >= 0 && b < 256 );
+    ASSERT( c >= 0 && c < 256 );
+    return opcode | (a << 8) | (b << 16) | (c << 24); 
+}
+
+static Instruction EncodeAD(Opcode opcode, int a, int d)
+{
+    ASSERT( a >= 0 && a < 256 );
+    ASSERT( d >= 0 && d < 65536 );
+    return opcode | (a << 8) | (d << 16); 
+}
+
+static Instruction EncodeAsD(Opcode opcode, int a, int d)
+{
+    ASSERT( a >= 0 && a < 256 );
+    ASSERT( d >= -32767 && d <= 32767 );
+    return opcode | (a << 8) | ((d + 32767) << 16); 
+}
+
+/** Translates an instruction block from standard Lua opcodes to our own encoding.
+ * src and dst can be the same. */
+static void Prototype_ConvertCode(Instruction* dst, const void* _src, int codeSize)
+{
+    
+#define RK_CONST(x) (x & 256)
+
+    static const Opcode arithOp[] =
+        {
+            Opcode_Add,
+            Opcode_AddRC,
+            Opcode_AddCR,
+            Opcode_AddCC,
+            Opcode_Sub,
+            Opcode_SubRC,
+            Opcode_SubCR,
+            Opcode_SubCC,
+            Opcode_Mul,
+            Opcode_MulRC,
+            Opcode_MulCR,
+            Opcode_MulCC,
+            Opcode_Div,
+            Opcode_DivRC,
+            Opcode_DivCR,
+            Opcode_DivCC,
+            Opcode_Mod,
+            Opcode_ModRC,
+            Opcode_ModCR,
+            Opcode_ModCC,
+            Opcode_Pow,
+            Opcode_PowRC,
+            Opcode_PowCR,
+            Opcode_PowCC,
+        };
+
+    static const Opcode logicOp[] =
+        {
+            Opcode_Eq,
+            Opcode_EqRC,
+            Opcode_EqCR,
+            Opcode_EqCC,
+            Opcode_Lt,
+            Opcode_LtRC,
+            Opcode_LtCR,
+            Opcode_LtCC,
+            Opcode_Le,
+            Opcode_LeRC,
+            Opcode_LeCR,
+            Opcode_LeCC,
+        };
+
+    const int* src = reinterpret_cast<const int*>(_src);
+    for (int i = 0; i < codeSize; ++i)
+    {
+
+        Opcode opcode = LUA_GET_OPCODE(*src);
+        ASSERT( opcode >= 0 && opcode <= Opcode_GetTableRef );
+
+        int a   = LUA_GET_A(*src);
+        int b   = LUA_GET_B(*src);
+        int bx  = LUA_GET_Bx(*src);
+        int sbx = LUA_GET_sBx(*src);
+        int c   = LUA_GET_C(*src);
+
+        switch (opcode)
+        {
+        case Opcode_Move:
+            *dst = EncodeAB(opcode, a, b); 
+            break;
+        case Opcode_LoadK:
+            *dst = EncodeAD(opcode, a, bx); 
+            break;
+        case Opcode_LoadBool:
+            *dst = EncodeABC(opcode, a, b, c); 
+            break;
+        case Opcode_LoadNil:
+            *dst = EncodeAB(opcode, a, b); 
+            break;
+        case Opcode_GetUpVal:
+        case Opcode_SetUpVal:
+            *dst = EncodeAB(opcode, a, b); 
+            break;
+        case Opcode_GetGlobal:
+        case Opcode_SetGlobal:
+            *dst = EncodeAD(opcode, a, bx); 
+            break;
+        case Opcode_GetTable:
+            *dst = EncodeABC(RK_CONST(c) ? Opcode_GetTableC : Opcode_GetTable, a, b, c & 255); 
+            break;
+        case Opcode_SetTable:
+            if (RK_CONST(b))
+            {
+                *dst = EncodeABC(RK_CONST(c) ? Opcode_SetTableCC : Opcode_SetTableCR, a, b & 255, c & 255); 
+            }
+            else
+            {
+                *dst = EncodeABC(RK_CONST(c) ? Opcode_SetTableRC : Opcode_SetTable, a, b & 255, c & 255); 
+            }
+            break;
+        case Opcode_NewTable:
+            *dst = EncodeABC(opcode, a, b, c); 
+            break;
+        case Opcode_Self:
+            *dst = EncodeABC(RK_CONST(c) ? Opcode_SelfC : Opcode_Self, a, b, c & 255); 
+            break;
+        case Opcode_Add:
+        case Opcode_Sub:
+        case Opcode_Mul:
+        case Opcode_Div:
+        case Opcode_Mod:
+        case Opcode_Pow:
+            {
+                int index = (opcode - Opcode_Add) * 4;
+                if (RK_CONST(b)) index += 2;
+                if (RK_CONST(c)) index += 1;
+                *dst = EncodeABC( arithOp[index], a, b & 255, c & 255 );
+            }
+            break;
+        case Opcode_Unm:
+        case Opcode_Not:
+        case Opcode_Len:
+            *dst = EncodeAB(opcode, a, b); 
+            break;
+        case Opcode_Concat:
+            *dst = EncodeABC(opcode, a, b, c);
+            break;
+        case Opcode_Jmp:
+            *dst = EncodeAsD(opcode, 0, sbx);
+            break;
+        case Opcode_Eq:
+        case Opcode_Lt:
+        case Opcode_Le:
+            {
+                int index = (opcode - Opcode_Eq) * 4;
+                if (RK_CONST(b)) index += 2;
+                if (RK_CONST(c)) index += 1;
+                *dst = EncodeABC( logicOp[index], a, b & 255, c & 255 );
+            }
+            break;
+        case Opcode_Test:
+            *dst = EncodeAD(opcode, a, c);
+            break;
+        case Opcode_TestSet:
+            *dst = EncodeABC(opcode, a, b, c);
+            break;
+        case Opcode_Call:
+            *dst = EncodeABC(opcode, a, b, c);
+            break;
+        case Opcode_TailCall:
+            *dst = EncodeAB(opcode, a, b);
+            break;
+        case Opcode_Return:
+            *dst = EncodeAB(opcode, a, b);
+            break;
+        case Opcode_ForLoop:
+        case Opcode_ForPrep:
+            * dst = EncodeAsD(opcode, a, sbx);
+            break;
+        case Opcode_TForLoop:
+            *dst = EncodeAD(opcode, a, c);
+            break;
+        case Opcode_SetList:
+            *dst = EncodeABC(opcode, a, b, c);
+            if (c == 0)
+            {
+                // TODO: this happens when c > 511, whcih is beyond what we can
+                // encode with 8-bites.
+                *(++dst) = (*++src);
+            }
+            break;
+        case Opcode_Close:
+            *dst = EncodeABC(opcode, a, 0, 0);
+            break;
+        case Opcode_Closure:
+            *dst = EncodeAD(opcode, a, bx);
+            break;
+        case Opcode_VarArg:
+            *dst = EncodeAB(opcode, a, b);
+            break;
+        case Opcode_GetTableRef:
+            *dst = EncodeABC(RK_CONST(c) ? Opcode_GetTableRefC : Opcode_GetTableRef, a, b, c & 255); 
+            break;
+        default:
+            ASSERT(0);
+        }
+
+        ++dst;
+        ++src;
+    }
+}
+
+void Prototype_ConvertCode(Prototype* prototype)
+{
+    Prototype_ConvertCode(prototype->convertedCode, prototype->code, prototype->codeSize);
+    for (int i = 0; i < prototype->numPrototypes; ++i)
+    {
+        Prototype_ConvertCode(prototype->prototype[i]);
+    }
 }
 
 static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* data, size_t& length)
@@ -223,8 +456,6 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
         prototype->source = String_Create(L, name, nameLength);
     }
 
-    memcpy(prototype->code, code, codeSize * sizeof(Instruction));
-
     for (int i = 0; i < numConstants; ++i)
     {
         
@@ -256,6 +487,8 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
         Gc_WriteBarrier(&L->gc, prototype, &prototype->constant[i]);
 
     }
+
+    memcpy(prototype->code, code, sizeof(Instruction) * codeSize);
 
     for (int i = 0; i < numPrototypes; ++i)
     {

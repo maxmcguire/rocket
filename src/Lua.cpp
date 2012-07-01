@@ -335,6 +335,8 @@ static void Parse(lua_State* L, void* userData)
     ASSERT(prototype != NULL);
     PushPrototype(L, prototype);
 
+    Prototype_ConvertCode( prototype );
+
     Table* env = L->globals.table;
     Closure* closure = Closure_Create(L, prototype, env);
     PushClosure(L, closure);
@@ -865,7 +867,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
             else if (function->c)
             {
                 ar->what    = "C";
-                ar->source = "=[C]";;
+                ar->source = "=[C]";
             }
             else
             {
@@ -881,7 +883,7 @@ int lua_getinfo(lua_State* L, const char* what, lua_Debug* ar)
             }
             else
             {
-                size_t ip = frame->ip - function->lclosure.prototype->code;
+                size_t ip = frame->ip - function->lclosure.prototype->convertedCode;
                 ar->currentline = function->lclosure.prototype->sourceLine[ip];
             }
             break;

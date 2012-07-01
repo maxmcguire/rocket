@@ -546,7 +546,7 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int value, int r
         int jumpPos = jump[i];
 
         Instruction inst = Parser_GetInstruction(parser, jumpPos - 1);
-        Opcode opcode = GET_OPCODE(inst);
+        Opcode opcode = LUA_GET_OPCODE(inst);
 
         if (startPos == -1)
         {
@@ -558,7 +558,7 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int value, int r
 
             // If B is set for a test instruction, that means that it has a not folded
             // into it, which requires the value to be coerced into a boolean.
-            if (GetIsComparison(opcode) || (opcode == Opcode_Test && GET_B(inst)))
+            if (GetIsComparison(opcode) || (opcode == Opcode_Test && LUA_GET_B(inst)))
             {
                 if (!emitBool)
                 {
@@ -579,11 +579,11 @@ static void Parser_UpdateJumpChain(Parser* parser, int jumpPos, int value, int r
                     emitBool = true;
                 }
             }
-            else if (opcode == Opcode_Test && reg != GET_A(inst))
+            else if (opcode == Opcode_Test && reg != LUA_GET_A(inst))
             {
                 // Update the instruction to a testset so that we have a value in
                 // the "true" case.
-                inst = Opcode_EncodeABC(Opcode_TestSet, reg, GET_A(inst), GET_C(inst));
+                inst = Opcode_EncodeABC(Opcode_TestSet, reg, LUA_GET_A(inst), LUA_GET_C(inst));
                 Parser_UpdateInstruction(parser, jumpPos - 1, inst);
             }
 
@@ -694,18 +694,18 @@ static void Parser_InvertTest(Parser* parser, Expression* value)
     if (pos >= 0)
     {
         Instruction inst = Parser_GetInstruction(parser, pos);
-        Opcode op = GET_OPCODE(inst);
+        Opcode op = LUA_GET_OPCODE(inst);
 
         if (GetIsComparison(op))
         {
-            int cond = GET_A(inst);
-            inst = Opcode_EncodeABC( op, !cond, GET_B(inst), GET_C(inst) );
+            int cond = LUA_GET_A(inst);
+            inst = Opcode_EncodeABC( op, !cond, LUA_GET_B(inst), LUA_GET_C(inst) );
             Parser_UpdateInstruction(parser, pos, inst);
         }
         else if (GetIsTest(op))
         {
-            int cond = GET_C(inst);
-            inst = Opcode_EncodeABC( op, GET_A(inst), GET_B(inst), !cond );
+            int cond = LUA_GET_C(inst);
+            inst = Opcode_EncodeABC( op, LUA_GET_A(inst), LUA_GET_B(inst), !cond );
             Parser_UpdateInstruction(parser, pos, inst);
         }
 
@@ -827,10 +827,10 @@ static void Parser_UpdateTempLocation(Parser* parser, Expression* value, int reg
         
     Instruction inst = Parser_GetInstruction(parser, value->index);
 
-    int b = GET_B(inst);
-    int c = GET_C(inst);
+    int b = LUA_GET_B(inst);
+    int c = LUA_GET_C(inst);
     
-    inst = Opcode_EncodeABC( GET_OPCODE(inst), reg, b, c );
+    inst = Opcode_EncodeABC( LUA_GET_OPCODE(inst), reg, b, c );
     Parser_UpdateInstruction( parser, value->index, inst );
 
     value->type = EXPRESSION_REGISTER;
@@ -1135,7 +1135,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    //PrintFunction(prototype);
+    PrintFunction(prototype);
 
     ASSERT( (L->stackTop - 1)->object == prototype );
     Pop(L, 1);
