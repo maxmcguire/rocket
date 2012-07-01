@@ -879,6 +879,7 @@ int Parser_MoveToRegister(Parser* parser, Expression* value, int reg)
     if (value->type == EXPRESSION_TEMP)
     {
         Parser_UpdateTempLocation(parser, value, reg);
+        Parser_FinalizeExitJumps(parser, value, reg);
         return value->index;
     }
 
