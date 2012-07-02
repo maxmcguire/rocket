@@ -1073,9 +1073,12 @@ int Parser_AddFunction(Parser* parser, Function* f)
 Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* source)
 {
 
+    int convertedCodeSize = Prototype_GetConvertedCodeSize( function->code, function->codeSize );
+
     Prototype* prototype = Prototype_Create(
         L,
         function->codeSize,
+        convertedCodeSize,
         function->numConstants,
         function->numFunctions,
         function->numUpValues);
@@ -1135,7 +1138,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     prototype->lineDefined      = 0;
     prototype->lastLineDefined  = 0;
 
-    PrintFunction(prototype);
+    //PrintFunction(prototype);
 
     ASSERT( (L->stackTop - 1)->object == prototype );
     Pop(L, 1);

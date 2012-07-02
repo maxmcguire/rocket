@@ -51,7 +51,7 @@ static int GetCurrentLine(CallFrame* frame)
     // Note, ip will be the next instruction we execute, so we need to
     // subtract one.
     int instruction = static_cast<int>(frame->ip - prototype->convertedCode - 1);
-    return prototype->sourceLine[instruction];
+    return prototype->convertedSourceLine[instruction];
 }
 
 Closure* Vm_GetCurrentFunction(lua_State* L)
@@ -957,7 +957,7 @@ Start:
 
     #ifdef DEBUG
         const char* _file = String_GetData(prototype->source);
-        int         _line = prototype->sourceLine[ip - prototype->convertedCode];
+        int         _line = prototype->convertedSourceLine[ip - prototype->convertedCode];
     #endif
 
         Instruction inst = *ip;
@@ -1609,6 +1609,37 @@ Start:
                 }
             }
             break;
+        case Opcode_LoadK2:
+            {
+                int bx = VM_GET_D(inst) + 65536;
+                ASSERT(bx >= 0 && bx < prototype->numConstants);
+                const Value* value = &constant[bx];
+                stackBase[a] = *value;
+            }
+            break;
+        case Opcode_SetGlobal2:
+            {
+                PROTECT(
+                    int d = VM_GET_D(inst) + 65536;
+                    ASSERT(d >= 0 && d < prototype->numConstants);
+                    Value* key = &constant[d];
+                    Value* value = &stackBase[a];
+                    Vm_SetGlobal(L, closure, key, value);
+                )
+            }
+            break;
+        case Opcode_GetGlobal2:
+            {
+                PROTECT(
+                    int d = VM_GET_D(inst) + 65536;
+                    ASSERT(d >= 0 && d < prototype->numConstants);
+                    const Value* key = &constant[d];
+                    Value* dst = &stackBase[a];
+                    Vm_GetGlobal(L, closure, key, dst);
+                )
+            }
+            break;
+
         default:
             // Unimplemented opcode!
             ASSERT(0);

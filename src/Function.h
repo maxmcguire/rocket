@@ -20,6 +20,7 @@ struct Prototype : public Gc_Object
     int                 maxStackSize;
     int                 codeSize;
     Instruction*        code;
+    int                 convertedCodeSize;
     Instruction*        convertedCode;
     int                 numConstants;
     Value*              constant;
@@ -34,6 +35,8 @@ struct Prototype : public Gc_Object
     // Optional debug information.
     String*             source;
     int*                sourceLine;
+    int*                convertedSourceLine;
+
 
 };
 
@@ -68,7 +71,8 @@ struct Closure : public Gc_Object
  * Creates a prototype with the specified fields. The caller will fill in the
  * appropriate fields.
  */
-Prototype* Prototype_Create(lua_State* L, int codeSize, int numConstants, int numPrototypes, int numUpValues);
+Prototype* Prototype_Create(lua_State* L, int codeSize, int convertedCodeSize,
+    int numConstants, int numPrototypes, int numUpValues);
 
 /**
  * Creates a new function prototype from compiled Lua code.
@@ -88,6 +92,7 @@ void Prototype_GetName(Prototype* prototype, char* buffer, size_t bufferLength);
 /** Translates the code in a prototype from standard Lua opcodes to our own
  * encoding. */
 void Prototype_ConvertCode(Prototype* prototype);
+int  Prototype_GetConvertedCodeSize(const Instruction* src, int codeSize);
 
 extern "C" Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env);
 Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues, Table* env);

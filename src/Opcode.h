@@ -43,7 +43,7 @@ enum Opcode
     Opcode_SetTable     = 9,
     Opcode_NewTable     = 10,
     Opcode_Self         = 11,
-    Opcode_Add          = 12,
+    Opcode_Add          = 12,   // Arg1 is register, arg2 is register.
     Opcode_Sub          = 13,
     Opcode_Mul          = 14,
     Opcode_Div          = 15,
@@ -71,6 +71,9 @@ enum Opcode
     Opcode_VarArg       = 37,
     Opcode_GetTableRef  = 38,
 
+    // These opcodes do not appear in standard Lua code, but we use them when
+    // we re-encode the instructinos for greater efficiency.
+
     Opcode_GetTableC    = 39,   // Key is a constant.
     Opcode_SetTableRC   = 40,   // Key is a register, value is constant.
     Opcode_SetTableCR   = 41,   // Key is a constant, value is register.
@@ -78,9 +81,9 @@ enum Opcode
 
     Opcode_SelfC        = 43,   // Key is constant.
 
-    Opcode_AddRC        = 44,
-    Opcode_AddCR        = 45,
-    Opcode_AddCC        = 46,
+    Opcode_AddRC        = 44,   // Arg1 is register, arg2 is constant.
+    Opcode_AddCR        = 45,   // Arg1 is constant, arg2 is register.
+    Opcode_AddCC        = 46,   // Arg1 is constant, arg2 is constant.
 
     Opcode_SubRC        = 47,
     Opcode_SubCR        = 48,
@@ -115,6 +118,10 @@ enum Opcode
     Opcode_LeCC         = 70,
 
     Opcode_GetTableRefC = 71,
+
+    Opcode_LoadK2       = 72,   // Constant index in the range 65536 to 131071.
+    Opcode_SetGlobal2   = 73,   // Constant index in the range 65536 to 131071.
+    Opcode_GetGlobal2   = 74,   // Constant index in the range 65536 to 131071.
 
 };
 
