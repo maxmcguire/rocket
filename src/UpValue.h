@@ -41,16 +41,6 @@ void CloseUpValue(lua_State* L, UpValue* upValue);
 // Closes all up values that refer to values >= value.
 void CloseUpValues(lua_State* L, Value* value);
 
-inline const Value* UpValue_GetValue(LClosure* closure, int index)
-    { return closure->upValue[index]->value; }
-
-inline void UpValue_SetValue(lua_State* L, LClosure* closure, int index, const Value* value)
-    { 
-        UpValue* upValue = closure->upValue[index];
-        *upValue->value = *value;
-        Gc_WriteBarrier(&L->gc, upValue, value);
-    }
-
 /**
  * Destroys an up value. This will automatically be called by the garbage
  * collector.

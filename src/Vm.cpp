@@ -949,8 +949,9 @@ Start:
 
     register const Instruction* ip  = frame->ip;
 
-    register Value* stackBase = L->stackBase;
-    register Value* constant  = prototype->constant;
+    register Value*    stackBase = L->stackBase;
+    register Value*    constant  = prototype->constant;
+    register UpValue** upValue   = lclosure->upValue;
 
     while (1)
     {
@@ -1050,12 +1051,15 @@ Start:
         case Opcode_SetUpVal:
             {
                 const Value* value = &stackBase[a];
-                UpValue_SetValue(L, lclosure, VM_GET_B(inst), value);    
+                int index = VM_GET_B(inst);
+                UpValue* dst = upValue[index];
+                *upValue[index]->value = *value;
+                Gc_WriteBarrier(&L->gc, upValue[index], value);            
             }
             break;
         case Opcode_GetUpVal:
             {
-                const Value* value = UpValue_GetValue(lclosure, VM_GET_B(inst));
+                const Value* value = upValue[VM_GET_B(inst)]->value;
                 stackBase[a] = *value;
             }
             break;
