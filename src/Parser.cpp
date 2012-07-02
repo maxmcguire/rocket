@@ -1073,9 +1073,12 @@ int Parser_AddFunction(Parser* parser, Function* f)
 Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* source)
 {
 
+    int convertedCodeSize = Prototype_GetConvertedCodeSize( function->code, function->codeSize );
+
     Prototype* prototype = Prototype_Create(
         L,
         function->codeSize,
+        convertedCodeSize,
         function->numConstants,
         function->numFunctions,
         function->numUpValues);
