@@ -132,6 +132,7 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int convertedCodeSize, i
     memset(prototype->sourceLine, 0, sizeof(int) * codeSize);
 
     prototype->convertedSourceLine = reinterpret_cast<int*>(prototype->sourceLine + codeSize);
+    memset(prototype->convertedSourceLine, 0, sizeof(int) * convertedCodeSize);
 
     ASSERT( size == Prototype_GetSize(prototype) );
 
@@ -410,8 +411,8 @@ static void Prototype_ConvertCode(Instruction* dst, const Instruction* src, int*
 
         ConvertInstruction(dst, src);
 
-        int srcSize = static_cast<int>(s - src);
-        int dstSize = static_cast<int>(d - dst);
+        int srcSize = static_cast<int>(src - s);
+        int dstSize = static_cast<int>(dst - d);
 
         for (int i = 0; i < dstSize; ++i)
         {
