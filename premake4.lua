@@ -6,7 +6,7 @@ solution "Rocket"
     defines { "_CRT_SECURE_NO_WARNINGS", "_CRT_SECURE_NO_DEPRECATE" }
     vpaths { 
         ["Header Files"] = "**.h",
-        ["Source Files"] = { "**.cpp", "**.c", "**.asm" },
+        ["Source Files"] = { "**.cpp", "**.c", "**.asm", "**.inl" },
         ["Linker Files"] = { "**.def" }
     }
 	

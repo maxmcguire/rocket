@@ -62,7 +62,10 @@ void StringPool_Shutdown(lua_State* L, StringPool* stringPool)
         while (string != NULL)
         {
             String* next = string->nextString;
-            String_Destroy(L, string);
+            if (string->managed)
+            {
+                String_Destroy(L, string);
+            }
             string = next;
         }
     }
@@ -98,12 +101,15 @@ static void StringPool_Grow(lua_State* L, StringPool* stringPool, int numNodes)
 
 }
 
-String* StringPool_Insert(lua_State* L, StringPool* stringPool, const char* data, size_t length)
+/** Returns the number of bytes that must be allocated for a String object to
+ * store a string of the specified size. */
+static size_t String_GetStringObjectSize(size_t length)
 {
+    return sizeof(String) + length + 1;
+}
 
-	unsigned int hash = HashString(data, length);
-	
-	int index = hash % stringPool->numNodes;
+static String* StringPool_FindInChain(StringPool* stringPool, int index, const char* data, size_t length)
+{
 	String* firstString = stringPool->node[index];	
 	
 	// Search for the exact string in the string pool.
@@ -117,16 +123,29 @@ String* StringPool_Insert(lua_State* L, StringPool* stringPool, const char* data
 		string = string->nextString;
 	}
 
+    return string;
+}
+
+String* StringPool_Insert(lua_State* L, StringPool* stringPool, const char* data, size_t length)
+{
+
+	unsigned int hash = HashString(data, length);
+	
+	int index = hash % stringPool->numNodes;
+    String* string = StringPool_FindInChain(stringPool, index, data, length);
+
     if (string == NULL)
 	{
 		
 		// Not already in the pool, so create a new object. To improve memory locality,
 		// we store the data for the string immediately after the String structure.
-		string = static_cast<String*>( Gc_AllocateObject(L, LUA_TSTRING, sizeof(String) + length + 1, false) );
+        size_t size = String_GetStringObjectSize(length);
+		string = static_cast<String*>( Gc_AllocateObject(L, LUA_TSTRING, size, false) );
 
 		string->hash 		= hash;
 		string->length		= length;
 		string->nextString  = stringPool->node[index];
+        string->managed     = true;
 
         char* stringData = reinterpret_cast<char*>(string + 1);
 
@@ -169,7 +188,7 @@ void StringPool_SweepStrings(lua_State* L, StringPool* stringPool)
         while (string != NULL)
         {
             String* next = string->nextString;
-            if (string->color == Color_White)
+            if (string->color == Color_White && string->managed)
             {
                 if (prev == NULL)
                 {
@@ -206,8 +225,81 @@ String* String_Create(lua_State* L, const char* data, size_t length)
 
 void String_Destroy(lua_State* L, String* string)
 {
-    size_t size = sizeof(String) + string->length + 1;
+    ASSERT( string->managed );
+    size_t size = String_GetStringObjectSize(string->length);
     Free(L, string, size);
+}
+
+void String_CreateUnmanagedArray(lua_State* L, String* string[], const char* data[], int numStrings)
+{
+
+    size_t size = 0;
+    for (int i = 0; i < numStrings; ++i)
+    {
+        size_t length = strlen(data[i]);
+        size += String_GetStringObjectSize(length);
+    }
+
+    String* result = static_cast<String*>(Allocate(L, size));
+    memset(result, 0, size);
+
+    StringPool* stringPool = &L->stringPool;
+    
+    for (int i = 0; i < numStrings; ++i)
+    {
+
+        string[i] = result;
+
+        size_t length       = strlen(data[i]);
+
+        result->type        = LUA_TSTRING;
+		result->hash 		= HashString(data[i], length);
+		result->length		= length;
+        result->managed     = false;
+
+        char* stringData = reinterpret_cast<char*>(result + 1);
+
+		memcpy( stringData, data[i], length );
+		stringData[length] = 0;
+
+#ifdef DEBUG
+        result->_data = stringData;
+#endif        
+
+        // Add to the pool so that we don't end up with duplicated strings. Note
+        // this must be done before the string is inserted into the table otherwise.
+
+        int index = result->hash % stringPool->numNodes;
+        ASSERT( StringPool_FindInChain(stringPool, index, data[i], length) == NULL );
+
+		stringPool->node[index] = result;
+        ++stringPool->numStrings;
+
+        if (stringPool->numStrings >= stringPool->numNodes)
+        {
+            StringPool_Grow(L, stringPool, stringPool->numNodes * 2);
+        }
+
+        // Advance to the next string in memory.
+        size_t size = String_GetStringObjectSize(length);
+        result = reinterpret_cast<String*>(reinterpret_cast<char*>(result) + size);
+
+    }
+
+}
+
+void String_DestroyUnmanagedArray(lua_State* L, String* string[], int numStrings)
+{
+    if (numStrings > 0)
+    {
+        size_t size = 0;
+        for (int i = 0; i < numStrings; ++i)
+        {
+            size_t length = string[i]->length;
+            size += String_GetStringObjectSize(length);
+        }
+        Free(L, string[0], size);
+    }
 }
 
 int String_Compare(String* string1, String* string2)

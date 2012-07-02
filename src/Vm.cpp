@@ -169,7 +169,7 @@ static Value* GetTagMethod(lua_State* L, const Value* value, TagMethod method)
     Value* result = NULL;
     if (metatable != NULL)
     {
-        result = Table_GetTable(L, metatable, L->tagMethodName[method]);
+        result = Table_GetTagMethod(L, metatable, method);
         if (Value_GetIsNil(result))
         {
             result = NULL;

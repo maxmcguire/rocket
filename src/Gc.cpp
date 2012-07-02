@@ -427,13 +427,6 @@ static void Gc_Finish(lua_State* L, Gc* gc)
 {
 
     // Mark the string constants since we never want to garbage collect them.
-    for (int i = 0; i < TagMethod_NumMethods; ++i)
-    {
-        if (L->tagMethodName[i] != NULL)
-        {
-            Gc_MarkObject(gc, L->tagMethodName[i]);
-        }
-    }
     for (int i = 0; i < NUM_TYPES; ++i)
     {
         if (L->typeName[i] != NULL)

@@ -26,6 +26,9 @@ namespace
 // problems.
 #define TABLE_ARRAY
 
+// Enables tag method caching optimization for tables.
+#define TABLE_TAG_METHOD_CACHE
+
 static void Table_InsertHash(lua_State* L, Table* table, Value* key, Value* value);
 static bool Table_WriteDot(const Table* table, const char* fileName);
 
@@ -50,6 +53,7 @@ Table* Table_Create(lua_State* L, int numArray, int numHash)
     table->metatable        = NULL;
     table->size             = 0;
     table->lastFreeNode     = NULL;
+    table->tagMethod        = NULL;
     // TODO: Initialize the array and hash parts based on the parameters.
     return table;
 }
@@ -58,6 +62,10 @@ void Table_Destroy(lua_State* L, Table* table)
 {
     Free(L, table->nodes, table->numNodes * sizeof(TableNode));
     Free(L, table->element, table->maxElements * sizeof(Value));
+    if (table->tagMethod != NULL)
+    {
+        Free(L, table->tagMethod, sizeof(Value) * TagMethod_NumMethods);
+    }
     Free(L, table, sizeof(Table));
 }
 
@@ -154,7 +162,7 @@ static bool Table_GetIsValidNode(const Table* table, const TableNode* node)
  * true if everything in the table structure appears valid. This function is 
  * not fast and should only be used for debugging.
  */
-static bool Table_CheckConsistency(const Table* table)
+static bool Table_CheckConsistency(lua_State* L, Table* table)
 {
 
     for (int i = 0; i < table->numNodes; ++i)
@@ -293,6 +301,21 @@ static bool Table_CheckConsistency(const Table* table)
         }
     }
 
+    // Check the tag methods.
+
+    if (table->tagMethod != NULL)
+    {
+        for (int i = 0; i < TagMethod_NumMethods; ++i)
+        {
+            Value* value = Table_GetTable(L, table, L->tagMethodName[i]);
+            if (!Value_Equal(value, &table->tagMethod[i]))
+            {
+                ASSERT(0);
+                return false;
+            }
+        }
+    }
+
     return true;
 
 }
@@ -392,7 +415,7 @@ static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool forc
     Free(L, nodes, numNodes * sizeof(TableNode));
     
 #ifdef TABLE_CHECK_CONSISTENCY
-    ASSERT( Table_CheckConsistency(table) );
+    ASSERT( Table_CheckConsistency(L, table) );
 #endif
 
     return true;
@@ -535,7 +558,7 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
     Table_ResizeHash(L, table, numNodes, true);
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    ASSERT( Table_CheckConsistency(table) );
+    ASSERT( Table_CheckConsistency(L, table) );
 #endif
 
 }
@@ -641,7 +664,47 @@ static TableNode* Table_GetNode(Table* table, const Value* key, TableNode*& prev
 
 }
 
-static bool Table_RemoveHash(Table* table, const Value* key)
+/**
+ * Initializes the tag method array which stores a cache of the values
+ * associated with the keys for all of the different tag methods.
+ */
+static void Table_CreateTagMethodArray(lua_State* L, Table* table)
+{
+    ASSERT(table->tagMethod == NULL);
+    table->tagMethod = static_cast<Value*>(Allocate( L, sizeof(Value) * TagMethod_NumMethods ));
+    for (int i = 0; i < TagMethod_NumMethods; ++i)
+    {
+        table->tagMethod[i] = *Table_GetTable(L, table, L->tagMethodName[i]);
+    }
+}
+
+/**
+ * If the key is a tag method name and we have cached tag methods, update the
+ * cached value.
+ */
+FORCE_INLINE static void Table_UpdateTagMethod(lua_State* L, Table* table, const Value* key, Value* value)
+{
+    if (table->tagMethod != NULL && State_GetIsTagMethodName(L, key))
+    {
+        TagMethod tm = State_GetTagMethod(L, key->string);
+        table->tagMethod[tm] = *value;
+    }
+}
+
+Value* Table_GetTagMethod(lua_State* L, Table* table, TagMethod method)
+{
+#ifdef TABLE_TAG_METHOD_CACHE
+    if (table->tagMethod == NULL)
+    {
+        Table_CreateTagMethodArray(L, table);
+    }
+    return &table->tagMethod[method];
+#else
+    return Table_GetTable(L, table, L->tagMethodName[method]);
+#endif
+}
+ 
+static bool Table_RemoveHash(lua_State* L, Table* table, const Value* key)
 {
 
     TableNode* prev = NULL;
@@ -655,15 +718,19 @@ static bool Table_RemoveHash(Table* table, const Value* key)
     node->dead = true;
     node->prev = prev;
 
+#ifdef TABLE_TAG_METHOD_CACHE
+    Table_UpdateTagMethod(L, table, key, &L->dummyObject);
+#endif
+
 #ifdef TABLE_CHECK_CONSISTENCY
-    ASSERT( Table_CheckConsistency(table) );
+    ASSERT( Table_CheckConsistency(L, table) );
 #endif
 
     return true;
 
 }
 
-static bool Table_Remove(Table* table, int key)
+static bool Table_Remove(lua_State* L, Table* table, int key)
 {
 
     if (key > 0 && key <= table->maxElements)
@@ -690,7 +757,7 @@ static bool Table_Remove(Table* table, int key)
         }
 
     #ifdef TABLE_CHECK_CONSISTENCY
-        ASSERT( Table_CheckConsistency(table) );
+        ASSERT( Table_CheckConsistency(L, table) );
     #endif
 
         return true;
@@ -698,18 +765,18 @@ static bool Table_Remove(Table* table, int key)
 
     Value k;
     SetValue(&k, key);
-    return Table_RemoveHash(table, &k);
+    return Table_RemoveHash(L, table, &k);
 
 }
 
-static bool Table_Remove(Table* table, const Value* key)
+static bool Table_Remove(lua_State* L, Table* table, const Value* key)
 {
     int index;
     if (Value_GetIsInteger(key, &index))
     {
-        return Table_Remove(table, index);
+        return Table_Remove(L, table, index);
     }
-    return Table_RemoveHash(table, key);
+    return Table_RemoveHash(L, table, key);
 }
 
 static TableNode* Table_GetFreeNode(Table* table)
@@ -739,7 +806,17 @@ bool Table_UpdateHash(lua_State* L, Table* table, Value* key, Value* value)
 
     node->value = *value;
     Gc_WriteBarrier(&L->gc, table, value);
+
+#ifdef TABLE_TAG_METHOD_CACHE
+    Table_UpdateTagMethod(L, table, key, value);
+#endif
+
+#ifdef TABLE_CHECK_CONSISTENCY
+    ASSERT( Table_CheckConsistency(L, table) );
+#endif
+
     return true;
+
 }
 
 FORCE_INLINE bool Table_Update(lua_State* L, Table* table, int key, Value* value)
@@ -749,7 +826,7 @@ FORCE_INLINE bool Table_Update(lua_State* L, Table* table, int key, Value* value
     {
         Value k;
         SetValue(&k, key);
-        return Table_Remove(table, &k);
+        return Table_Remove(L, table, &k);
     }
 
 #ifdef TABLE_ARRAY
@@ -797,7 +874,7 @@ bool Table_Update(lua_State* L, Table* table, Value* key, Value* value)
 
     if (Value_GetIsNil(value))
     {
-        return Table_Remove(table, key);
+        return Table_Remove(L, table, key);
     }
 
     return Table_UpdateHash(L, table, key, value);
@@ -968,9 +1045,9 @@ Start:
         }
 
     }
-
-#ifdef TABLE_CHECK_CONSISTENCY
-    ASSERT( Table_CheckConsistency(table) );
+    
+#ifdef TABLE_TAG_METHOD_CACHE
+    Table_UpdateTagMethod(L, table, key, value);
 #endif
 
 }
@@ -983,7 +1060,7 @@ FORCE_INLINE static void Table_AssignArray(lua_State* L, Table* table, int index
     ASSERT( index < table->maxElements );
 
     if (index == table->numElements)
-    {
+    { 
         // Fast case: appending an element to the array.
         table->numElements = index + 1;
     }
@@ -1004,7 +1081,7 @@ FORCE_INLINE static void Table_AssignArray(lua_State* L, Table* table, int index
     ++table->numElementsSet;
 
 #ifdef TABLE_CHECK_CONSISTENCY
-    ASSERT( Table_CheckConsistency(table) );
+    ASSERT( Table_CheckConsistency(L, table) );
 #endif
 
 }

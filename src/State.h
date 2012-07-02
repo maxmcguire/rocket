@@ -215,4 +215,9 @@ String* State_TypeName(lua_State* L, int type);
 inline CallFrame* State_GetCallFrame(lua_State* L)
     { return L->callStackTop - 1; }
 
+inline bool State_GetIsTagMethodName(lua_State* L, const Value* key);
+inline TagMethod State_GetTagMethod(lua_State* L, const String* name);
+
+#include "State.inl"
+
 #endif

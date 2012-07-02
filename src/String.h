@@ -17,6 +17,7 @@ struct String : public Gc_Object
 	unsigned int    hash;
 	size_t 			length;
 	String*			nextString;	// For chaining in the string pool.
+    bool            managed;    // Unmanaged strings will not be garbage collected.
 #ifdef DEBUG
     // Useful for viewing in the watch window, but not necessary since the
     // string data is immediately after the structure in memory.
@@ -40,6 +41,16 @@ inline const char* String_GetData(const String* string)
  */
 String* String_Create(lua_State* L, const char* data);
 String* String_Create(lua_State* L, const char* data, size_t length);
+
+/**
+ * Allocates an array of strings which exist outside of the garbage collector.
+ * The strings must be explicitly released with DestroyUnmanagedArray. The
+ * memory for the strings is allocated in a contiguous block so that a string
+ * s can be tested to see if it's inside the array by:
+ * string[0] >= s && s <= string[numStrings - 1]
+ */
+void String_CreateUnmanagedArray(lua_State* L, String* string[], const char* data[], int numStrings);
+void String_DestroyUnmanagedArray(lua_State* L, String* string[], int numStrings);
 
 /**
  * Releases the memory for a string. This should only be called when you know

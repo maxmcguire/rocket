@@ -128,6 +128,28 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     SetValue( &L->globals, Table_Create(L, 0, 0) );
     SetValue( &L->registry, Table_Create(L, 0, 0) );
 
+    // Store the tag method names so we don't need to create new strings
+    // every time we want to access them.
+    const char* tagMethodName[] =
+        {
+            "__index",
+            "__newindex",
+            "__call",
+            "__add",
+            "__sub",
+            "__mul",
+            "__div",
+            "__mod",
+            "__pow",
+            "__unm",
+            "__lt",
+            "__le",
+            "__eq",
+            "__concat",
+        };
+
+    String_CreateUnmanagedArray(L, L->tagMethodName, tagMethodName, TagMethod_NumMethods);
+
     // Store the names for the different types, so we don't have to create new
     // strings when we want to return them.
     String* unknownName = String_Create(L, "unknown");
@@ -149,31 +171,6 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     L->typeName[1 + LUA_TUPVALUE]       = String_Create(L, "upval");
     L->typeName[1 + LUA_TPROTOTYPE]     = String_Create(L, "proto");
 
-    // Store the tag method names so we don't need to create new strings
-    // every time we want to access them.
-    const char* tagMethodName[] =
-        {
-            "__index",
-            "__newindex",
-            "__call",
-            "__add",
-            "__sub",
-            "__mul",
-            "__div",
-            "__mod",
-            "__pow",
-            "__unm",
-            "__lt",
-            "__le",
-            "__eq",
-            "__concat",
-        };
-    for (int i = 0; i < TagMethod_NumMethods; ++i)
-    {
-        ASSERT( i < sizeof(tagMethodName) / sizeof(const char*) );
-        L->tagMethodName[i] = String_Create(L, tagMethodName[i]);
-    }
-
     return L;
 
 }
@@ -181,6 +178,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
 void State_Destroy(lua_State* L)
 {
     StringPool_Shutdown(L, &L->stringPool);
+    String_DestroyUnmanagedArray(L, L->tagMethodName, TagMethod_NumMethods);
     Gc_Shutdown(L, &L->gc);
     L->alloc( L->userdata, L, 0, 0 );
 }
