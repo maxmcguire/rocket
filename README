@@ -29,6 +29,21 @@ Building
 Rocket uses premake4 (requires at least version 4.4) to generate build files.
 premake4 is available from http://industriousone.com/premake.
 
+Garbage Collector
+-------------------------------------------------------------------------------
+
+The garbage collector in Rocket uses a combination of reference counting
+and incremental mark and sweep. The purpose of this hybrid approach is to act as
+a sort of generational garbage collector, where we can identify a subset of the
+objects which are likely to be garbage and collect those first.
+
+To avoid the overhead of pure reference counting, objects do not track references
+from the stack. Instead the stack is scanned prior to releasing any objects which
+have a reference count of 0 to ensure there are no references from the stack. 
+Incremental mark and sweep is used to collect objects contained within cycles
+which could overwise not be collected by the reference counting system.
+
+
 TODO
 -------------------------------------------------------------------------------
 
