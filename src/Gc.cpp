@@ -602,6 +602,13 @@ bool Gc_Step(lua_State* L, Gc* gc)
     return false;
 #endif
 
+    if (L->gchook != NULL)
+    {
+        L->gchook(L, LUA_GCHOOK_STEP_START);
+    }
+
+    bool result = false;
+
     switch (gc->state)
     {
     case Gc_State_Start:
@@ -629,9 +636,16 @@ bool Gc_Step(lua_State* L, Gc* gc)
             gc->threshold = L->totalBytes + _gcStepSize;
 
         }
-        return true;
+        result = true;
+        break;
     }
-    return false;
+
+    if (L->gchook != NULL)
+    {
+        L->gchook(L, LUA_GCHOOK_STEP_END);
+    }
+
+    return result;
 }
 
 void Gc_Collect(lua_State* L, Gc* gc)
@@ -640,6 +654,11 @@ void Gc_Collect(lua_State* L, Gc* gc)
 #ifdef GC_DISABLE
     return;
 #endif
+
+    if (L->gchook != NULL)
+    {
+        L->gchook(L, LUA_GCHOOK_FULL_START);
+    }
 
     // Finish up any propagation stage.
     while (gc->state != Gc_State_Paused)
@@ -652,6 +671,11 @@ void Gc_Collect(lua_State* L, Gc* gc)
     while (gc->state != Gc_State_Paused)
     {
         Gc_Step(L, gc);
+    }
+
+    if (L->gchook != NULL)
+    {
+        L->gchook(L, LUA_GCHOOK_FULL_END);
     }
 
 }
