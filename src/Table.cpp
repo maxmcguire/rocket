@@ -110,7 +110,7 @@ void Table_Destroy(lua_State* L, Table* table, bool releaseRefs)
 
     Free(L, table->nodes, table->numNodes * sizeof(TableNode));
     Free(L, table->element, table->maxElements * sizeof(Value));
-    
+
     if (table->tagMethod != NULL)
     {
         Free(L, table->tagMethod, sizeof(Value) * TagMethod_NumMethods);
@@ -858,7 +858,6 @@ bool Table_UpdateHash(lua_State* L, Table* table, Value* key, Value* value)
     Gc_IncrementReference(&L->gc, table, value);
     Gc_DecrementReference(&L->gc, &node->value);
     node->value = *value;
-    
 
 #ifdef TABLE_TAG_METHOD_CACHE
     Table_UpdateTagMethod(L, table, key, value);
