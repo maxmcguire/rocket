@@ -144,8 +144,8 @@ struct Expression
     };
 };
 
-Function* Function_Create(lua_State* L);
-void Function_Destroy(lua_State* L, Function* function);
+Function* Function_Create(lua_State* L, Function* parent);
+void Function_Destroy(lua_State* L, Function* function, bool releaseRefs);
 
 void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer);
 void Parser_Destroy(Parser* parser);

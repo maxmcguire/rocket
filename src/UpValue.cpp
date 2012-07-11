@@ -32,6 +32,7 @@ UpValue* UpValue_Create(lua_State* L, Value* value)
     {
         upValue = static_cast<UpValue*>( Gc_AllocateObject( L, LUA_TUPVALUE, sizeof(UpValue) ) );
         upValue->value = value;
+        Gc_IncrementReference(&L->gc, upValue, value);
         upValue->nextUpValue = L->openUpValue;
         upValue->prevUpValue = NULL;
         if (upValue->nextUpValue != NULL)
@@ -73,24 +74,29 @@ static void UpValue_Unlink(lua_State* L, UpValue* upValue)
     }
 }
 
-void UpValue_Destroy(lua_State* L, UpValue* upValue)
+void UpValue_Destroy(lua_State* L, UpValue* upValue, bool releaseRefs)
 {
     if (UpValue_GetIsOpen(upValue))
     {
         UpValue_Unlink(L, upValue);
     }
+    if (releaseRefs)
+    {
+        Gc_DecrementReference(&L->gc, upValue->value);
+    }
     Free(L, upValue, sizeof(UpValue));
 }
 
-void CloseUpValue(lua_State* L, UpValue* upValue)
+void UpValue_Close(lua_State* L, UpValue* upValue)
 {
     UpValue_Unlink(L, upValue);
     // Copy over the value so we have our own storage.
     upValue->storage = *upValue->value;
     upValue->value   = &upValue->storage;
+    Gc_IncrementReference(&L->gc, upValue, upValue->value);
 }
 
-void CloseUpValues(lua_State* L, Value* value)
+void UpValue_CloseUpValues(lua_State* L, Value* value)
 {
     UpValue* upValue = L->openUpValue;
     while (upValue != NULL)
@@ -98,7 +104,7 @@ void CloseUpValues(lua_State* L, Value* value)
         UpValue* nextUpValue = upValue->nextUpValue;
         if (upValue->value >= value)
         {
-            CloseUpValue(L, upValue);
+            UpValue_Close(L, upValue);
         }
         upValue = nextUpValue;
     }

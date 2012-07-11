@@ -17,26 +17,33 @@ void Value_SetMetatable(lua_State* L, Value* value, Table* table)
     switch (value->tag)
     {
     case Tag_Table:
-        value->table->metatable = table;
         if (table != NULL)
         {
-            Gc_WriteBarrier(&L->gc, value->table, table);
+            Gc_IncrementReference(&L->gc, value->table, table);
         }
+        if (value->table->metatable != NULL)
+        {
+            Gc_DecrementReference(&L->gc, value->table->metatable);
+        }
+        value->table->metatable = table;
         break;
     case Tag_Userdata:
-        value->userData->metatable = table;
         if (table != NULL)
         {
-            Gc_WriteBarrier(&L->gc, value->userData, table);
+            Gc_IncrementReference(&L->gc, value->userData, table);
         }
-        break;
+        if (value->userData->metatable != NULL)
+        {
+            Gc_DecrementReference(&L->gc, value->userData->metatable);
+        }
+        value->userData->metatable = table;
+         break;
     default:
         {
             // Set the global metatable for the type.
             int type = Value_GetType(value);
             ASSERT(type >= 0 && type < NUM_TYPES );
             L->metatable[type] = table;
-            // TODO: Gc_WriteBarrier?
         }
         break;
     }
@@ -62,16 +69,18 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table)
     switch (value->tag)
     {
     case Tag_Closure:
+        Gc_IncrementReference(&L->gc, value->closure, table);
+        Gc_DecrementReference(&L->gc, value->closure->env);
         value->closure->env = table;
-        Gc_WriteBarrier(&L->gc, value->closure, table);
         return 1;
     case Tag_Thread:
         // TODO: implement.
         ASSERT(0);
         return 1;
     case Tag_Userdata:
+        Gc_IncrementReference(&L->gc, value->userData, table);
+        Gc_DecrementReference(&L->gc, value->userData->env);
         value->userData->env = table;
-        Gc_WriteBarrier(&L->gc, value->userData, table);
         return 1;
     }
     return 0;

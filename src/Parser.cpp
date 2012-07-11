@@ -16,12 +16,18 @@
 
 #include <memory.h>
 
-Function* Function_Create(lua_State* L)
+Function* Function_Create(lua_State* L, Function* parent)
 {
 
     Function* function = static_cast<Function*>( Gc_AllocateObject( L, LUA_TFUNCTIONP, sizeof(Function) ) );
+    Gc* gc = &L->gc;
 
-    function->parent            = NULL;
+    if (parent != NULL)
+    {
+        Gc_IncrementReference(gc, function, parent);
+    }
+    function->parent            = parent;
+
     function->parser            = NULL;
 
     function->numRegisters      = 0;
@@ -53,19 +59,43 @@ Function* Function_Create(lua_State* L)
 
     PushFunction(L, function);
     function->constants = Table_Create(L, 0, 0);
-    Gc_WriteBarrier(&L->gc, function, function->constants);
+    Gc_IncrementReference(&L->gc, function, function->constants);
     Pop(L, 1);
 
     return function;
 
 }
 
-void Function_Destroy(lua_State* L, Function* function)
+void Function_Destroy(lua_State* L, Function* function, bool releaseRefs)
 {
+
+    if (releaseRefs)
+    {
+        Gc* gc = &L->gc;
+        Gc_DecrementReference(gc, function->constants);
+        if (function->parent != NULL)
+        {
+            Gc_DecrementReference(gc, function->parent);
+        }
+        for (int i = 0; i < function->numFunctions; ++i)
+        {
+            Gc_DecrementReference(gc, function->function[i]);
+        }
+        for (int i = 0; i < function->numUpValues; ++i)
+        {
+            Gc_DecrementReference(gc, function->upValue[i]);
+        }
+        for (int i = 0; i < function->numLocals; ++i)
+        {
+            Gc_DecrementReference(gc, function->local[i]);
+        }
+    }
+
     FreeArray(L, function->function, function->maxFunctions);
     FreeArray(L, function->code, function->maxCodeSize);
     FreeArray(L, function->sourceLine, function->maxSourceLines);
     Free(L, function, sizeof(Function));
+
 }
 
 void Parser_Initialize(Parser* parser, lua_State* L, Lexer* lexer)
@@ -229,7 +259,7 @@ static int Parser_AddUpValue(Parser* parser, Function* function, String* name)
             int n =  function->numUpValues;
             function->upValue[n] = name;
 
-            Gc_WriteBarrier(&L->gc, function, name);
+            Gc_IncrementReference(&L->gc, function, name);
 
             ++function->numUpValues;
             return n;
@@ -265,8 +295,9 @@ int Parser_AddLocal(Parser* parser, String* name)
         Parser_Error(parser, "too many local variables (limit is %d)", LUAI_MAXVARS);
     }
 
+    Gc_IncrementReference(&parser->L->gc, function, name);
     function->local[function->numLocals] = name;
-    Gc_WriteBarrier(&parser->L->gc, function, name);
+    
     ++function->numLocals;
 
     return function->numLocals - 1;
@@ -1064,7 +1095,7 @@ int Parser_AddFunction(Parser* parser, Function* f)
     function->function[index] = f;
     ++function->numFunctions;
 
-    Gc_WriteBarrier(&L->gc, function, f);
+    Gc_IncrementReference(&L->gc, function, f);
 
     return index;
 
@@ -1099,7 +1130,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
     for (int i = 0; i < function->numFunctions; ++i)
     {
         prototype->prototype[i] = Function_CreatePrototype(L, function->function[i], source);
-        Gc_WriteBarrier(&L->gc, prototype, prototype->prototype[i]);
+        Gc_IncrementReference(&L->gc, prototype, prototype->prototype[i]);
     }
 
     // Store the constants.
@@ -1127,7 +1158,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
         {
             prototype->constant[i] = key;
         }
-        Gc_WriteBarrier(&L->gc, prototype, &prototype->constant[i]);
+        Gc_IncrementReference(&L->gc, prototype, &prototype->constant[i]);
     }
     
     prototype->varArg       = function->varArg;

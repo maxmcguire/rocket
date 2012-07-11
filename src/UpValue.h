@@ -36,25 +36,15 @@ UpValue* UpValue_Create(lua_State* L);
 UpValue* UpValue_Create(lua_State* L, Value* value);
 
 // "Closes" the up value so that it has its own storage.
-void CloseUpValue(lua_State* L, UpValue* upValue);
+void UpValue_Close(lua_State* L, UpValue* upValue);
 
 // Closes all up values that refer to values >= value.
-void CloseUpValues(lua_State* L, Value* value);
-
-inline const Value* UpValue_GetValue(LClosure* closure, int index)
-    { return closure->upValue[index]->value; }
-
-inline void UpValue_SetValue(lua_State* L, LClosure* closure, int index, const Value* value)
-    { 
-        UpValue* upValue = closure->upValue[index];
-        *upValue->value = *value;
-        Gc_WriteBarrier(&L->gc, upValue, value);
-    }
+void UpValue_CloseUpValues(lua_State* L, Value* value);
 
 /**
  * Destroys an up value. This will automatically be called by the garbage
  * collector.
  */
-void UpValue_Destroy(lua_State* L, UpValue* upValue);
+void UpValue_Destroy(lua_State* L, UpValue* upValue, bool releaseRefs);
 
 #endif

@@ -169,7 +169,7 @@ static Value* GetTagMethod(lua_State* L, const Value* value, TagMethod method)
     Value* result = NULL;
     if (metatable != NULL)
     {
-        result = Table_GetTable(L, metatable, L->tagMethodName[method]);
+        result = Table_GetTagMethod(L, metatable, method);
         if (Value_GetIsNil(result))
         {
             result = NULL;
@@ -949,8 +949,9 @@ Start:
 
     register const Instruction* ip  = frame->ip;
 
-    register Value* stackBase = L->stackBase;
-    register Value* constant  = prototype->constant;
+    register Value*    stackBase = L->stackBase;
+    register Value*    constant  = prototype->constant;
+    register UpValue** upValue   = lclosure->upValue;
 
     while (1)
     {
@@ -1050,12 +1051,16 @@ Start:
         case Opcode_SetUpVal:
             {
                 const Value* value = &stackBase[a];
-                UpValue_SetValue(L, lclosure, VM_GET_B(inst), value);    
+                int index = VM_GET_B(inst);
+                UpValue* dst = upValue[index];
+                Gc_IncrementReference(&L->gc, dst, value);            
+                Gc_DecrementReference(&L->gc, dst->value);            
+                *dst->value = *value;
             }
             break;
         case Opcode_GetUpVal:
             {
-                const Value* value = UpValue_GetValue(lclosure, VM_GET_B(inst));
+                const Value* value = upValue[VM_GET_B(inst)]->value;
                 stackBase[a] = *value;
             }
             break;
@@ -1194,7 +1199,7 @@ Start:
                     // with the tail call, we need to close the up values.
                     if (L->openUpValue != NULL)
                     {
-                        CloseUpValues(L, stackBase);
+                        UpValue_CloseUpValues(L, stackBase);
                     }
 
                     CallFrame* newFrame = frame + 1;
@@ -1236,7 +1241,7 @@ Start:
             {
                 if (L->openUpValue != NULL)
                 {
-                    CloseUpValues(L, stackBase);
+                    UpValue_CloseUpValues(L, stackBase);
                 }       
                 int numResults = VM_GET_B(inst) - 1;
                 numResults = MoveResults(L, frame->function, &stackBase[a], numResults);
@@ -1408,12 +1413,12 @@ Start:
                     if ( VM_GET_OPCODE(inst) == Opcode_Move )
                     {
                         c->lclosure.upValue[i] = UpValue_Create(L, &stackBase[b]);
-                        Gc_WriteBarrier(&L->gc, c, c->lclosure.upValue[i]);
                     }
                     else
                     {
                         ASSERT( VM_GET_OPCODE(inst) == Opcode_GetUpVal );
                         c->lclosure.upValue[i] = lclosure->upValue[b];
+                        Gc_IncrementReference(&L->gc, c, c->lclosure.upValue[i]);
                     }
                 }
 
@@ -1423,7 +1428,7 @@ Start:
             break;
         case Opcode_Close:
             {
-                CloseUpValues(L, &stackBase[a]);
+                UpValue_CloseUpValues(L, &stackBase[a]);
             }
             break;
         case Opcode_ForPrep:
@@ -1696,7 +1701,7 @@ int Vm_RunProtected(lua_State* L, ProtectedFunction function, Value* stackTop, v
     
         if (L->openUpValue != NULL)
         {
-            CloseUpValues(L, oldBase);
+            UpValue_CloseUpValues(L, oldBase);
         }
 
         // Move the error message to the top of the pre-call stack.

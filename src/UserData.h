@@ -25,7 +25,7 @@ struct UserData : public Gc_Object
 
 UserData* UserData_Create(lua_State* L, size_t size, Table* env);
 
-void UserData_Destroy(lua_State* L, UserData* userData);
+void UserData_Destroy(lua_State* L, UserData* userData, bool releaseRefs);
 
 inline void* UserData_GetData(UserData* userData)
     { return (void*)(userData + 1); }

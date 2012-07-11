@@ -13,6 +13,7 @@ extern "C"
 #include "Global.h"
 #include "UserData.h"
 #include "State.h"
+#include "Table.h"
 
 #include <stdlib.h>
 
@@ -25,10 +26,22 @@ UserData* UserData_Create(lua_State* L, size_t size, Table* env)
     userData->metatable = NULL;
     userData->env       = env;
 
+    Gc* gc = &L->gc;
+    Gc_IncrementReference(gc, userData, userData->env);
+
     return userData;
 }
 
-void UserData_Destroy(lua_State* L, UserData* userData)
+void UserData_Destroy(lua_State* L, UserData* userData, bool releaseRefs)
 {
+    if (releaseRefs)
+    {
+        Gc* gc = &L->gc;
+        if (userData->metatable != NULL)
+        {
+            Gc_DecrementReference(gc, userData->metatable);
+        }
+        Gc_DecrementReference(gc, userData->env);
+    }
     Free(L, userData, sizeof(UserData) + userData->size);
 }

@@ -16,7 +16,8 @@ struct String : public Gc_Object
 {
 	unsigned int    hash;
 	size_t 			length;
-	String*			nextString;	// For chaining in the string pool.
+	String*			nextString;	// Next chained string in the string pool.
+    String*         prevString; // Pevious chained string in the string pool.
 #ifdef DEBUG
     // Useful for viewing in the watch window, but not necessary since the
     // string data is immediately after the structure in memory.
@@ -42,6 +43,16 @@ String* String_Create(lua_State* L, const char* data);
 String* String_Create(lua_State* L, const char* data, size_t length);
 
 /**
+ * Allocates an array of strings which exist outside of the garbage collector.
+ * The strings must be explicitly released with DestroyUnmanagedArray. The
+ * memory for the strings is allocated in a contiguous block so that a string
+ * s can be tested to see if it's inside the array by:
+ * string[0] >= s && s <= string[numStrings - 1]
+ */
+void String_CreateUnmanagedArray(lua_State* L, String* string[], const char* data[], int numStrings);
+void String_DestroyUnmanagedArray(lua_State* L, String* string[], int numStrings);
+
+/**
  * Releases the memory for a string. This should only be called when you know
  * there are no remaining references to the string (i.e. it should only be
  * called by the garbage collector).
@@ -55,11 +66,11 @@ void StringPool_Initialize(lua_State* L, StringPool* stringPool);
 void StringPool_Shutdown(lua_State* L, StringPool* stringPool);
 
 /**
- * Removes strings for the string pool that are marked as white. Strings are
- * handled differently than other types of garbage collected objects, since the
- * string pool has weak references to the strings -- when a string no longer has
- * any references outside the pool we need to remove it from the pool.
+ * Removes a string from the string pool. This does not destroy the string,
+ * which is done with String_Destroy. Strings do not need to be manually
+ * removed from the string pool or destroyed. This is done automatically by the
+ * garbage collector when they are no longer needed.
  */
-void StringPool_SweepStrings(lua_State* L, StringPool* stringPool);
+void StringPool_Remove(lua_State* L, StringPool* stringPool, String* string);
 
 #endif

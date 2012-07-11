@@ -43,10 +43,11 @@ struct Table : public Gc_Object
     int             size;           // Size of the array (using Lua definition).
     TableNode*      lastFreeNode;
     Table*          metatable;
+    Value*          tagMethod;      // Provides quick access to tag methods.
 };
 
 extern "C" Table* Table_Create(lua_State* L, int numArray, int numHash);
-void   Table_Destroy(lua_State* L, Table* table);
+void   Table_Destroy(lua_State* L, Table* table, bool releaseRefs);
 
 /**
  * Updates the value for the key in the table. If the key does not exist
@@ -85,5 +86,10 @@ int Table_GetSize(lua_State* L, Table* table);
  * table as long as the table was not resized.
  */
 const Value* Table_Next(lua_State* L, Table* table, Value* key);
+
+/**
+ * Provides fast look up of tag method name.
+ */
+Value* Table_GetTagMethod(lua_State* L, Table* table, TagMethod method);
 
 #endif

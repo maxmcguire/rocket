@@ -13,9 +13,14 @@
 #include "Parser.h"
 #include "UpValue.h"
 
-#include <stdio.h>
+namespace
+{
+    const size_t _gcStepSize = 1024;
+}
 
-#define GCSTEPSIZE	1024u
+// Disables the garbage collector. This can be useful for debugging garbage
+// collector issues, but is not something that you would want to do otherwise.
+//#define GC_DISABLE
 
 /**
  * Checks if the garbage collector needs to be run.
@@ -33,29 +38,52 @@ static void Gc_Check(lua_State* L, Gc* gc)
 }
 
 /**
- * Reclaims the memory for an object.
+ * Reclaims the memory for an object. The releaseRefs parameter is set to true
+ * to indicate whether or not we need to decremement the reference count for
+ * child objects. If the object is being freed as part of the mark and sweep,
+ * we know children are unreachable and therefore don't need to be decremented,
+ * since they will also be released by the mark and sweep.
  */
-static void Gc_FreeObject(lua_State* L, Gc_Object* object)
+static void Gc_FreeObject(lua_State* L, Gc* gc, Gc_Object* object, bool releaseRefs)
 {
+
+    // Remove from the global object list.
+    if (object->next != NULL)
+    {
+        object->next->prev = object->prev;
+    }
+    if (object->prev != NULL)
+    {
+        object->prev->next = object->next;
+    }
+    else
+    {
+        gc->first = object->next;
+    }
+
     switch (object->type)
     {
+    case LUA_TSTRING:
+        StringPool_Remove( L, &L->stringPool, static_cast<String*>(object) );
+        String_Destroy( L, static_cast<String*>(object) );
+        break;
     case LUA_TTABLE:
-        Table_Destroy( L, static_cast<Table*>(object) );
+        Table_Destroy( L, static_cast<Table*>(object), releaseRefs );
         break;
     case LUA_TFUNCTION:
-        Closure_Destroy(L, static_cast<Closure*>(object) );
+        Closure_Destroy(L, static_cast<Closure*>(object), releaseRefs );
         break;
     case LUA_TPROTOTYPE:
-        Prototype_Destroy(L, static_cast<Prototype*>(object) );
+        Prototype_Destroy(L, static_cast<Prototype*>(object), releaseRefs );
         break;
     case LUA_TFUNCTIONP:
-        Function_Destroy(L, static_cast<Function*>(object) );
+        Function_Destroy(L, static_cast<Function*>(object), releaseRefs );
         break;
     case LUA_TUPVALUE:
-        UpValue_Destroy(L, static_cast<UpValue*>(object));
+        UpValue_Destroy(L, static_cast<UpValue*>(object), releaseRefs );
         break;
     case LUA_TUSERDATA:
-        UserData_Destroy(L, static_cast<UserData*>(object));
+        UserData_Destroy(L, static_cast<UserData*>(object), releaseRefs );
         break;
     default:
         ASSERT(0);
@@ -67,7 +95,9 @@ void Gc_Initialize(Gc* gc)
     gc->first       = NULL;
     gc->firstGrey   = NULL;
     gc->state       = Gc_State_Paused;
-    gc->threshold   = GCSTEPSIZE;
+    gc->threshold   = _gcStepSize;
+    gc->firstYoung  = NULL;
+    gc->scanMark    = 0;
 }
 
 void Gc_Shutdown(lua_State* L, Gc* gc)
@@ -78,7 +108,7 @@ void Gc_Shutdown(lua_State* L, Gc* gc)
     while (object != NULL)
     {
         Gc_Object* nextObject = object->next;
-        Gc_FreeObject(L, object);
+        Gc_FreeObject(L, gc, object, false);
         object = nextObject;
     }
 
@@ -87,17 +117,18 @@ void Gc_Shutdown(lua_State* L, Gc* gc)
 
 }
 
-void* Gc_AllocateObject(lua_State* L, int type, size_t size, bool link)
+void* Gc_AllocateObject(lua_State* L, int type, size_t size)
 {
 
-    Gc_Check(L, &L->gc);
+    Gc* gc = &L->gc;
+    Gc_Check(L, gc);
 
     Gc_Object* object = static_cast<Gc_Object*>(Allocate(L, size));
     if (object == NULL)
     {
 
         // Emergency run of the garbage collector to free up memory.
-        Gc_Collect(L, &L->gc);
+        Gc_Collect(L, gc);
 
         object = static_cast<Gc_Object*>(Allocate(L, size));
         if (object == NULL)
@@ -108,10 +139,15 @@ void* Gc_AllocateObject(lua_State* L, int type, size_t size, bool link)
 
     }
 
+    object->refCount    = 0;
+    object->nextYoung   = NULL;
+    object->young       = false;
+    object->scanMark    = gc->scanMark;
+
     object->nextGrey    = NULL;
     object->type        = type;
 
-    if (L->gc.state == Gc_State_Finish)
+    if (gc->state == Gc_State_Finish)
     {
         // If we've already finished marking but have not done the sweep, we need
         // to make the object black to prevent it from being collected.
@@ -125,15 +161,15 @@ void* Gc_AllocateObject(lua_State* L, int type, size_t size, bool link)
         object->color = Color_White;
     }
 
-    if (link)
+    if (gc->first != NULL)
     {
-        object->next = L->gc.first;
-        L->gc.first = object;
+        gc->first->prev = object;
     }
-    else
-    {
-        object->next = NULL;
-    }
+
+    object->next = gc->first;
+    object->prev = NULL;
+
+    gc->first = object;
 
     return object;
 
@@ -234,6 +270,10 @@ static bool Gc_Propagate(Gc* gc)
             {
                 Gc_MarkValue(gc, &node->key);
                 Gc_MarkValue(gc, &node->value);
+            }
+            else
+            {
+                Gc_MarkValue(gc, &node->key);
             }
             ++node;
         }
@@ -388,31 +428,23 @@ static void Gc_Sweep(lua_State* L, Gc* gc)
         // White objects are garbage object.
         if (object->color == Color_White)
         {
-
-            // Strings should never be collected from the global list; they
-            // are referenced from the string pool and are collected when we
-            // sweep the strings.
-            ASSERT(object->type != LUA_TSTRING);
-
-            // Remove from the global object list.
-            if (prevObject != NULL)
-            {
-                prevObject->next = object->next;
-            }
-            else
-            {
-                gc->first = object->next;
-            }
-
             Gc_Object* nextObject = object->next;
-            Gc_FreeObject(L, object);
+            Gc_FreeObject(L, gc, object, false);
             object = nextObject;
-
         }
         else
         {
-            // Reset the color for the next gc cycle.
+            // Reset the for the next gc cycle.
             object->color = Color_White;
+            object->young = false;
+
+            // This is a candidate for deletion if there is no reference in the
+            // stack, so put it in the young list for examination during the
+            // next cycle of the garbage collector.
+            if (object->refCount == 0)
+            {
+                Gc_AddYoungObject(gc, object);
+            }
     
             // Advance to the next object in the list.
             prevObject = object;
@@ -427,13 +459,6 @@ static void Gc_Finish(lua_State* L, Gc* gc)
 {
 
     // Mark the string constants since we never want to garbage collect them.
-    for (int i = 0; i < TagMethod_NumMethods; ++i)
-    {
-        if (L->tagMethodName[i] != NULL)
-        {
-            Gc_MarkObject(gc, L->tagMethodName[i]);
-        }
-    }
     for (int i = 0; i < NUM_TYPES; ++i)
     {
         if (L->typeName[i] != NULL)
@@ -453,17 +478,140 @@ static void Gc_Finish(lua_State* L, Gc* gc)
 
     Gc_Sweep(L, gc);
 
-    // Sweep the string pool. We don't mark the strings since the string pool
-    // acts a weak reference.
-    StringPool_SweepStrings(L, &L->stringPool);
+}
 
+static void Gc_ScanMarkValue(Gc_Object* object, int scanMark)
+{
+    object->scanMark = scanMark;
+}
+
+static void Gc_ScanMarkValue(Value* value, int scanMark)
+{
+    if (Value_GetIsObject(value))
+    {
+        Gc_ScanMarkValue(value->object, scanMark);
+    }
+}
+
+/** Scans the stack and mark the objects on it with a unique mark. */
+static void Gc_ScanMarkRootObjects(lua_State* L, Gc* gc)
+{
+
+    ++gc->scanMark;
+    int scanMark = gc->scanMark;
+
+    Value* stackTop = L->stackTop;
+
+    // Mark the functions on the call stack.
+    CallFrame* frame = L->callStackBase;
+    CallFrame* callStackTop = L->callStackTop;
+    while (frame < callStackTop)
+    {
+        Gc_ScanMarkValue(frame->function, scanMark);
+        if (frame->stackTop > stackTop)
+        {
+            stackTop = frame->stackTop;
+        }
+        ++frame;
+    }
+
+    // Mark the objects on the stack.
+    Value* value = L->stack;
+    while (value < stackTop)
+    {
+        Gc_ScanMarkValue(value, scanMark);
+        ++value;
+    }
+    
+    // Mark the global tables.
+    Gc_ScanMarkValue(&L->globals, scanMark);
+    Gc_ScanMarkValue(&L->registry, scanMark);
+
+    for (int i = 0; i < NUM_TYPES; ++i)
+    {
+        if (L->metatable[i] != NULL)
+        {
+            Gc_ScanMarkValue(L->metatable[i], scanMark);
+        }
+    }
+
+    // Mark the string constants.
+    for (int i = 0; i < NUM_TYPES; ++i)
+    {
+        if (L->typeName[i] != NULL)
+        {
+            Gc_ScanMarkValue(L->typeName[i], scanMark);
+        }
+    }
+
+}
+
+static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
+{
+
+    Gc_Object* prevObject = NULL;
+    Gc_Object* object = gc->firstYoung;
+
+    int scanMark = gc->scanMark;
+
+    while (object != NULL)
+    {
+
+        Gc_Object* nextObject = object->nextYoung;
+
+        // This object doesn't have any references on the heap or stack.
+        bool unreachable = (object->refCount == 0 && object->scanMark != scanMark);
+
+        // This object is referenced by something.
+        bool referenced = object->refCount > 0;
+
+        // Remove from the young list.
+        if (unreachable || referenced)
+        {
+            if (prevObject != NULL)
+            {
+                prevObject->nextYoung = nextObject;
+            }
+            else
+            {
+                gc->firstYoung = nextObject;
+            }
+        }
+
+        if (unreachable)
+        {
+            //Gc_FreeObject(L, gc, object, true);
+        }
+        
+        object = nextObject;
+
+    }
+
+}
+
+void Gc_CollectYoung(lua_State* L, Gc* gc)
+{
+    Gc_ScanMarkRootObjects(L, gc);
+    Gc_SweepYoungObjects(L, gc);
 }
 
 bool Gc_Step(lua_State* L, Gc* gc)
 {
+
+#ifdef GC_DISABLE
+    return false;
+#endif
+
     switch (gc->state)
     {
     case Gc_State_Start:
+        Gc_CollectYoung(L, gc);
+        gc->state = Gc_State_StartMarkAndSweep;
+        break;
+    case Gc_State_StartMarkAndSweep:
+        // Clear the young list so that we don't have to worry about deleting
+        // something that is in it. We'll rebuild it when we do the sweep phase.
+        gc->firstYoung = NULL;
         Gc_MarkRoots(L, gc);
         gc->state = Gc_State_Propagate;
         break;
@@ -477,9 +625,8 @@ bool Gc_Step(lua_State* L, Gc* gc)
         {
             Gc_Finish(L, gc);
             gc->state = Gc_State_Paused;
-
             // Setup the increment for the next time we run the garbage collector.
-            gc->threshold = L->totalBytes + GCSTEPSIZE;
+            gc->threshold = L->totalBytes + _gcStepSize;
 
         }
         return true;
@@ -489,6 +636,10 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
 void Gc_Collect(lua_State* L, Gc* gc)
 {
+
+#ifdef GC_DISABLE
+    return;
+#endif
 
     // Finish up any propagation stage.
     while (gc->state != Gc_State_Paused)
@@ -503,4 +654,13 @@ void Gc_Collect(lua_State* L, Gc* gc)
         Gc_Step(L, gc);
     }
 
+}
+
+void Gc_AddYoungObject(Gc* gc, Gc_Object* object)
+{
+    ASSERT( !object->young );
+
+    object->nextYoung = gc->firstYoung;
+    gc->firstYoung = object;
+    object->young = true;
 }

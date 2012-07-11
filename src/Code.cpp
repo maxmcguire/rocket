@@ -237,10 +237,8 @@ static void Parser_Function(Parser* parser, Expression* dst, bool method)
 
     lua_State* L = parser->L;
     
-    Function* function = Function_Create(L);
+    Function* function = Function_Create(L, parser->function);
     PushFunction(L, function);
-    
-    function->parent = parser->function;
 
     Parser p;
     Parser_Initialize(&p, parser->L, parser->lexer);
@@ -1803,7 +1801,7 @@ Prototype* Parse(lua_State* L, Input* input, const char* name)
     Parser_Initialize(&parser, L, &lexer);
 
     // Keep the function on the stack so that it's not garbage collected.
-    Function* function = Function_Create(L);
+    Function* function = Function_Create(L, NULL);
     PushFunction(L, function);
 
     // Top level block accepts a variable number of arguments.

@@ -10,7 +10,6 @@
 
 #include "Gc.h"
 #include "State.h"
-#include "Compiler.h"
 
 struct Prototype : public Gc_Object
 {
@@ -84,7 +83,7 @@ Prototype* Prototype_Create(lua_State* L, const char* data, size_t length, const
  * there are no remaining references to the prototpye (i.e. it should only be
  * called by the garbage collector).
  */
-void Prototype_Destroy(lua_State* L, Prototype* prototype);
+void Prototype_Destroy(lua_State* L, Prototype* prototype, bool releaseRefs);
 
 /** Copies the short name of the source of a function prototype into the buffer. */
 void Prototype_GetName(Prototype* prototype, char* buffer, size_t bufferLength);
@@ -97,6 +96,6 @@ int  Prototype_GetConvertedCodeSize(const Instruction* src, int codeSize);
 extern "C" Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env);
 Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValue[], int numUpValues, Table* env);
 
-void Closure_Destroy(lua_State* L, Closure* closure);
+void Closure_Destroy(lua_State* L, Closure* closure, bool releaseRefs);
 
 #endif

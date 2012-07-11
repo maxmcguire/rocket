@@ -15,6 +15,7 @@
 enum Gc_State
 {
     Gc_State_Start,
+    Gc_State_StartMarkAndSweep,
     Gc_State_Propagate,
     Gc_State_Finish,
     Gc_State_Paused,
@@ -33,9 +34,19 @@ enum Color
 struct Gc_Object
 {
     int         type;
+
+    // Data used by the mark and sweep garbage collector.
     Color       color;      // "color" used for garbabe collection.
     Gc_Object*  next;       // Next object in the global list.
+    Gc_Object*  prev;       // Previous object in the global list.
     Gc_Object*  nextGrey;   // If grey, this points to the next grey object.
+
+    // Data is used by the reference counting garbage collector.
+    int         refCount;
+    Gc_Object*  nextYoung;  // Next object in the "young" list.
+    bool        young;      // True if the object is in the "young" list.
+    int         scanMark;
+
 };
 
 /** Stores the current state of the garbage collector */
@@ -45,6 +56,8 @@ struct Gc
     Gc_Object*  first;      // First object in the global list.
     Gc_Object*  firstGrey;  // First grey object during gc.
     size_t      threshold;
+    Gc_Object*  firstYoung; // First object in the young list.
+    int         scanMark;
 };
 
 void Gc_Initialize(Gc* gc);
@@ -65,21 +78,20 @@ void Gc_Collect(lua_State* L, Gc* gc);
  */
 bool Gc_Step(lua_State* L, Gc* gc);
 
-/**
- * If link is false, the object will not be included in the global garbage
- * collection list. This should only be used in rare instance where a pointer
- * to the object will be maintained elsewhere (like the string pool).
- */
-void* Gc_AllocateObject(lua_State* L, int type, size_t size, bool link = true);
+void* Gc_AllocateObject(lua_State* L, int type, size_t size);
 
 /** 
  * Should be called when parent becomes an owner of child.
  */
-void Gc_WriteBarrier(Gc* gc, Gc_Object* parent, Gc_Object* child);
-void Gc_WriteBarrier(Gc* gc, Gc_Object* parent, const Value* child);
+void Gc_IncrementReference(Gc* gc, Gc_Object* parent, Gc_Object* child);
+void Gc_IncrementReference(Gc* gc, Gc_Object* parent, const Value* child);
 
+void Gc_DecrementReference(Gc* gc, Gc_Object* child);
+void Gc_DecrementReference(Gc* gc, const Value* child);
 
 void Gc_MarkObject(Gc* gc, Gc_Object* object);
+
+void Gc_AddYoungObject(Gc* gc, Gc_Object* object);
 
 #include "Gc.inl"
 

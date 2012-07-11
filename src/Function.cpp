@@ -7,8 +7,8 @@
 
 #include "Function.h"
 #include "String.h"
-#include "Compiler.h"
 #include "Table.h"
+#include "UpValue.h"
 
 #include <string.h>
 
@@ -132,6 +132,7 @@ Prototype* Prototype_Create(lua_State* L, int codeSize, int convertedCodeSize, i
     memset(prototype->sourceLine, 0, sizeof(int) * codeSize);
 
     prototype->convertedSourceLine = reinterpret_cast<int*>(prototype->sourceLine + codeSize);
+    memset(prototype->convertedSourceLine, 0, sizeof(int) * convertedCodeSize);
 
     ASSERT( size == Prototype_GetSize(prototype) );
 
@@ -410,8 +411,8 @@ static void Prototype_ConvertCode(Instruction* dst, const Instruction* src, int*
 
         ConvertInstruction(dst, src);
 
-        int srcSize = static_cast<int>(s - src);
-        int dstSize = static_cast<int>(d - dst);
+        int srcSize = static_cast<int>(src - s);
+        int dstSize = static_cast<int>(dst - d);
 
         for (int i = 0; i < dstSize; ++i)
         {
@@ -436,6 +437,8 @@ void Prototype_ConvertCode(Prototype* prototype)
 
 static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* data, size_t& length)
 {
+
+    Gc* gc = &L->gc;
 
     // A description of the binary format for a compiled chunk can be found here:
     // http://luaforge.net/docman/view.php/83/98/ANoFrillsIntroToLua51VMInstructions.pdf
@@ -527,6 +530,7 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
     {
         prototype->source = String_Create(L, name, nameLength);
     }
+    Gc_IncrementReference(gc, prototype, prototype->source);
 
     for (int i = 0; i < numConstants; ++i)
     {
@@ -556,7 +560,7 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
             ++constants;
         }
             
-        Gc_WriteBarrier(&L->gc, prototype, &prototype->constant[i]);
+        Gc_IncrementReference(gc, prototype, &prototype->constant[i]);
 
     }
 
@@ -566,6 +570,7 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
     {
         size_t length = 0;
         prototype->prototype[i] = Prototype_Create(L, prototype, prototypes, length);
+        Gc_IncrementReference(gc, prototype, prototype->prototype[i]);
         prototypes += length;
     }
 
@@ -620,8 +625,30 @@ Prototype* Prototype_Create(lua_State* L, const char* data, size_t length, const
     return prototype;
 }
 
-void Prototype_Destroy(lua_State* L, Prototype* prototype)
+void Prototype_Destroy(lua_State* L, Prototype* prototype, bool releaseRefs)
 {
+
+    if (releaseRefs)
+    {
+        Gc* gc = &L->gc;
+        for (int i = 0; i < prototype->numConstants; ++i)
+        {
+            Gc_DecrementReference(gc, &prototype->constant[i]);
+        }
+        for (int i = 0; i < prototype->numUpValues; ++i)
+        {
+            Gc_DecrementReference(gc, prototype->upValue[i]);
+        }
+        for (int i = 0; i < prototype->numPrototypes; ++i)
+        {
+            Gc_DecrementReference(gc, prototype->prototype[i]);
+        }
+        if (prototype->source != NULL)
+        {
+            Gc_DecrementReference(gc, prototype->source);
+        }
+    }
+
     size_t size = Prototype_GetSize(prototype);
     Free(L, prototype, size);
 }
@@ -631,17 +658,19 @@ Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env)
 
     ASSERT(env != NULL);
 
+    Gc* gc = &L->gc;
+
     size_t size = sizeof(Closure);
     size += prototype->numUpValues * sizeof(UpValue*);
 
     Closure* closure = static_cast<Closure*>(Gc_AllocateObject(L, LUA_TFUNCTION, size));
     closure->c = false;
     
+    Gc_IncrementReference(gc, closure, env);
     closure->env = env;
-    Gc_WriteBarrier(&L->gc, closure, env);
 
+    Gc_IncrementReference(gc, closure, prototype);
     closure->lclosure.prototype = prototype;
-    Gc_WriteBarrier(&L->gc, closure, prototype);
 
     closure->lclosure.upValue   = reinterpret_cast<UpValue**>(closure + 1);
     closure->lclosure.numUpValues = prototype->numUpValues;
@@ -656,12 +685,16 @@ Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValu
 
     ASSERT(env != NULL);
 
+    Gc* gc = &L->gc;
+
     size_t size = sizeof(Closure);
     size += numUpValues * sizeof(Value);
 
     Closure* closure = static_cast<Closure*>(Gc_AllocateObject(L, LUA_TFUNCTION, size));
 
+    Gc_IncrementReference(gc, closure, env);
     closure->env = env;
+
     closure->c = true;
     closure->cclosure.function      = function;
 
@@ -669,12 +702,47 @@ Closure* Closure_Create(lua_State* L, lua_CFunction function, const Value upValu
     closure->cclosure.numUpValues   = numUpValues;
     memcpy(closure->cclosure.upValue, upValue, numUpValues * sizeof(Value));
 
+    for (int i = 0; i < numUpValues; ++i)
+    {
+        Gc_IncrementReference(gc, closure, &upValue[i]);
+    }
+
     return closure;
 
 }
 
-void Closure_Destroy(lua_State* L, Closure* closure)
+void Closure_Destroy(lua_State* L, Closure* closure, bool releaseRefs)
 {
+
+    Gc* gc = &L->gc;
+
+    if (releaseRefs)
+    {
+        // Release the environment table.
+        Gc_DecrementReference(gc, closure->env);
+
+        // Release the up values.
+        if (closure->c)
+        {
+            Value* upValue = closure->cclosure.upValue;
+            for (int i = 0; i < closure->cclosure.numUpValues; ++i)
+            {
+                Gc_DecrementReference(gc, upValue);
+                ++upValue;
+            }
+        }
+        else
+        {
+            UpValue** upValue = closure->lclosure.upValue;
+            for (int i = 0; i < closure->lclosure.numUpValues; ++i)
+            {
+                Gc_DecrementReference(gc, *upValue);
+                ++upValue;
+            }
+        }
+
+    }
+
     size_t size = sizeof(Closure);
     if (closure->c)
     {
