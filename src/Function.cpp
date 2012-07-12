@@ -603,6 +603,7 @@ static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* 
         size_t length = *reinterpret_cast<const size_t*>(data);
         data += sizeof(size_t);
         prototype->upValue[i] = String_Create(L, data, length - 1);
+        Gc_IncrementReference(gc, prototype, prototype->upValue[i]);
         data += length;
     }
 

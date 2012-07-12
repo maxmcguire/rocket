@@ -1418,8 +1418,8 @@ Start:
                     {
                         ASSERT( VM_GET_OPCODE(inst) == Opcode_GetUpVal );
                         c->lclosure.upValue[i] = lclosure->upValue[b];
-                        Gc_IncrementReference(&L->gc, c, c->lclosure.upValue[i]);
                     }
+                    Gc_IncrementReference(&L->gc, c, c->lclosure.upValue[i]);
                 }
 
                 SetValue( &stackBase[a], c );
