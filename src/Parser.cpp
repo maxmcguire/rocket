@@ -1124,6 +1124,7 @@ Prototype* Function_CreatePrototype(lua_State* L, Function* function, String* so
 
     // Store the source information.
     prototype->source = source;
+    Gc_IncrementReference(&L->gc, prototype, prototype->source);
     memcpy(prototype->sourceLine, function->sourceLine, function->codeSize * sizeof(int));
 
     // Store the functions.
