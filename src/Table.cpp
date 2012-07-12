@@ -442,6 +442,8 @@ static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool forc
     Swap(table->numNodes, numNodes);
     Swap(table->nodes, nodes);
 
+    Gc* gc = &L->gc;
+
     if (table->numNodes != 0)
     {
         table->lastFreeNode = table->nodes + table->numNodes - 1;
@@ -450,6 +452,10 @@ static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool forc
             if ( !Table_NodeIsEmpty(&nodes[i]) )
             {
                 Table_InsertHash(L, table, &nodes[i].key, &nodes[i].value);
+            }
+            else
+            {
+                Gc_DecrementReference(gc, &nodes[i].key);
             }
         }
     }
