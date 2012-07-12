@@ -13,9 +13,11 @@
 #include "Parser.h"
 #include "UpValue.h"
 
+#include <stdio.h>
+
 namespace
 {
-    const size_t _gcStepSize = 1024;
+    const size_t _gcThreshold = 64 * 1024;
 }
 
 // Disables the garbage collector. This can be useful for debugging garbage
@@ -31,6 +33,15 @@ static void Gc_Check(lua_State* L, Gc* gc)
     {
         if (gc->state == Gc_State_Paused)
         {
+            gc->state = Gc_State_Young;
+            Gc_Step(L, gc);
+            ASSERT(gc->state == Gc_State_Paused);
+            if (L->totalBytes < gc->threshold)
+            {
+                return;
+            }
+            // If the young collector didn't free up enough memory, start the
+            // mark and sweep collector.
             gc->state = Gc_State_Start;
         }
         Gc_Step(L, gc);
@@ -88,6 +99,11 @@ static void Gc_FreeObject(lua_State* L, Gc* gc, Gc_Object* object, bool releaseR
     default:
         ASSERT(0);
     }
+
+#ifdef DEBUG
+    --gc->numObjects;
+#endif
+
 }
 
 void Gc_Initialize(Gc* gc)
@@ -95,9 +111,13 @@ void Gc_Initialize(Gc* gc)
     gc->first       = NULL;
     gc->firstGrey   = NULL;
     gc->state       = Gc_State_Paused;
-    gc->threshold   = _gcStepSize;
+    gc->threshold   = _gcThreshold;
     gc->firstYoung  = NULL;
     gc->scanMark    = 0;
+
+#ifdef DEBUG
+    gc->numObjects  = 0;
+#endif
 }
 
 void Gc_Shutdown(lua_State* L, Gc* gc)
@@ -170,6 +190,15 @@ void* Gc_AllocateObject(lua_State* L, int type, size_t size)
     object->prev = NULL;
 
     gc->first = object;
+
+    if (gc->state == Gc_State_Paused)
+    {
+        Gc_AddYoungObject(gc, object);
+    }
+
+#ifdef DEBUG
+    ++gc->numObjects;
+#endif
 
     return object;
 
@@ -422,6 +451,8 @@ static void Gc_Sweep(lua_State* L, Gc* gc)
     Gc_Object* object = gc->first;
     Gc_Object* prevObject = NULL;
 
+    int numObjectsCollected = 0;
+
     while (object != NULL)
     {
             
@@ -431,6 +462,7 @@ static void Gc_Sweep(lua_State* L, Gc* gc)
             Gc_Object* nextObject = object->next;
             Gc_FreeObject(L, gc, object, false);
             object = nextObject;
+            ++numObjectsCollected;
         }
         else
         {
@@ -554,9 +586,14 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
 
     int scanMark = gc->scanMark;
 
+    int numYoungObjects     = 0;
+    int numObjectsCollected = 0;
+    int numObjectsRemoved   = 0;
+
     while (object != NULL)
     {
 
+        ++numYoungObjects;
         Gc_Object* nextObject = object->nextYoung;
 
         // This object doesn't have any references on the heap or stack.
@@ -568,7 +605,8 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
         // Remove from the young list.
         if (unreachable || referenced)
         {
-            if (prevObject != NULL)
+            ++numObjectsRemoved;
+            if (prevObject != NULL) 
             {
                 prevObject->nextYoung = nextObject;
             }
@@ -580,7 +618,8 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
 
         if (unreachable)
         {
-            //Gc_FreeObject(L, gc, object, true);
+            Gc_FreeObject(L, gc, object, true);
+            ++numObjectsCollected;
         }
         
         object = nextObject;
@@ -611,11 +650,11 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
     switch (gc->state)
     {
-    case Gc_State_Start:
+    case Gc_State_Young:
         Gc_CollectYoung(L, gc);
-        gc->state = Gc_State_StartMarkAndSweep;
+        gc->state = Gc_State_Paused;
         break;
-    case Gc_State_StartMarkAndSweep:
+    case Gc_State_Start:
         // Clear the young list so that we don't have to worry about deleting
         // something that is in it. We'll rebuild it when we do the sweep phase.
         gc->firstYoung = NULL;
@@ -633,8 +672,7 @@ bool Gc_Step(lua_State* L, Gc* gc)
             Gc_Finish(L, gc);
             gc->state = Gc_State_Paused;
             // Setup the increment for the next time we run the garbage collector.
-            gc->threshold = L->totalBytes + _gcStepSize;
-
+            gc->threshold = L->totalBytes + _gcThreshold;
         }
         result = true;
         break;

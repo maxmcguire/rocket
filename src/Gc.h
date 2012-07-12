@@ -15,10 +15,10 @@
 enum Gc_State
 {
     Gc_State_Start,
-    Gc_State_StartMarkAndSweep,
     Gc_State_Propagate,
     Gc_State_Finish,
     Gc_State_Paused,
+    Gc_State_Young,
 };
 
 /** "Colors" for marking nodes during garbage collection */
@@ -58,6 +58,10 @@ struct Gc
     size_t      threshold;
     Gc_Object*  firstYoung; // First object in the young list.
     int         scanMark;
+
+#ifdef DEBUG
+    int         numObjects;
+#endif
 };
 
 void Gc_Initialize(Gc* gc);
