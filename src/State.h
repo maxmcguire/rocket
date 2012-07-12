@@ -199,7 +199,10 @@ inline void State_Remove(lua_State* L, Value* value)
 // Replaces the n values on the top of the stack with their concatenation.
 void Concat(lua_State* L, int n);
 
-// Concatenates a range of values between start and end.
+/**
+ * Concatenates a range of values on the stack between start and end and stores
+ * the result in dst. dst and start can point to the same location.
+ */
 void Concat(lua_State* L, Value* dst, Value* start, Value* end);
 
 // Converts the value to a string; if the conversion was successful the function
