@@ -1401,9 +1401,10 @@ Start:
             {
 
                 int d = VM_GET_D(inst);
-
                 Prototype* p = prototype->prototype[d];
+
                 Closure* c = Closure_Create(L, p, frame->function->closure->env);
+                SetValue( &stackBase[a], c );
 
                 for (int i = 0; i < p->numUpValues; ++i)
                 {
@@ -1421,8 +1422,6 @@ Start:
                     }
                     Gc_IncrementReference(&L->gc, c, c->lclosure.upValue[i]);
                 }
-
-                SetValue( &stackBase[a], c );
 
             }
             break;
