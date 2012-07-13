@@ -166,10 +166,6 @@ String* StringPool_Insert(lua_State* L, StringPool* stringPool, const char* data
         }
 
 	}
-    else
-    {
-        Gc_MarkObject(&L->gc, string);
-    }
 
 	return string;
 
