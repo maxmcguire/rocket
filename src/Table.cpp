@@ -91,14 +91,8 @@ void Table_Destroy(lua_State* L, Table* table, bool releaseRefs)
             ++element;
         }
 
-        // Release the tag methods.
-        if (table->tagMethod != NULL)
-        {
-            for (int i = 0; i < TagMethod_NumMethods; ++i)
-            {
-                Gc_DecrementReference(gc, &table->tagMethod[i]);
-            }
-        }
+        // We don't need to release the tag methods since we don't increment
+        // the reference to them (since they are a cache).
 
         // Release the metatable.
         if (table->metatable != NULL)
@@ -452,11 +446,9 @@ static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool forc
             if ( !Table_NodeIsEmpty(&nodes[i]) )
             {
                 Table_InsertHash(L, table, &nodes[i].key, &nodes[i].value);
+                Gc_DecrementReference(gc, &nodes[i].value);
             }
-            else
-            {
-                Gc_DecrementReference(gc, &nodes[i].key);
-            }
+            Gc_DecrementReference(gc, &nodes[i].key);
         }
     }
     else
@@ -581,6 +573,8 @@ static void Table_RebuildArray(lua_State* L, Table* table, int maxElements)
                 Value* dst = &table->element[key - 1];
                 ASSERT( Value_GetIsNil(dst) );
                 *dst = node->value;
+                // We don't need to increment the reference to the value, since
+                // we would normally decrement it when we set the node to dead.
                 if (key > table->size)
                 {
                     table->size = key;
@@ -788,6 +782,8 @@ static bool Table_RemoveHash(lua_State* L, Table* table, const Value* key)
 static bool Table_Remove(lua_State* L, Table* table, int key)
 {
 
+    Gc* gc = &L->gc;
+
     if (key > 0 && key <= table->maxElements)
     {
 
@@ -796,9 +792,10 @@ static bool Table_Remove(lua_State* L, Table* table, int key)
         {
             return false;
         }
+        Gc_DecrementReference(gc, dst);
         SetNil(dst);
         --table->numElementsSet;
-
+        
         // If we removed the last non-nil element in the array, we need to
         // update the size.
         if (key == table->size)
@@ -1133,6 +1130,10 @@ FORCE_INLINE static void Table_AssignArray(lua_State* L, Table* table, int index
     {
         // Slower case: skipping some elements in the array.
         Table_InitializeArrayElements(table, index + 1);
+    }
+    else
+    {
+        ASSERT( Value_GetIsNil(&element[index]) );
     }
 
     if (index >= table->size)
