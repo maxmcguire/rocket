@@ -29,7 +29,7 @@ namespace
  */
 static void Gc_Check(lua_State* L, Gc* gc)
 {
-    if (L->totalBytes > gc->threshold)
+    if (L->totalBytes >= gc->threshold)
     {
         if (gc->state == Gc_State_Paused)
         {
@@ -57,15 +57,6 @@ static void Gc_Check(lua_State* L, Gc* gc)
  */
 static void Gc_FreeObject(lua_State* L, Gc* gc, Gc_Object* object, bool releaseRefs)
 {
-
-    /*
-    if (file == NULL)
-    {
-        file = fopen("c:/temp/log.txt", "wt");
-    }
-    fprintf(file, "free %p %d\n", object, object->type);
-    fflush(file);
-    */
 
     // Remove from the global object list.
     if (object->next != NULL)
@@ -623,6 +614,10 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
             {
                 gc->firstYoung = nextObject;
             }
+        }
+        else
+        {
+            prevObject = object;
         }
 
         if (unreachable)
