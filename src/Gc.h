@@ -46,7 +46,6 @@ struct Gc_Object
     Gc_Object*  nextYoung;  // Next object in the "young" list.
     bool        young;      // True if the object is in the "young" list.
     int         scanMark;
-
 };
 
 /** Stores the current state of the garbage collector */
@@ -60,7 +59,7 @@ struct Gc
     int         scanMark;
 
 #ifdef DEBUG
-    int         numObjects;
+    int         _numObjects;
 #endif
 };
 

@@ -58,6 +58,15 @@ static void Gc_Check(lua_State* L, Gc* gc)
 static void Gc_FreeObject(lua_State* L, Gc* gc, Gc_Object* object, bool releaseRefs)
 {
 
+    /*
+    if (file == NULL)
+    {
+        file = fopen("c:/temp/log.txt", "wt");
+    }
+    fprintf(file, "free %p %d\n", object, object->type);
+    fflush(file);
+    */
+
     // Remove from the global object list.
     if (object->next != NULL)
     {
@@ -101,7 +110,7 @@ static void Gc_FreeObject(lua_State* L, Gc* gc, Gc_Object* object, bool releaseR
     }
 
 #ifdef DEBUG
-    --gc->numObjects;
+    --gc->_numObjects;
 #endif
 
 }
@@ -116,7 +125,7 @@ void Gc_Initialize(Gc* gc)
     gc->scanMark    = 0;
 
 #ifdef DEBUG
-    gc->numObjects  = 0;
+    gc->_numObjects  = 0;
 #endif
 }
 
@@ -197,7 +206,7 @@ void* Gc_AllocateObject(lua_State* L, int type, size_t size)
     }
 
 #ifdef DEBUG
-    ++gc->numObjects;
+    ++gc->_numObjects;
 #endif
 
     return object;
@@ -641,9 +650,11 @@ bool Gc_Step(lua_State* L, Gc* gc)
     return false;
 #endif
 
+    Gc_State state = gc->state;
+
     if (L->gchook != NULL)
     {
-        L->gchook(L, LUA_GCHOOK_STEP_START);
+        L->gchook(L, LUA_GCHOOK_STEP_START, state);
     }
 
     bool result = false;
@@ -680,7 +691,7 @@ bool Gc_Step(lua_State* L, Gc* gc)
 
     if (L->gchook != NULL)
     {
-        L->gchook(L, LUA_GCHOOK_STEP_END);
+        L->gchook(L, LUA_GCHOOK_STEP_END, state);
     }
 
     return result;
@@ -695,7 +706,7 @@ void Gc_Collect(lua_State* L, Gc* gc)
 
     if (L->gchook != NULL)
     {
-        L->gchook(L, LUA_GCHOOK_FULL_START);
+        L->gchook(L, LUA_GCHOOK_FULL_START, 0);
     }
 
     // Finish up any propagation stage.
@@ -713,7 +724,7 @@ void Gc_Collect(lua_State* L, Gc* gc)
 
     if (L->gchook != NULL)
     {
-        L->gchook(L, LUA_GCHOOK_FULL_END);
+        L->gchook(L, LUA_GCHOOK_FULL_END, 0);
     }
 
 }
@@ -721,7 +732,6 @@ void Gc_Collect(lua_State* L, Gc* gc)
 void Gc_AddYoungObject(Gc* gc, Gc_Object* object)
 {
     ASSERT( !object->young );
-
     object->nextYoung = gc->firstYoung;
     gc->firstYoung = object;
     object->young = true;

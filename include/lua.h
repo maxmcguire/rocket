@@ -339,13 +339,12 @@ typedef struct lua_Debug lua_Debug;  /* activation record */
 /* Functions to be called by the debuger in specific events */
 typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
-/* NOTE: The following GC callback was added by Brian Cronin on 11/17/10 */
 /* Function to be called for garbage collection events */
 #define LUA_GCHOOK_STEP_START 0
 #define LUA_GCHOOK_STEP_END 1
 #define LUA_GCHOOK_FULL_START 2
 #define LUA_GCHOOK_FULL_END 3
-typedef void (*lua_GCHook) (lua_State *L, int);
+typedef void (*lua_GCHook) (lua_State *L, int event, int state);
 LUA_API void lua_setgchook (lua_State *L, lua_GCHook func);
 
 
