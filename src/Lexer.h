@@ -12,6 +12,7 @@
 #include "Buffer.h"
 
 struct String;
+struct Table;
 
 // In addition to these token values, single character values are also
 // used as tokens. The order of these is significant and must match the
@@ -68,6 +69,7 @@ const int Lexer_maxRestoreTokens = 4;
 struct Lexer
 {
     lua_State*  L;
+    Table*      tokenTable;
     Input*      input;
     int         lineNumber;
     Token       token;
@@ -79,7 +81,7 @@ struct Lexer
 
 const char* Token_GetString(TokenType token);
 
-void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input);
+void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input, Table* tokenTable);
 void Lexer_Destroy(Lexer* lexer);
 
 void Lexer_NextToken(Lexer* lexer);

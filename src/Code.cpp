@@ -8,6 +8,7 @@
 #include "Parser.h"
 #include "Lexer.h"
 #include "Opcode.h"
+#include "Table.h"
 
 #include <malloc.h>
 
@@ -1794,8 +1795,11 @@ void Parser_Block(Parser* parser, int endToken)
 Prototype* Parse(lua_State* L, Input* input, const char* name)
 {
 
+    Table* tokenTable = Table_Create(L, 0, 0);
+    PushTable(L, tokenTable);
+
     Lexer lexer;
-    Lexer_Initialize(&lexer, L, input);
+    Lexer_Initialize(&lexer, L, input, tokenTable);
 
     Parser parser;
     Parser_Initialize(&parser, L, &lexer);
@@ -1803,6 +1807,9 @@ Prototype* Parse(lua_State* L, Input* input, const char* name)
     // Keep the function on the stack so that it's not garbage collected.
     Function* function = Function_Create(L, NULL);
     PushFunction(L, function);
+
+    String* source = String_Create(L, name);
+    PushString(L, source);
 
     // Top level block accepts a variable number of arguments.
     function->varArg = true;
@@ -1813,14 +1820,15 @@ Prototype* Parse(lua_State* L, Input* input, const char* name)
     Parser_Block(&parser, TokenType_EndOfStream);
     Parser_EmitAB(&parser, Opcode_Return, 0, 1);
 
-    String* source = String_Create(L, name);
     Prototype* prototype = Function_CreatePrototype(parser.L, parser.function, source);
 
     Parser_Destroy(&parser);
     Lexer_Destroy(&lexer);
 
-    ASSERT( (L->stackTop - 1)->object == function );
-    Pop(L, 1);
+    ASSERT( (L->stackTop - 1)->object == source );
+    ASSERT( (L->stackTop - 2)->object == function );
+    ASSERT( (L->stackTop - 3)->object == tokenTable );
+    Pop(L, 3);
 
     return prototype;
 

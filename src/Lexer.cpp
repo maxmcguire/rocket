@@ -8,6 +8,7 @@
 #include "Lexer.h"
 #include "String.h"
 #include "State.h"
+#include "Table.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -50,9 +51,10 @@ static const char* tokenName[] =
         "end of stream",
     };
 
-void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input)
+void Lexer_Initialize(Lexer* lexer, lua_State* L, Input* input, Table* tokenTable)
 {
     lexer->L                = L;
+    lexer->tokenTable       = tokenTable;
     lexer->input            = input;
     lexer->lineNumber       = 1;
     lexer->token.string     = NULL;
@@ -299,6 +301,11 @@ static bool Lexer_ReadLongBlock(Lexer* lexer, int c, bool store)
     {
         lexer->token.type   = TokenType_String;
         lexer->token.string = String_Create(lexer->L, lexer->buffer.data, lexer->buffer.length - (1 + level));
+
+        // Store the token in the token table so it won't be garbage collected.
+        Value token;
+        SetValue(&token, lexer->token.string);
+        Table_Insert(lexer->L, lexer->tokenTable, &token, &token);
     }
 
     return true;
