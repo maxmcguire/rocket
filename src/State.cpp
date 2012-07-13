@@ -171,6 +171,17 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     L->typeName[1 + LUA_TUPVALUE]       = String_Create(L, "upval");
     L->typeName[1 + LUA_TPROTOTYPE]     = String_Create(L, "proto");
 
+    // To prevent our objects from constantly being considered by the reference
+    // counter, increment the references.
+
+    ++L->globals.object->refCount;
+    ++L->registry.object->refCount;
+
+    for (int i = 0; i < NUM_TYPES + 1; ++i)
+    {
+        ++L->typeName[i]->refCount;
+    }
+
     return L;
 
 }
