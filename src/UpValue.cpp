@@ -18,6 +18,8 @@ UpValue* UpValue_Create(lua_State* L)
 UpValue* UpValue_Create(lua_State* L, Value* value)
 {
 
+    ASSERT( value >= L->stack && value < L->stackTop );
+
     // TODO: Insert in reverse sorted order for efficient closing.
     
     // Check to see if we already have an open up value for this address.
@@ -47,14 +49,6 @@ UpValue* UpValue_Create(lua_State* L, Value* value)
 }
 
 /**
- * Returns true if the up value is currently opened.
- */
-bool UpValue_GetIsOpen(UpValue* upValue)
-{
-    return &upValue->storage != upValue->value;
-}
-
-/**
  * Removes an up value from the global list.
  */
 static void UpValue_Unlink(lua_State* L, UpValue* upValue)
@@ -80,9 +74,12 @@ void UpValue_Destroy(lua_State* L, UpValue* upValue, bool releaseRefs)
     {
         UpValue_Unlink(L, upValue);
     }
-    if (releaseRefs)
+    else
     {
-        Gc_DecrementReference(&L->gc, upValue->value);
+        if (releaseRefs)
+        {
+            Gc_DecrementReference(&L->gc, upValue->value);
+        }
     }
     Free(L, upValue, sizeof(UpValue));
 }
@@ -93,6 +90,9 @@ void UpValue_Close(lua_State* L, UpValue* upValue)
     // Copy over the value so we have our own storage.
     upValue->storage = *upValue->value;
     upValue->value   = &upValue->storage;
+    // Now that the value is no longer on the stack, we need to increment
+    // its reference.
+    Gc_IncrementReference(&L->gc, upValue, upValue->value);
 }
 
 void UpValue_CloseUpValues(lua_State* L, Value* value)

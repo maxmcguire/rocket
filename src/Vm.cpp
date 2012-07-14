@@ -1053,9 +1053,7 @@ Start:
                 const Value* value = &stackBase[a];
                 int index = VM_GET_B(inst);
                 UpValue* dst = upValue[index];
-                Gc_IncrementReference(&L->gc, dst, value);            
-                Gc_DecrementReference(&L->gc, dst->value);            
-                *dst->value = *value;
+                UpValue_SetValue(L, dst, value);
             }
             break;
         case Opcode_GetUpVal:

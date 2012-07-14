@@ -366,6 +366,11 @@ int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char* name)
     args.userdata   = userdata;
     args.name       = name;
 
+    if (args.name == NULL)
+    {
+        args.name = "";
+    }
+
     int result = Vm_RunProtected(L, Parse, L->stackTop, &args, NULL);
 
     if (result == LUA_ERRRUN)
@@ -1232,17 +1237,42 @@ static const char* GetUpValue(Value* value, int n, Value** upValue)
 const char* lua_setupvalue(lua_State* L, int funcindex, int n)
 {
 
-    Value* closure = GetValueForIndex(L, funcindex);
+    Value* value = GetValueForIndex(L, funcindex);
 
-    Value* upValue;
-    const char* name = GetUpValue(closure, n, &upValue);
-    
-    if (name != NULL)
+    if (!Value_GetIsClosure(value))
     {
-        ASSERT(upValue != NULL);
-        Value_Copy( upValue, L->stackTop - 1 );
-        Pop(L, 1);
+        return NULL;
     }
 
-    return name;
+    Closure* closure = value->closure;
+    Value* src = L->stackTop - 1;
+    
+    Gc* gc = &L->gc;
+    
+    if (closure->c)
+    {
+        if (n >= 1 && n <= closure->cclosure.numUpValues)
+        {
+            Value* dst = &closure->cclosure.upValue[n - 1];
+            Gc_IncrementReference(gc, closure, src);
+            Gc_DecrementReference(gc, dst);
+            Value_Copy( dst, src );
+            Pop(L, 1);
+            // Up values to a C function are unnamed.
+            return "";
+        }
+    }
+    else
+    {
+        if (n >= 1 && n <= closure->lclosure.numUpValues)
+        {
+            UpValue* upValue = closure->lclosure.upValue[n - 1];
+            UpValue_SetValue(L, upValue, src);
+            Pop(L, 1);
+            return String_GetData( closure->lclosure.prototype->upValue[n - 1] );   
+        }
+    }
+
+    return NULL;
+
 }
