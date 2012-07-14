@@ -56,6 +56,7 @@ struct Gc
     Gc_Object*  firstGrey;  // First grey object during gc.
     size_t      threshold;
     Gc_Object*  firstYoung; // First object in the young list.
+    Gc_Object*  lastYoung;  // Last object in the young list.
     int         scanMark;
 
 #ifdef DEBUG

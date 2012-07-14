@@ -32,7 +32,7 @@ FORCE_INLINE void Gc_DecrementReference(Gc* gc, Gc_Object* child)
 
     // We don't update the young list while we're in the mark and sweep phase
     // of the garbage collector since we rebuild the young list during the sweep.
-    if (gc->state == Gc_State_Paused)
+    if (gc->state == Gc_State_Paused || gc->state == Gc_State_Young)
     {
         if (child->refCount == 0 && !child->young)
         {

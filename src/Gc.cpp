@@ -13,11 +13,9 @@
 #include "Parser.h"
 #include "UpValue.h"
 
-#include <stdio.h>
-
 namespace
 {
-    const size_t _gcThreshold = 64 * 1024;
+    const size_t _gcThreshold = 1024 * 64;
 }
 
 // Disables the garbage collector. This can be useful for debugging garbage
@@ -113,6 +111,7 @@ void Gc_Initialize(Gc* gc)
     gc->state       = Gc_State_Paused;
     gc->threshold   = _gcThreshold;
     gc->firstYoung  = NULL;
+    gc->lastYoung   = NULL;
     gc->scanMark    = 0;
 
 #ifdef DEBUG
@@ -614,6 +613,10 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
             {
                 gc->firstYoung = nextObject;
             }
+            if (gc->lastYoung == object)
+            {
+                gc->lastYoung = prevObject;
+            }
         }
         else
         {
@@ -664,6 +667,7 @@ bool Gc_Step(lua_State* L, Gc* gc)
         // Clear the young list so that we don't have to worry about deleting
         // something that is in it. We'll rebuild it when we do the sweep phase.
         gc->firstYoung = NULL;
+        gc->lastYoung  = NULL;
         Gc_MarkRoots(L, gc);
         gc->state = Gc_State_Propagate;
         break;
@@ -727,7 +731,16 @@ void Gc_Collect(lua_State* L, Gc* gc)
 void Gc_AddYoungObject(Gc* gc, Gc_Object* object)
 {
     ASSERT( !object->young );
-    object->nextYoung = gc->firstYoung;
-    gc->firstYoung = object;
+    if (gc->lastYoung != NULL)
+    {
+        gc->lastYoung->nextYoung = object;
+        gc->lastYoung = object;
+    }
+    else
+    {
+        gc->lastYoung = object;
+        gc->firstYoung = object;
+    }
     object->young = true;
+    object->nextYoung = NULL;
 }
