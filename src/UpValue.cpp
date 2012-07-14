@@ -93,7 +93,6 @@ void UpValue_Close(lua_State* L, UpValue* upValue)
     // Copy over the value so we have our own storage.
     upValue->storage = *upValue->value;
     upValue->value   = &upValue->storage;
-    Gc_IncrementReference(&L->gc, upValue, upValue->value);
 }
 
 void UpValue_CloseUpValues(lua_State* L, Value* value)
