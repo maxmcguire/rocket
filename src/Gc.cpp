@@ -13,9 +13,11 @@
 #include "Parser.h"
 #include "UpValue.h"
 
+#include <stdio.h>
+
 namespace
 {
-    const size_t _gcThreshold = 1024 * 64;
+    const size_t _gcThreshold = 64 * 1024;
 }
 
 // Disables the garbage collector. This can be useful for debugging garbage
@@ -593,7 +595,6 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
     {
 
         ++numYoungObjects;
-        Gc_Object* nextObject = object->nextYoung;
 
         // This object doesn't have any references on the heap or stack.
         bool unreachable = (object->refCount == 0 && object->scanMark != scanMark);
@@ -607,16 +608,17 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
             ++numObjectsRemoved;
             if (prevObject != NULL) 
             {
-                prevObject->nextYoung = nextObject;
+                prevObject->nextYoung = object->nextYoung;
             }
             else
             {
-                gc->firstYoung = nextObject;
+                gc->firstYoung = object->nextYoung;
             }
             if (gc->lastYoung == object)
             {
                 gc->lastYoung = prevObject;
             }
+            object->young = false;
         }
         else
         {
@@ -627,9 +629,23 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
         {
             Gc_FreeObject(L, gc, object, true);
             ++numObjectsCollected;
+            // Since the object no longer exists, we must use the previous
+            // object to determine the next object in the list. We simply save
+            // the nextYoung field prior to freeing the object, since freeing
+            // it may add new objects to the list.
+            if (prevObject != NULL)
+            {
+                object = prevObject->nextYoung;
+            }
+            else
+            {
+                object = gc->firstYoung;
+            }
         }
-        
-        object = nextObject;
+        else
+        {
+            object = object->nextYoung;
+        }        
 
     }
 
