@@ -23,7 +23,7 @@ FORCE_INLINE void Gc_IncrementReference(Gc* gc, Gc_Object* parent, const Value* 
     }
 }
 
-FORCE_INLINE void Gc_DecrementReference(Gc* gc, Gc_Object* child)
+FORCE_INLINE void Gc_DecrementReference(lua_State* L, Gc* gc, Gc_Object* child)
 {
     ASSERT(child != NULL);
     
@@ -38,16 +38,16 @@ FORCE_INLINE void Gc_DecrementReference(Gc* gc, Gc_Object* child)
         {
             // There are either no references to this object, or the only references
             // are on the stack, so add it to the young list.
-            Gc_AddYoungObject(gc, child);
+            Gc_AddYoungObject(L, gc, child);
         }
     }
     
 }
 
-FORCE_INLINE void Gc_DecrementReference(Gc* gc, const Value* child)
+FORCE_INLINE void Gc_DecrementReference(lua_State* L, Gc* gc, const Value* child)
 {
     if (Value_GetIsObject(child))
     {
-        Gc_DecrementReference(gc, child->object);
+        Gc_DecrementReference(L, gc, child->object);
     }
 }

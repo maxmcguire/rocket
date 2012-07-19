@@ -17,7 +17,7 @@
 
 namespace
 {
-    const size_t _gcThreshold = 64 * 1024;
+    const size_t _gcThreshold = 1024 * 1024 * 5;
 }
 
 // Disables the garbage collector. This can be useful for debugging garbage
@@ -106,15 +106,20 @@ static void Gc_FreeObject(lua_State* L, Gc* gc, Gc_Object* object, bool releaseR
 
 }
 
-void Gc_Initialize(Gc* gc)
+void Gc_Initialize(lua_State* L, Gc* gc)
 {
     gc->first       = NULL;
     gc->firstGrey   = NULL;
     gc->state       = Gc_State_Paused;
     gc->threshold   = _gcThreshold;
-    gc->firstYoung  = NULL;
-    gc->lastYoung   = NULL;
     gc->scanMark    = 0;
+
+    // Compute the size of the young object array so that it's unlikely we'll
+    // overflow it before hitting our threshold for running the young collector.
+    const size_t averageObjectPayload = 100;
+    gc->maxYoungObjects = _gcThreshold / (sizeof(Gc_Object) + averageObjectPayload);
+    gc->numYoungObjects = 0;
+    gc->youngObject = static_cast<Gc_Object**>(Allocate(L, sizeof(Gc_Object*) * gc->maxYoungObjects));
 
 #ifdef DEBUG
     gc->_numObjects  = 0;
@@ -135,6 +140,9 @@ void Gc_Shutdown(lua_State* L, Gc* gc)
 
     gc->first = NULL;
     gc->firstGrey = NULL;
+
+    Free(L, gc->youngObject, sizeof(Gc_Object*) * gc->maxYoungObjects);
+    gc->youngObject = NULL;
 
 }
 
@@ -161,12 +169,25 @@ void* Gc_AllocateObject(lua_State* L, int type, size_t size)
     }
 
     object->refCount    = 0;
-    object->nextYoung   = NULL;
     object->young       = false;
     object->scanMark    = gc->scanMark;
 
     object->nextGrey    = NULL;
     object->type        = type;
+
+    if (gc->first != NULL)
+    {
+        gc->first->prev = object;
+    }
+
+    object->next = gc->first;
+    object->prev = NULL;
+
+    gc->first = object;
+
+#ifdef DEBUG
+    ++gc->_numObjects;
+#endif
 
     if (gc->state == Gc_State_Finish)
     {
@@ -180,26 +201,11 @@ void* Gc_AllocateObject(lua_State* L, int type, size_t size)
         // we'll either color this object with a write barrier or when we rescan
         // the stack during finalization (or it will be garbage).
         object->color = Color_White;
+        if (gc->state == Gc_State_Paused)
+        {
+            Gc_AddYoungObject(L, gc, object);
+        }
     }
-
-    if (gc->first != NULL)
-    {
-        gc->first->prev = object;
-    }
-
-    object->next = gc->first;
-    object->prev = NULL;
-
-    gc->first = object;
-
-    if (gc->state == Gc_State_Paused)
-    {
-        Gc_AddYoungObject(gc, object);
-    }
-
-#ifdef DEBUG
-    ++gc->_numObjects;
-#endif
 
     return object;
 
@@ -476,7 +482,7 @@ static void Gc_Sweep(lua_State* L, Gc* gc)
             // next cycle of the garbage collector.
             if (object->refCount == 0)
             {
-                Gc_AddYoungObject(gc, object);
+                Gc_AddYoungObject(L, gc, object);
             }
     
             // Advance to the next object in the list.
@@ -582,19 +588,21 @@ static void Gc_ScanMarkRootObjects(lua_State* L, Gc* gc)
 static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
 {
 
-    Gc_Object* prevObject = NULL;
-    Gc_Object* object = gc->firstYoung;
-
     int scanMark = gc->scanMark;
 
     int numYoungObjects     = 0;
     int numObjectsCollected = 0;
     int numObjectsRemoved   = 0;
 
-    while (object != NULL)
+    int objectIndex = 0;
+    Gc_Object** youngObject = gc->youngObject;
+
+    while (objectIndex < gc->numYoungObjects)
     {
 
         ++numYoungObjects;
+
+        Gc_Object* object = youngObject[objectIndex];
 
         // This object doesn't have any references on the heap or stack.
         bool unreachable = (object->refCount == 0 && object->scanMark != scanMark);
@@ -605,47 +613,25 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
         // Remove from the young list.
         if (unreachable || referenced)
         {
-            ++numObjectsRemoved;
-            if (prevObject != NULL) 
-            {
-                prevObject->nextYoung = object->nextYoung;
-            }
-            else
-            {
-                gc->firstYoung = object->nextYoung;
-            }
-            if (gc->lastYoung == object)
-            {
-                gc->lastYoung = prevObject;
-            }
-            object->young = false;
-        }
-        else
-        {
-            prevObject = object;
-        }
 
-        if (unreachable)
-        {
-            Gc_FreeObject(L, gc, object, true);
-            ++numObjectsCollected;
-            // Since the object no longer exists, we must use the previous
-            // object to determine the next object in the list. We simply save
-            // the nextYoung field prior to freeing the object, since freeing
-            // it may add new objects to the list.
-            if (prevObject != NULL)
+            ++numObjectsRemoved;
+            
+            // To quickly from the list, swap with the last object.
+            --gc->numYoungObjects;
+            youngObject[objectIndex] = youngObject[gc->numYoungObjects];
+            object->young = false;
+
+            if (unreachable)
             {
-                object = prevObject->nextYoung;
+                Gc_FreeObject(L, gc, object, true);
+                ++numObjectsCollected;
             }
-            else
-            {
-                object = gc->firstYoung;
-            }
+
         }
         else
         {
-            object = object->nextYoung;
-        }        
+            ++objectIndex;
+        }
 
     }
 
@@ -682,8 +668,7 @@ bool Gc_Step(lua_State* L, Gc* gc)
     case Gc_State_Start:
         // Clear the young list so that we don't have to worry about deleting
         // something that is in it. We'll rebuild it when we do the sweep phase.
-        gc->firstYoung = NULL;
-        gc->lastYoung  = NULL;
+        gc->numYoungObjects = 0;
         Gc_MarkRoots(L, gc);
         gc->state = Gc_State_Propagate;
         break;
@@ -744,19 +729,25 @@ void Gc_Collect(lua_State* L, Gc* gc)
 
 }
 
-void Gc_AddYoungObject(Gc* gc, Gc_Object* object)
+void Gc_AddYoungObject(lua_State* L, Gc* gc, Gc_Object* object)
 {
     ASSERT( !object->young );
-    if (gc->lastYoung != NULL)
+
+    if (gc->numYoungObjects == gc->maxYoungObjects)
     {
-        gc->lastYoung->nextYoung = object;
-        gc->lastYoung = object;
+        if (gc->state == Gc_State_Paused)
+        {
+            Gc_CollectYoung(L, gc);
+            if (gc->numYoungObjects == gc->maxYoungObjects)
+            {
+                // We need to run the mark and sweep collector since we have too
+                // many young objects.
+                return;
+            }
+        }
     }
-    else
-    {
-        gc->lastYoung = object;
-        gc->firstYoung = object;
-    }
+
     object->young = true;
-    object->nextYoung = NULL;
+    gc->youngObject[gc->numYoungObjects] = object;
+    ++gc->numYoungObjects;
 }

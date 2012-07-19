@@ -72,22 +72,22 @@ void Function_Destroy(lua_State* L, Function* function, bool releaseRefs)
     if (releaseRefs)
     {
         Gc* gc = &L->gc;
-        Gc_DecrementReference(gc, function->constants);
+        Gc_DecrementReference(L, gc, function->constants);
         if (function->parent != NULL)
         {
-            Gc_DecrementReference(gc, function->parent);
+            Gc_DecrementReference(L, gc, function->parent);
         }
         for (int i = 0; i < function->numFunctions; ++i)
         {
-            Gc_DecrementReference(gc, function->function[i]);
+            Gc_DecrementReference(L, gc, function->function[i]);
         }
         for (int i = 0; i < function->numUpValues; ++i)
         {
-            Gc_DecrementReference(gc, function->upValue[i]);
+            Gc_DecrementReference(L, gc, function->upValue[i]);
         }
         for (int i = 0; i < function->numLocals; ++i)
         {
-            Gc_DecrementReference(gc, function->local[i]);
+            Gc_DecrementReference(L, gc, function->local[i]);
         }
     }
 

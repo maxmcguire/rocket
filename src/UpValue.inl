@@ -4,7 +4,7 @@ inline void UpValue_SetValue(lua_State* L, UpValue* upValue, const Value* value)
     if (!UpValue_GetIsOpen(upValue))
     {
         Gc_IncrementReference(gc, upValue, value);            
-        Gc_DecrementReference(gc, upValue->value);            
+        Gc_DecrementReference(L, gc, upValue->value);            
     }
     Value_Copy(upValue->value, value);
 }

@@ -634,19 +634,19 @@ void Prototype_Destroy(lua_State* L, Prototype* prototype, bool releaseRefs)
         Gc* gc = &L->gc;
         for (int i = 0; i < prototype->numConstants; ++i)
         {
-            Gc_DecrementReference(gc, &prototype->constant[i]);
+            Gc_DecrementReference(L, gc, &prototype->constant[i]);
         }
         for (int i = 0; i < prototype->numUpValues; ++i)
         {
-            Gc_DecrementReference(gc, prototype->upValue[i]);
+            Gc_DecrementReference(L, gc, prototype->upValue[i]);
         }
         for (int i = 0; i < prototype->numPrototypes; ++i)
         {
-            Gc_DecrementReference(gc, prototype->prototype[i]);
+            Gc_DecrementReference(L, gc, prototype->prototype[i]);
         }
         if (prototype->source != NULL)
         {
-            Gc_DecrementReference(gc, prototype->source);
+            Gc_DecrementReference(L, gc, prototype->source);
         }
     }
 
@@ -720,7 +720,7 @@ void Closure_Destroy(lua_State* L, Closure* closure, bool releaseRefs)
     if (releaseRefs)
     {
         // Release the environment table.
-        Gc_DecrementReference(gc, closure->env);
+        Gc_DecrementReference(L, gc, closure->env);
 
         // Release the up values.
         if (closure->c)
@@ -728,7 +728,7 @@ void Closure_Destroy(lua_State* L, Closure* closure, bool releaseRefs)
             Value* upValue = closure->cclosure.upValue;
             for (int i = 0; i < closure->cclosure.numUpValues; ++i)
             {
-                Gc_DecrementReference(gc, upValue);
+                Gc_DecrementReference(L, gc, upValue);
                 ++upValue;
             }
         }
@@ -737,7 +737,7 @@ void Closure_Destroy(lua_State* L, Closure* closure, bool releaseRefs)
             UpValue** upValue = closure->lclosure.upValue;
             for (int i = 0; i < closure->lclosure.numUpValues; ++i)
             {
-                Gc_DecrementReference(gc, *upValue);
+                Gc_DecrementReference(L, gc, *upValue);
                 ++upValue;
             }
         }

@@ -78,7 +78,7 @@ void UpValue_Destroy(lua_State* L, UpValue* upValue, bool releaseRefs)
     {
         if (releaseRefs)
         {
-            Gc_DecrementReference(&L->gc, upValue->value);
+            Gc_DecrementReference(L, &L->gc, upValue->value);
         }
     }
     Free(L, upValue, sizeof(UpValue));

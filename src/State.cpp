@@ -123,7 +123,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     L->callStackTop->stackTop   = L->stackTop;
     ++L->callStackTop;
 
-    Gc_Initialize(&L->gc);
+    Gc_Initialize(L, &L->gc);
 
     SetValue( &L->globals, Table_Create(L, 0, 0) );
     SetValue( &L->registry, Table_Create(L, 0, 0) );

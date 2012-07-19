@@ -77,9 +77,9 @@ void Table_Destroy(lua_State* L, Table* table, bool releaseRefs)
         {
             if (!Table_NodeIsEmpty(node))
             {
-                Gc_DecrementReference(gc, &node->value);
+                Gc_DecrementReference(L, gc, &node->value);
             }
-            Gc_DecrementReference(gc, &node->key);
+            Gc_DecrementReference(L, gc, &node->key);
             ++node;
         }
 
@@ -87,7 +87,7 @@ void Table_Destroy(lua_State* L, Table* table, bool releaseRefs)
         Value* element = table->element;
         for (int i = 0; i < table->numElementsSet; ++i)
         {
-            Gc_DecrementReference(gc, element);
+            Gc_DecrementReference(L, gc, element);
             ++element;
         }
 
@@ -97,7 +97,7 @@ void Table_Destroy(lua_State* L, Table* table, bool releaseRefs)
         // Release the metatable.
         if (table->metatable != NULL)
         {
-            Gc_DecrementReference(gc, table->metatable);
+            Gc_DecrementReference(L, gc, table->metatable);
         }
 
     }
@@ -446,9 +446,9 @@ static bool Table_ResizeHash(lua_State* L, Table* table, int numNodes, bool forc
             if ( !Table_NodeIsEmpty(&nodes[i]) )
             {
                 Table_InsertHash(L, table, &nodes[i].key, &nodes[i].value);
-                Gc_DecrementReference(gc, &nodes[i].value);
+                Gc_DecrementReference(L, gc, &nodes[i].value);
             }
-            Gc_DecrementReference(gc, &nodes[i].key);
+            Gc_DecrementReference(L, gc, &nodes[i].key);
         }
     }
     else
@@ -762,7 +762,7 @@ static bool Table_RemoveHash(lua_State* L, Table* table, const Value* key)
     }
 
     ASSERT(!node->dead);
-    Gc_DecrementReference(&L->gc, &node->value);
+    Gc_DecrementReference(L, &L->gc, &node->value);
 
     node->dead = true;
     node->prev = prev;
@@ -792,7 +792,7 @@ static bool Table_Remove(lua_State* L, Table* table, int key)
         {
             return false;
         }
-        Gc_DecrementReference(gc, dst);
+        Gc_DecrementReference(L, gc, dst);
         SetNil(dst);
         --table->numElementsSet;
         
@@ -859,7 +859,7 @@ bool Table_UpdateHash(lua_State* L, Table* table, Value* key, Value* value)
     ASSERT(!node->dead);
 
     Gc_IncrementReference(&L->gc, table, value);
-    Gc_DecrementReference(&L->gc, &node->value);
+    Gc_DecrementReference(L, &L->gc, &node->value);
     node->value = *value;
 
 #ifdef TABLE_TAG_METHOD_CACHE
@@ -904,7 +904,7 @@ FORCE_INLINE bool Table_Update(lua_State* L, Table* table, int key, Value* value
         }
 
         Gc_IncrementReference(&L->gc, table, value);
-        Gc_DecrementReference(&L->gc, dst);
+        Gc_DecrementReference(L, &L->gc, dst);
         *dst = *value;
         
         return true;
@@ -1024,7 +1024,7 @@ Start:
         }
         node->dead  = false;
     
-        Gc_DecrementReference(&L->gc, &node->key);
+        Gc_DecrementReference(L, &L->gc, &node->key);
 
         node->key   = *key;
         node->value = *value;
@@ -1045,7 +1045,7 @@ Start:
             }
         }
 
-        Gc_DecrementReference(&L->gc, &freeNode->key);
+        Gc_DecrementReference(L, &L->gc, &freeNode->key);
         freeNode = Table_UnlinkDeadNode(table, freeNode);
 
         if (freeNode == node)

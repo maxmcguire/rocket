@@ -23,7 +23,7 @@ void Value_SetMetatable(lua_State* L, Value* value, Table* table)
         }
         if (value->table->metatable != NULL)
         {
-            Gc_DecrementReference(&L->gc, value->table->metatable);
+            Gc_DecrementReference(L, &L->gc, value->table->metatable);
         }
         value->table->metatable = table;
         break;
@@ -34,7 +34,7 @@ void Value_SetMetatable(lua_State* L, Value* value, Table* table)
         }
         if (value->userData->metatable != NULL)
         {
-            Gc_DecrementReference(&L->gc, value->userData->metatable);
+            Gc_DecrementReference(L, &L->gc, value->userData->metatable);
         }
         value->userData->metatable = table;
          break;
@@ -70,7 +70,7 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table)
     {
     case Tag_Closure:
         Gc_IncrementReference(&L->gc, value->closure, table);
-        Gc_DecrementReference(&L->gc, value->closure->env);
+        Gc_DecrementReference(L, &L->gc, value->closure->env);
         value->closure->env = table;
         return 1;
     case Tag_Thread:
@@ -79,7 +79,7 @@ int Value_SetEnv(lua_State* L, Value* value, Table* table)
         return 1;
     case Tag_Userdata:
         Gc_IncrementReference(&L->gc, value->userData, table);
-        Gc_DecrementReference(&L->gc, value->userData->env);
+        Gc_DecrementReference(L, &L->gc, value->userData->env);
         value->userData->env = table;
         return 1;
     }

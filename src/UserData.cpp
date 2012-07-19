@@ -39,9 +39,9 @@ void UserData_Destroy(lua_State* L, UserData* userData, bool releaseRefs)
         Gc* gc = &L->gc;
         if (userData->metatable != NULL)
         {
-            Gc_DecrementReference(gc, userData->metatable);
+            Gc_DecrementReference(L, gc, userData->metatable);
         }
-        Gc_DecrementReference(gc, userData->env);
+        Gc_DecrementReference(L, gc, userData->env);
     }
     Free(L, userData, sizeof(UserData) + userData->size);
 }

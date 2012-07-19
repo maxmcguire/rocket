@@ -1255,7 +1255,7 @@ const char* lua_setupvalue(lua_State* L, int funcindex, int n)
         {
             Value* dst = &closure->cclosure.upValue[n - 1];
             Gc_IncrementReference(gc, closure, src);
-            Gc_DecrementReference(gc, dst);
+            Gc_DecrementReference(L, gc, dst);
             Value_Copy( dst, src );
             Pop(L, 1);
             // Up values to a C function are unnamed.
