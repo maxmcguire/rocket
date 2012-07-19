@@ -735,16 +735,10 @@ void Gc_AddYoungObject(lua_State* L, Gc* gc, Gc_Object* object)
 
     if (gc->numYoungObjects == gc->maxYoungObjects)
     {
-        if (gc->state == Gc_State_Paused)
-        {
-            Gc_CollectYoung(L, gc);
-            if (gc->numYoungObjects == gc->maxYoungObjects)
-            {
-                // We need to run the mark and sweep collector since we have too
-                // many young objects.
-                return;
-            }
-        }
+        // We are out of room in the young list, so just let this object fall
+        // back to being collected by mark and sweep. If the young array is
+        // allocated large enough, this should not happen very often.
+        return;
     }
 
     object->young = true;

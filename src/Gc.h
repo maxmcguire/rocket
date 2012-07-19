@@ -18,7 +18,7 @@ enum Gc_State
     Gc_State_Propagate,
     Gc_State_Finish,
     Gc_State_Paused,
-    Gc_State_Young,
+    Gc_State_Young, // Must be after Paused for test in Gc_DecrementReference
 };
 
 /** "Colors" for marking nodes during garbage collection */
@@ -50,15 +50,15 @@ struct Gc_Object
 struct Gc
 {
     Gc_State    state;
-    Gc_Object*  first;      // First object in the global list.
-    Gc_Object*  firstGrey;  // First grey object during gc.
-    size_t      threshold;
-    Gc_Object*  lastYoung;  // Last object in the young list.
-    int         scanMark;
 
     Gc_Object** youngObject;
     int         numYoungObjects;
     int         maxYoungObjects;
+
+    Gc_Object*  first;      // First object in the global list.
+    Gc_Object*  firstGrey;  // First grey object during gc.
+    size_t      threshold;
+    int         scanMark;
 
 #ifdef DEBUG
     int         _numObjects;
