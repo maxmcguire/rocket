@@ -428,7 +428,7 @@ static void Prototype_ConvertCode(Instruction* dst, const Instruction* src, int*
 void Prototype_ConvertCode(Prototype* prototype)
 {
     Prototype_ConvertCode(prototype->convertedCode, prototype->code,
-        prototype->sourceLine, prototype->convertedSourceLine, prototype->codeSize);
+        prototype->convertedSourceLine, prototype->sourceLine, prototype->codeSize);
     for (int i = 0; i < prototype->numPrototypes; ++i)
     {
         Prototype_ConvertCode(prototype->prototype[i]);
