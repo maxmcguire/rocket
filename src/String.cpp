@@ -250,7 +250,16 @@ void String_CreateUnmanagedArray(lua_State* L, String* string[], const char* dat
         int index = result->hash % stringPool->numNodes;
         ASSERT( StringPool_FindInChain(stringPool, index, data[i], length) == NULL );
 
-		stringPool->node[index] = result;
+        String* nextString = stringPool->node[index];
+        if (nextString != NULL)
+        {
+            nextString->prevString = result;
+        }
+    
+        result->nextString  = nextString;
+        result->prevString  = NULL;
+
+        stringPool->node[index] = result;
         ++stringPool->numStrings;
 
         if (stringPool->numStrings >= stringPool->numNodes)
