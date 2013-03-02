@@ -13,6 +13,7 @@
 #include "Table.h"
 #include "Function.h"
 #include "UpValue.h"
+#include <stdio.h>
 
 extern "C"
 {
@@ -294,6 +295,9 @@ void Vm_SetTable(lua_State* L, Value* dst, Value* key, Value* value)
 
 }
 
+/** 
+ * Returns a hint for looking up the key in the table again.
+ */
 void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst, bool ref)
 {
     for (int i = 0; i < MAXTAGLOOP; ++i)
@@ -333,6 +337,55 @@ void Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst,
         }
     }
     SetNil(dst);
+}
+
+int Vm_GetTable(lua_State* L, const Value* value, const Value* key, Value* dst, bool ref, int hint)
+{
+    for (int i = 0; i < MAXTAGLOOP; ++i)
+    {
+
+        const Value* method = NULL;
+        if (Value_GetIsTable(value))
+        {
+            const Value* result = Table_GetTable(L, value->table, key, hint);
+            if (!Value_GetIsNil(result))
+            {
+                *dst = *result;
+                return Table_GetLookupHint(value->table, result);
+            }
+        }
+        method = GetTagMethod(L, value, TagMethod_Index);
+        if (method == NULL)
+        {
+            if (!Value_GetIsTable(value))
+            {
+                // No metamethod.
+                TypeError(L, value, "index");
+            }
+            break;
+        }
+        if (Value_GetIsClosure(method))
+        {
+            Value refValue;
+            SetValue(&refValue, ref);
+            CallTagMethod3Result(L, method, value, key, &refValue, dst);
+            return 0;
+        }
+        else
+        {
+            // Assume the tag method is a table.
+            value = method;
+        }
+    }
+    SetNil(dst);
+    return 0;
+}
+
+int Vm_GetGlobal(lua_State* L, Closure* closure, const Value* key, Value* dst, int hint)
+{
+    Value table;
+    SetValue(&table, closure->env);
+    return Vm_GetTable(L, &table, key, dst, false, hint);
 }
 
 void Vm_GetGlobal(lua_State* L, Closure* closure, const Value* key, Value* dst)
@@ -947,7 +1000,7 @@ Start:
 
     Prototype* prototype = lclosure->prototype;
 
-    register const Instruction* ip  = frame->ip;
+    register Instruction* ip  = frame->ip;
 
     register Value*    stackBase = L->stackBase;
     register Value*    constant  = prototype->constant;
@@ -960,6 +1013,9 @@ Start:
         const char* _file = String_GetData(prototype->source);
         int         _line = prototype->convertedSourceLine[ip - prototype->convertedCode];
     #endif
+
+        ASSERT( ip >= prototype->convertedCode );
+        ASSERT( ip <= prototype->convertedCode + prototype->convertedCodeSize );
 
         Instruction inst = *ip;
         ++ip;
@@ -1039,6 +1095,18 @@ Start:
             break;
         case Opcode_GetGlobal:
             {
+            #ifdef ROCKET_INLINE_CACHE_GLOBALS
+                // The table look up hint is cached inline after the instruction.
+                int* hint = static_cast<int*>(ip);
+                ++ip;
+                PROTECT(
+                    int d = VM_GET_D(inst);
+                    ASSERT(d >= 0 && d < prototype->numConstants);
+                    const Value* key = &constant[d];
+                    Value* dst = &stackBase[a];
+                    *hint = Vm_GetGlobal(L, closure, key, dst, *hint);
+                )
+            #else
                 PROTECT(
                     int d = VM_GET_D(inst);
                     ASSERT(d >= 0 && d < prototype->numConstants);
@@ -1046,6 +1114,7 @@ Start:
                     Value* dst = &stackBase[a];
                     Vm_GetGlobal(L, closure, key, dst);
                 )
+            #endif
             }
             break;
         case Opcode_SetUpVal:
@@ -1613,7 +1682,8 @@ Start:
             break;
         case Opcode_LoadK2:
             {
-                int bx = VM_GET_D(inst) + 65536;
+                int bx = *ip;
+                ++ip;
                 ASSERT(bx >= 0 && bx < prototype->numConstants);
                 const Value* value = &constant[bx];
                 stackBase[a] = *value;
@@ -1621,9 +1691,10 @@ Start:
             break;
         case Opcode_SetGlobal2:
             {
+                int d = *ip;
+                ++ip;
+                ASSERT(d >= 0 && d < prototype->numConstants);
                 PROTECT(
-                    int d = VM_GET_D(inst) + 65536;
-                    ASSERT(d >= 0 && d < prototype->numConstants);
                     Value* key = &constant[d];
                     Value* value = &stackBase[a];
                     Vm_SetGlobal(L, closure, key, value);
@@ -1632,6 +1703,20 @@ Start:
             break;
         case Opcode_GetGlobal2:
             {
+            #ifdef ROCKET_INLINE_CACHE_GLOBALS
+                int d = *ip;
+                ++ip;
+                ASSERT(d >= 0 && d < prototype->numConstants);
+                // The table lookup hint is cached inline after the instruction.
+                int* hint = static_cast<int*>(ip);
+                ++ip;
+                PROTECT(
+                    const Value* key = &constant[d];
+                    Value* dst = &stackBase[a];
+                    *hint = Vm_GetGlobal(L, closure, key, dst, *hint);
+                )
+            #else
+                // The hint is "inline cached" after the instruction.
                 PROTECT(
                     int d = VM_GET_D(inst) + 65536;
                     ASSERT(d >= 0 && d < prototype->numConstants);
@@ -1639,6 +1724,7 @@ Start:
                     Value* dst = &stackBase[a];
                     Vm_GetGlobal(L, closure, key, dst);
                 )
+            #endif
             }
             break;
 
@@ -1690,10 +1776,8 @@ int Vm_RunProtected(lua_State* L, ProtectedFunction function, Value* stackTop, v
         {
             PushString( L, String_Create(L, "not enough memory") );
         }
-        else
+        else if (result == LUA_ERRSYNTAX)
         {
-            // The other error codes should never get to this point.
-            ASSERT(0);
         }
     
         if (L->openUpValue != NULL)

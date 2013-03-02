@@ -27,7 +27,7 @@ enum Color
     Color_White,            // Not yet examined or unreachable
     Color_Black,            // Proven reachable
     Color_Grey,             // Proven reachable, but children not examined
-    Color_Alignment = 0xFFFFFFFF
+    Color_Alignment = 0xFFFF
 };
 
 /** The base for all garbage collectable objects. */
@@ -37,6 +37,7 @@ struct Gc_Object
 
     int         refCount;   // Non-stack ref count for ref count garbage collection.
     Color       color;      // Used for incremental mark & sweep garbage collection.
+    bool        fixed;      // This object should not be garbage collected.
     bool        young;      // True if the object is in the "young" list.
 
     Gc_Object*  next;       // Next object in the global list.

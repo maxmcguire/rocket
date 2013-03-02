@@ -119,9 +119,9 @@ enum Opcode
 
     Opcode_GetTableRefC = 71,
 
-    Opcode_LoadK2       = 72,   // Constant index in the range 65536 to 131071.
-    Opcode_SetGlobal2   = 73,   // Constant index in the range 65536 to 131071.
-    Opcode_GetGlobal2   = 74,   // Constant index in the range 65536 to 131071.
+    Opcode_LoadK2       = 72,   // Constant index > 65536.
+    Opcode_SetGlobal2   = 73,   // Constant index > 65536.
+    Opcode_GetGlobal2   = 74,   // Constant index > 65536.
 
 };
 

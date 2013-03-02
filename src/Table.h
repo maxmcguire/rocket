@@ -65,6 +65,7 @@ void Table_Insert(lua_State* L, Table* table, Value* key, Value* value);
 
 void Table_SetTable(lua_State* L, Table* table, int key, Value* value);
 void Table_SetTable(lua_State* L, Table* table, const char* key, Value* value);
+void Table_SetTable(lua_State* L, Table* table, String* key, Value* value);
 void Table_SetTable(lua_State* L, Table* table, Value* key, Value* value);
 
 /**
@@ -74,6 +75,15 @@ void Table_SetTable(lua_State* L, Table* table, Value* key, Value* value);
 Value* Table_GetTable(lua_State* L, Table* table, const Value* key);
 Value* Table_GetTable(lua_State* L, Table* table, int key);
 Value* Table_GetTable(lua_State* L, Table* table, String* key);
+Value* Table_GetTable(lua_State* L, Table* table, const Value* key, int hint);
+
+/**
+ * Given a value returned by Table_GetTable, this function returns a hint
+ * value which can be passed to future calls to Table_GetTable for faster
+ * look ups.
+ */
+inline int Table_GetLookupHint(Table* table, const Value* value)
+    { return (int)((TableNode*)((char*)value - offsetof(TableNode, value)) - table->nodes); }
 
 /**
  * For a hash table the size is t[n] is non-nil and t[n+1] is nil.

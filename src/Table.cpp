@@ -953,6 +953,13 @@ void Table_SetTable(lua_State* L, Table* table, const char* key, Value* value)
     Table_SetTable(L, table, &k, value);
 }
 
+void Table_SetTable(lua_State* L, Table* table, String* key, Value* value)
+{
+    Value k;
+    SetValue( &k, key );
+    Table_SetTable(L, table, &k, value);
+}
+
 static TableNode* Table_UnlinkDeadNode(Table* table, TableNode* node)
 {
     ASSERT(node->dead);
@@ -1263,6 +1270,25 @@ Value* Table_GetTable(lua_State* L, Table* table, const Value* key)
     if (Value_GetIsInteger(key, &index))
     {
         return Table_GetTable(L, table, index);
+    }
+    return Table_GetTableHash(L, table, key);
+}
+
+Value* Table_GetTable(lua_State* L, Table* table, const Value* key, int hint)
+{
+    int index;
+    if (Value_GetIsInteger(key, &index))
+    {
+        return Table_GetTable(L, table, index);
+    }
+    // If the hint is valid, check if it is the correct key.
+    if (hint < table->numNodes)
+    {
+        TableNode* node = table->nodes + hint;
+        if (!node->dead & KeysEqual(&node->key, key))
+        {
+            return &node->value;
+        }
     }
     return Table_GetTableHash(L, table, key);
 }

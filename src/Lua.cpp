@@ -20,6 +20,8 @@ extern "C"
 #include "Code.h"
 #include "UpValue.h"
 
+#include "Parser/lparser.h"
+
 #include <string.h>
 
 /**
@@ -312,30 +314,38 @@ static int DumpBinary(lua_State* L, Prototype* prototype, lua_Writer writer, voi
 static void Parse(lua_State* L, void* userData)
 {
 
-    // We currently can't run the GC while parsing because some objects used by
-    // the parser are not properly stored in a root location.
-
     ParseArgs* args = static_cast<ParseArgs*>(userData);
-
-    Input input;
-    Input_Initialize(L, &input, args->reader, args->userdata);
-
     Prototype* prototype = NULL;
 
-    if (Input_PeekByte(&input) == '\033')
+    ZIO z;
+    luaZ_init(L, &z, args->reader, args->userdata);
+
+    int c = luaZ_lookahead(&z);
+    if (c == LUA_SIGNATURE[0])
     {
         // The data is a pre-compiled binary.
+        Input input;
+        Input_Initialize(L, &input, args->reader, args->userdata);
+
+        // Copy the data we're already read through the zio.
+        input.buffer = z.p;
+        input.size   = z.n;
         prototype = LoadBinary(L, &input, args->name);
     }
     else
     {
-        prototype = Parse(L, &input, args->name);
+        // Use the parser implementation from Lua 5.1 since it's more stable
+        // and probably faster than our own implementation.
+        Mbuffer buff;
+        luaZ_initbuffer(L, &buff);
+        prototype = luaY_parser(L, &z, &buff, args->name);
+        //prototype = Parse(L, &input, args->name);
     }
 
     ASSERT(prototype != NULL);
     PushPrototype(L, prototype);
 
-    Prototype_ConvertCode( prototype );
+    Prototype_ConvertCode( L, prototype );
 
     Table* env = L->globals.table;
     Closure* closure = Closure_Create(L, prototype, env);
@@ -368,16 +378,10 @@ int lua_load(lua_State* L, lua_Reader reader, void* userdata, const char* name)
 
     if (args.name == NULL)
     {
-        args.name = "";
+        args.name = "?";
     }
 
-    int result = Vm_RunProtected(L, Parse, L->stackTop, &args, NULL);
-
-    if (result == LUA_ERRRUN)
-    {
-        result = LUA_ERRSYNTAX;
-    }
-    return result;
+    return Vm_RunProtected(L, Parse, L->stackTop, &args, NULL);
 
 }
 

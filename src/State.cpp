@@ -92,6 +92,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
 
     L->alloc        = alloc;
     L->panic        = NULL;
+    L->numCCalls    = 0;
     L->hook         = NULL;
     L->hookMask     = 0;
     L->hookCount    = 0;
@@ -112,6 +113,7 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
     memset(L->tagMethodName, 0, sizeof(L->tagMethodName));
     memset(L->typeName, 0, sizeof(L->typeName));
     memset(L->metatable, 0, sizeof(L->metatable));
+    memset(L->reservedWord, 0, sizeof(L->reservedWord));
 
     StringPool_Initialize(L, &L->stringPool);
 
@@ -149,6 +151,18 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
         };
 
     String_CreateUnmanagedArray(L, L->tagMethodName, tagMethodName, TagMethod_NumMethods);
+
+    const char* reservedWord[] =
+        {
+            "and", "break", "do", "else", "elseif",
+            "end", "false", "for", "function", "if",
+            "in", "local", "nil", "not", "or", "repeat",
+            "return", "then", "true", "until", "while",
+            "..", "...", "==", ">=", "<=", "~=",
+            "<number>", "<name>", "<string>", "<eof>"
+        };
+
+    String_CreateUnmanagedArray(L, L->reservedWord, reservedWord, 31);
 
     // Store the names for the different types, so we don't have to create new
     // strings when we want to return them.
@@ -189,20 +203,22 @@ lua_State* State_Create(lua_Alloc alloc, void* userdata)
 void State_Destroy(lua_State* L)
 {
     String_DestroyUnmanagedArray(L, L->tagMethodName, TagMethod_NumMethods);
+    String_DestroyUnmanagedArray(L, L->reservedWord, 31);
     Gc_Shutdown(L, &L->gc);
     StringPool_Shutdown(L, &L->stringPool);
     L->alloc( L->userdata, L, 0, 0 );
 }
 
-void PushFString(lua_State* L, const char* fmt, ...)
+const char* PushFString(lua_State* L, const char* fmt, ...)
 {
     va_list argp;
     va_start(argp, fmt);
-    PushVFString(L, fmt, argp);
+    const char* result = PushVFString(L, fmt, argp);
     va_end(argp);
+    return result;
 }
 
-void PushVFString(lua_State* L, const char* fmt, va_list argp)
+const char*  PushVFString(lua_State* L, const char* fmt, va_list argp)
 {
     int n = 1;
     PushString(L, "" );
@@ -262,6 +278,7 @@ void PushVFString(lua_State* L, const char* fmt, va_list argp)
     PushString(L, fmt);
     Concat( L, L->stackTop - n - 1, L->stackTop - n - 1, L->stackTop - 1 ); 
     Pop(L, n);
+    return String_GetData( (L->stackTop - 1)->string );
 }
 
 void Concat(lua_State* L, int n)
@@ -315,11 +332,11 @@ bool ToString(lua_State* L, Value* value)
     return false;
 }
 
-void State_Error(lua_State* L)
+void State_Error(lua_State* L, int type)
 {
     if (L->errorHandler != NULL)
     {
-        longjmp(L->errorHandler->jump, LUA_ERRRUN);
+        longjmp(L->errorHandler->jump, type);
     }
     else
     {

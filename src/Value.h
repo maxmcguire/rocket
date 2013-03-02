@@ -11,6 +11,7 @@
 extern "C"
 {
 #include "lua.h"
+#include "luaconf.h"
 }
 
 #include "Global.h"

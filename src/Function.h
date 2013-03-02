@@ -11,6 +11,18 @@
 #include "Gc.h"
 #include "State.h"
 
+/* masks for new-style vararg */
+#define VARARG_HASARG		1
+#define VARARG_ISVARARG		2
+#define VARARG_NEEDSARG		4
+
+struct LocVar
+{
+    String* varname;
+    int     startpc;    // First point where variable is active
+    int     endpc;      // First point where variable is dead
+};
+
 struct Prototype : public Gc_Object
 {
 
@@ -24,9 +36,13 @@ struct Prototype : public Gc_Object
     int                 numConstants;
     Value*              constant;
     int                 numUpValues;
+    int                 maxUpValues;
     String**            upValue;
     int                 numPrototypes;
     Prototype**         prototype;
+
+    LocVar*             local;
+    int                 numLocals;
 
     int                 lineDefined;
     int                 lastLineDefined;
@@ -66,6 +82,8 @@ struct Closure : public Gc_Object
     };
 };
 
+Prototype* Prototype_Create(lua_State* L);
+
 /**
  * Creates a prototype with the specified fields. The caller will fill in the
  * appropriate fields.
@@ -85,12 +103,16 @@ Prototype* Prototype_Create(lua_State* L, const char* data, size_t length, const
  */
 void Prototype_Destroy(lua_State* L, Prototype* prototype, bool releaseRefs);
 
-/** Copies the short name of the source of a function prototype into the buffer. */
+/**
+ * Copies the short name of the source of a function prototype into the buffer.
+ */
 void Prototype_GetName(Prototype* prototype, char* buffer, size_t bufferLength);
 
-/** Translates the code in a prototype from standard Lua opcodes to our own
- * encoding. */
-void Prototype_ConvertCode(Prototype* prototype);
+/**
+ * Translates the code in a prototype from standard Lua opcodes to our own
+ * encoding.
+ */
+void Prototype_ConvertCode(lua_State* L, Prototype* prototype);
 int  Prototype_GetConvertedCodeSize(const Instruction* src, int codeSize);
 
 extern "C" Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env);

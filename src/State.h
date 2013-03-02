@@ -19,6 +19,7 @@ extern "C"
 #include "Gc.h"
 
 #include <setjmp.h>
+#include <malloc.h>
 
 struct Gc_Object;
 struct Closure;
@@ -37,7 +38,7 @@ struct ErrorHandler
 struct CallFrame
 {
     Value*              function; 
-    const Instruction*  ip;
+    Instruction*        ip;
     Value*              stackTop;
     Value*              stackBase;
     int                 numResults; // Expected number of results from the call.
@@ -45,14 +46,14 @@ struct CallFrame
 
 struct lua_State
 {
-    Value           dummyObject;    // Used when we need to refer to an object that doesn't exist.
-    Value*          stack;
     Value*          stackBase;
     Value*          stackTop;       // Points to the next free spot on the stack.
+    Value           dummyObject;    // Used when we need to refer to an object that doesn't exist.
     UpValue*        openUpValue;
     CallFrame*      callStackTop;
     lua_Alloc       alloc;
     lua_CFunction   panic;
+    int             numCCalls;
     lua_Hook        hook;
     int             hookMask;
     int             hookCount;
@@ -63,9 +64,11 @@ struct lua_State
     Value           registry;
     Value           env;            // Temporary storage for the env table for a function.
     Gc              gc;
+    Value*          stack;
     size_t          totalBytes;
     Table*          metatable[NUM_TYPES];   // Metatables for basic types.
     String*         typeName[NUM_TYPES + 1];
+    String*         reservedWord[31];                 // Reserved words.
     String*         tagMethodName[TagMethod_NumMethods];
     CallFrame       callStackBase[LUAI_MAXCCALLS];
     StringPool      stringPool;
@@ -87,6 +90,12 @@ void GrowArray(lua_State* L, T*& p, int numElements, int& maxElements)
         size_t newSize = maxElements * sizeof(T);
         p = (T*)Reallocate(L, p, oldSize, newSize);
     }
+}
+
+template <class T>
+T* AllocateArray(lua_State* L, int numElements)
+{
+    return (T*)Allocate(L, sizeof(T) * numElements);
 }
 
 template <class T>
@@ -151,8 +160,8 @@ inline void PushString(lua_State* L, const char* string)
     PushString( L, String_Create(L, string) );
 }
 
-void PushFString(lua_State* L, const char* format, ...);
-void PushVFString(lua_State* L, const char* fmt,  va_list argp);
+const char* PushFString(lua_State* L, const char* format, ...);
+const char* PushVFString(lua_State* L, const char* fmt,  va_list argp);
 
 inline void PushNil(lua_State* L)
 {
@@ -209,7 +218,7 @@ void Concat(lua_State* L, Value* dst, Value* start, Value* end);
 // returns true.
 bool ToString(lua_State* L, Value* value);
 
-void State_Error(lua_State* L);
+void State_Error(lua_State* L, int type = LUA_ERRRUN);
 void State_Error(lua_State* L, const char* format, ...);
 
 // Returns a human readable type name.

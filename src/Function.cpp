@@ -1,6 +1,6 @@
 /*
  * RocketVM
- * Copyright (c) 2011 Max McGuire
+ * Copyright (c) 2011-2012 Max McGuire
  *
  * See copyright notice in COPYRIGHT
  */
@@ -11,6 +11,8 @@
 #include "UpValue.h"
 
 #include <string.h>
+#include <malloc.h>
+#include <stdio.h>
 
 void Prototype_GetName(Prototype* prototype, char *out, size_t bufflen)
 {
@@ -64,77 +66,56 @@ void Prototype_GetName(Prototype* prototype, char *out, size_t bufflen)
     }
 }
 
-static size_t Prototype_GetSize(Prototype* prototype)
+Prototype* Prototype_Create(lua_State* L)
 {
-    size_t size = sizeof(Prototype);
-    size += prototype->codeSize             * sizeof(Instruction);
-    size += prototype->convertedCodeSize    * sizeof(Instruction);
-    size += prototype->numConstants         * sizeof(Value);
-    size += prototype->numPrototypes        * sizeof(Prototype*);
-    size += prototype->numUpValues          * sizeof(String*);  
-    size += prototype->codeSize             * sizeof(int);
-    size += prototype->convertedCodeSize    * sizeof(int);
-    return size;
-}
-
-Prototype* Prototype_Create(lua_State* L, int codeSize, int convertedCodeSize, int numConstants, int numPrototypes, int numUpValues)
-{
-
-    size_t size = sizeof(Prototype);
-    size += codeSize            * sizeof(Instruction);
-    size += convertedCodeSize   * sizeof(Instruction);
-    size += numConstants        * sizeof(Value);
-    size += numPrototypes       * sizeof(Prototype*);
-    size += numUpValues         * sizeof(String*);  
-    size += codeSize            * sizeof(int);
-    size += convertedCodeSize   * sizeof(int);
-
-    Prototype* prototype = static_cast<Prototype*>(Gc_AllocateObject(L, LUA_TPROTOTYPE, size));
-
+    Prototype* prototype = static_cast<Prototype*>(Gc_AllocateObject(L, LUA_TPROTOTYPE, sizeof(Prototype)));
     if (prototype == NULL)
     {
         return NULL;
     }
 
-    prototype->varArg           = 0;
-    prototype->numParams        = 0;
-    prototype->maxStackSize     = 0;
-    prototype->lineDefined      = 0;
-    prototype->lastLineDefined  = 0;
-    prototype->source           = NULL;
+    prototype->varArg               = 0;
+    prototype->numParams            = 0;
+    prototype->maxStackSize         = 0;
+    prototype->codeSize             = 0;
+    prototype->code                 = NULL;
+    prototype->convertedCodeSize    = 0;
+    prototype->convertedCode        = NULL;
+    prototype->numConstants         = 0;
+    prototype->constant             = NULL;
+    prototype->numUpValues          = 0;
+    prototype->maxUpValues          = 0; 
+    prototype->upValue              = NULL;
+    prototype->numPrototypes        = 0;
+    prototype->prototype            = NULL;
+    prototype->local                = NULL;
+    prototype->numLocals            = 0;
+    prototype->lineDefined          = 0;
+    prototype->lastLineDefined      = 0;
+    prototype->source               = NULL;
+    prototype->sourceLine           = NULL;
+    prototype->convertedSourceLine  = NULL;
 
-    // Code is stored immediately after the prototype structure in memory.
-    prototype->code                 = reinterpret_cast<Instruction*>(prototype + 1);
+    return prototype;
+}
+
+Prototype* Prototype_Create(lua_State* L, int codeSize, int convertedCodeSize, int numConstants, int numPrototypes, int numUpValues)
+{
+    
+    Prototype* prototype = Prototype_Create(L);
+
+    prototype->code                 = AllocateArray<Instruction>(L, codeSize);
+    prototype->constant             = AllocateArray<Value>(L, numConstants);
+    prototype->prototype            = AllocateArray<Prototype*>(L, numPrototypes);
+    prototype->upValue              = AllocateArray<String*>(L, numUpValues);
+
+    prototype->sourceLine           = AllocateArray<int>(L, codeSize);
+ 
+    prototype->numUpValues          = numUpValues;
+    prototype->maxUpValues          = numUpValues;
     prototype->codeSize             = codeSize;
-    prototype->convertedCode        = reinterpret_cast<Instruction*>(prototype->code + codeSize);
-    prototype->convertedCodeSize    = convertedCodeSize;
-
-    // Constants are stored after the code.
-    prototype->constant = reinterpret_cast<Value*>(prototype->convertedCode + convertedCodeSize);
-    prototype->numConstants = numConstants;
-    for (int i = 0; i < numConstants; ++i)
-    {
-        SetNil(&prototype->constant[i]);
-    }
-
-    // Prototypes are stored after the constants.
-    prototype->numPrototypes = numPrototypes;
-    prototype->prototype     = reinterpret_cast<Prototype**>(prototype->constant + numConstants);
-    memset(prototype->prototype, 0, sizeof(Prototype*) * numPrototypes);
-
-    // Up values are is stored after the prototypes.
-    prototype->numUpValues   = numUpValues;
-    prototype->upValue       = reinterpret_cast<String**>(prototype->prototype + numPrototypes);
-    memset(prototype->upValue, 0, sizeof(String*) * numUpValues);
-
-    // Debug info is stored after the up values.
-    prototype->sourceLine = reinterpret_cast<int*>(prototype->upValue + numUpValues);
-    memset(prototype->sourceLine, 0, sizeof(int) * codeSize);
-
-    prototype->convertedSourceLine = reinterpret_cast<int*>(prototype->sourceLine + codeSize);
-    memset(prototype->convertedSourceLine, 0, sizeof(int) * convertedCodeSize);
-
-    ASSERT( size == Prototype_GetSize(prototype) );
+    prototype->numConstants         = numConstants;
+    prototype->numPrototypes        = numPrototypes;
 
     return prototype;
 
@@ -239,9 +220,15 @@ static void ConvertInstruction(Instruction*& dst, const Instruction*& src)
         if (bx >= 65536)
         {
             opcode = Opcode_LoadK2;
-            bx -= 65536;
+            *dst = EncodeAD(opcode, a, 0); 
+            ++dst;
+            *dst = bx;
         }
-        *dst = EncodeAD(opcode, a, bx); 
+        else
+        {
+            ASSERT(bx < 65536);
+            *dst = EncodeAD(opcode, a, bx); 
+        }
         break;
     case Opcode_LoadBool:
         *dst = EncodeABC(opcode, a, b, c); 
@@ -257,17 +244,33 @@ static void ConvertInstruction(Instruction*& dst, const Instruction*& src)
         if (bx >= 65536)
         {
             opcode = Opcode_GetGlobal2;
-            bx -= 65536;
+            *dst = EncodeAD(opcode, a, 0); 
+            ++dst;
+            *dst = bx;
         }
-        *dst = EncodeAD(opcode, a, bx);
+        else
+        {
+            *dst = EncodeAD(opcode, a, bx);
+        }
+    #ifdef ROCKET_INLINE_CACHE_GLOBALS
+        // Add an extra instruction slot for inline caching of the hint value for global
+        // table lookups.
+        ++dst;
+        *dst = 0;
+    #endif
         break;
     case Opcode_SetGlobal:
         if (bx >= 65536)
         {
             opcode = Opcode_SetGlobal2;
-            bx -= 65536;
+            *dst = EncodeAD(opcode, a, 0); 
+            ++dst;
+            *dst = bx;
         }
-        *dst = EncodeAD(opcode, a, bx);
+        else
+        {
+            *dst = EncodeAD(opcode, a, bx);
+        }
         break;
     case Opcode_GetTable:
         *dst = EncodeABC(RK_CONST(c) ? Opcode_GetTableC : Opcode_GetTable, a, b, c & 255); 
@@ -342,7 +345,7 @@ static void ConvertInstruction(Instruction*& dst, const Instruction*& src)
         break;
     case Opcode_ForLoop:
     case Opcode_ForPrep:
-        * dst = EncodeAsD(opcode, a, sbx);
+        *dst = EncodeAsD(opcode, a, sbx);
         break;
     case Opcode_TForLoop:
         *dst = EncodeAD(opcode, a, c);
@@ -398,11 +401,75 @@ int Prototype_GetConvertedCodeSize(const Instruction* src, int codeSize)
     return size;
 }
 
+static int GetJumpAdjustment(const char* adjustment, int jump)
+{
+    int result = 0;
+    if (jump > 0)
+    {
+        for (int i = 1; i <= jump; ++i)
+        {
+            result += adjustment[i];
+        }
+    }
+    else if (jump < 0)
+    {
+        for (int i = -1; i > jump; --i)
+        {
+            result -= adjustment[i];
+        }
+    }
+    return result;
+}
+
+static void AdjustJump(Instruction* dst, const char* adjustment)
+{
+
+    Opcode opcode = VM_GET_OPCODE(*dst); 
+    Instruction inst = *dst;
+
+    switch (opcode)
+    {
+    case Opcode_Jmp:
+        {
+            int sbx = VM_GET_sD(inst);
+            sbx += GetJumpAdjustment(adjustment, sbx);
+            *dst = EncodeAsD(opcode, 0, sbx);
+        }
+        break;
+    case Opcode_ForLoop:
+    case Opcode_ForPrep:
+        {
+            int a  = VM_GET_A(inst);
+            int sd = VM_GET_sD(inst);
+            sd += GetJumpAdjustment(adjustment, sd);
+            *dst = EncodeAsD(opcode, a, sd);
+        }
+    }
+
+}
+
 /** Translates an instruction block from standard Lua opcodes to our own encoding.
  * src and dst can be the same. */
-static void Prototype_ConvertCode(Instruction* dst, const Instruction* src, int* dstLine, const int* srcLine, int codeSize)
+static void Prototype_ConvertCode(lua_State* L, Instruction* _dst, const Instruction* src, int* dstLine, const int* srcLine, int dstCodeSize, int codeSize)
 {
+
+    // Track how much jumps needs to be adjusted based on the change
+    // in size of instructions during our conversion process.
+    char* adjustment = AllocateArray<char>(L, codeSize);
+    memset( adjustment, 0, sizeof(char) * codeSize );
+
+    char* dstSizes = AllocateArray<char>(L, dstCodeSize);
+    memset( dstSizes, 0, sizeof(char) * dstCodeSize );
+
+    char* srcSizes = AllocateArray<char>(L, codeSize);
+    memset( srcSizes, 0, sizeof(char) * codeSize );
+
+    int dstIp = 0;
+    int srcIp = 0;
+
+    Instruction* dst = _dst;
     const Instruction* end = src + codeSize;
+
     while (src < end)
     {
         
@@ -414,6 +481,11 @@ static void Prototype_ConvertCode(Instruction* dst, const Instruction* src, int*
         int srcSize = static_cast<int>(src - s);
         int dstSize = static_cast<int>(dst - d);
 
+        adjustment[srcIp] = dstSize - srcSize;
+        
+        dstSizes[dstIp] = dstSize;
+        srcSizes[srcIp] = srcSize;
+
         for (int i = 0; i < dstSize; ++i)
         {
             dstLine[i] = *srcLine;
@@ -422,17 +494,60 @@ static void Prototype_ConvertCode(Instruction* dst, const Instruction* src, int*
         srcLine += srcSize;
         dstLine += dstSize;
 
+        dstIp += dstSize;
+        srcIp += srcSize;
+
     }
+
+    // Adjust any jumps.
+
+    dstIp = 0;
+    srcIp = 0;
+
+    while (dstIp < dstCodeSize)
+    {
+        int srcSize = srcSizes[srcIp];
+        int dstSize = dstSizes[dstIp];
+
+        AdjustJump(_dst + dstIp, adjustment + srcIp);
+
+        dstIp += dstSize;
+        srcIp += srcSize;
+    }
+
+    FreeArray<char>(L, adjustment, codeSize);
+    FreeArray<char>(L, dstSizes, dstCodeSize);
+    FreeArray<char>(L, srcSizes, codeSize);
+
 }
 
-void Prototype_ConvertCode(Prototype* prototype)
+void Prototype_ConvertCode(lua_State* L, Prototype* prototype)
 {
-    Prototype_ConvertCode(prototype->convertedCode, prototype->code,
-        prototype->convertedSourceLine, prototype->sourceLine, prototype->codeSize);
+    
+    ASSERT(prototype->convertedCode == NULL);
+
+    int convertedCodeSize = Prototype_GetConvertedCodeSize(prototype->code, prototype->codeSize);
+    prototype->convertedCode = AllocateArray<Instruction>(L, convertedCodeSize);
+    prototype->convertedCodeSize = convertedCodeSize;
+
+    if (prototype->sourceLine)
+    {
+        prototype->convertedSourceLine = AllocateArray<int>(L, convertedCodeSize);
+    }
+
+    Prototype_ConvertCode(L,
+        prototype->convertedCode,
+        prototype->code,
+        prototype->convertedSourceLine,
+        prototype->sourceLine,
+        prototype->convertedCodeSize,
+        prototype->codeSize);
+    
     for (int i = 0; i < prototype->numPrototypes; ++i)
     {
-        Prototype_ConvertCode(prototype->prototype[i]);
+        Prototype_ConvertCode(L, prototype->prototype[i]);
     }
+
 }
 
 static Prototype* Prototype_Create(lua_State* L, Prototype* parent, const char* data, size_t& length)
@@ -650,8 +765,23 @@ void Prototype_Destroy(lua_State* L, Prototype* prototype, bool releaseRefs)
         }
     }
 
-    size_t size = Prototype_GetSize(prototype);
-    Free(L, prototype, size);
+    Free(L, prototype->code, prototype->codeSize * sizeof(Instruction));
+    Free(L, prototype->convertedCode, prototype->convertedCodeSize * sizeof(Instruction));
+    Free(L, prototype->constant, prototype->numConstants * sizeof(Value));
+    Free(L, prototype->upValue, prototype->maxUpValues * sizeof(String*));
+    Free(L, prototype->prototype, prototype->numPrototypes * sizeof(Prototype*));
+    Free(L, prototype->local, prototype->numLocals * sizeof(LocVar));
+
+    if (prototype->sourceLine != NULL)
+    {
+        Free(L, prototype->sourceLine, prototype->codeSize * sizeof(int));
+    }
+    if (prototype->convertedSourceLine != NULL)
+    {
+        Free(L, prototype->convertedSourceLine, prototype->convertedCodeSize * sizeof(int));
+    }
+
+    Free(L, prototype, sizeof(Prototype));
 }
 
 Closure* Closure_Create(lua_State* L, Prototype* prototype, Table* env)

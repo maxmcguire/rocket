@@ -531,7 +531,7 @@
 /*
 @@ The luai_num* macros define the primitive operations over numbers.
 */
-#if defined(LUA_CORE)
+//#if defined(LUA_CORE)
 #include <math.h>
 #define luai_numadd(a,b)	((a)+(b))
 #define luai_numsub(a,b)	((a)-(b))
@@ -544,7 +544,7 @@
 #define luai_numlt(a,b)		((a)<(b))
 #define luai_numle(a,b)		((a)<=(b))
 #define luai_numisnan(a)	(!luai_numeq((a), (a)))
-#endif
+//#endif
 
 
 /*
@@ -758,8 +758,15 @@ union luai_Cast { double l_d; long l_l; };
 /*
 ** Local configuration. You can use this space to add your redefinitions
 ** without modifying the main part of the file.
+
 */
 
+/**
+ * Rocket will use a caching mechanism for global variables so that if
+ * the global table is not changing much, accessing a global variable
+ * from the same location will be faster.
+ */
+#define ROCKET_INLINE_CACHE_GLOBALS
 
 
 #endif

@@ -57,7 +57,7 @@ void StringPool_Shutdown(lua_State* L, StringPool* stringPool)
     // The strings should have already been collected by the garbage collector.
     for (int i = 0; i < stringPool->numNodes; ++i)
     {
-        ASSERT( stringPool->node[i] == NULL );
+        ASSERT( stringPool->node[i] == NULL || stringPool->node[i]->fixed );
     }
     FreeNodeArray(L, stringPool->node, stringPool->numNodes);
 }
@@ -231,6 +231,7 @@ void String_CreateUnmanagedArray(lua_State* L, String* string[], const char* dat
 
         size_t length       = strlen(data[i]);
 
+        result->fixed       = true;
         result->type        = LUA_TSTRING;
 		result->hash 		= HashString(data[i], length);
 		result->length		= length;

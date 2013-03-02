@@ -27,7 +27,7 @@ project "Rocket"
     language "C++"
     files { "src/*.h", "src/*.c", "src/*.cpp", "src/*.inl", "src/*.asm", "include/*.h" }
     includedirs { "include" }
-    links { "AuxLib" }
+    links { "AuxLib", "Parser" }
 	if os.is("windows") then
 		linkoptions { [[/DEF:"../src/Rocket.def"]] }
 	end
@@ -41,6 +41,14 @@ project "AuxLib"
     files { "src/AuxLib/*.h", "src/AuxLib/*.c", "src/AuxLib/*.cpp" }
     includedirs { "include" }
 
+-- Parser library     
+project "Parser"
+    kind "StaticLib"
+    location "build"
+    language "C++"
+    files { "src/Parser/*.h", "src/Parser/*.c", "src/Parser/*.cpp" }
+    includedirs { "include" }
+		
 -- Unit test     
 project "Test"
     kind "ConsoleApp"

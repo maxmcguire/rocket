@@ -29,6 +29,9 @@ namespace
  */
 static void Gc_Check(lua_State* L, Gc* gc)
 {
+#ifdef GC_DISABLE
+    return;
+#endif
     if (L->totalBytes >= gc->threshold)
     {
         if (gc->state == Gc_State_Paused)
@@ -134,7 +137,10 @@ void Gc_Shutdown(lua_State* L, Gc* gc)
     while (object != NULL)
     {
         Gc_Object* nextObject = object->next;
-        Gc_FreeObject(L, gc, object, false);
+        if (!object->fixed)
+        {
+            Gc_FreeObject(L, gc, object, false);
+        }
         object = nextObject;
     }
 
@@ -464,7 +470,7 @@ static void Gc_Sweep(lua_State* L, Gc* gc)
     {
             
         // White objects are garbage object.
-        if (object->color == Color_White)
+        if (object->color == Color_White && !object->fixed)
         {
             Gc_Object* nextObject = object->next;
             Gc_FreeObject(L, gc, object, false);
@@ -621,7 +627,7 @@ static void Gc_SweepYoungObjects(lua_State* L, Gc* gc)
             youngObject[objectIndex] = youngObject[gc->numYoungObjects];
             object->young = false;
 
-            if (unreachable)
+            if (unreachable && !object->fixed)
             {
                 Gc_FreeObject(L, gc, object, true);
                 ++numObjectsCollected;
